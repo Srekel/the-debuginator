@@ -164,8 +164,7 @@ static void debuginator_validate_item(DebuginatorItemDefinition* item) {
 		DEBUGINATOR_assert(item->num_values > 0);
 		DEBUGINATOR_assert(item->value_titles != NULL);
 		//DEBUGINATOR_assert(item->value_descriptions == NULL);
-		DEBUGINATOR_assert(item->array_values != NULL
-			|| item->array_of_ptr_values != NULL);
+		DEBUGINATOR_assert(item->array_values != NULL);
 		DEBUGINATOR_assert(item->array_item_size > 0);
 	}
 	else if (item->type == DebuginatorItemType_ArrayOfPtrs) {
@@ -176,8 +175,7 @@ static void debuginator_validate_item(DebuginatorItemDefinition* item) {
 		DEBUGINATOR_assert(item->num_values > 0);
 		DEBUGINATOR_assert(item->value_titles != NULL);
 		//DEBUGINATOR_assert(item->value_descriptions == NULL);
-		DEBUGINATOR_assert(item->array_of_ptr_values != NULL
-			|| item->array_of_ptr_values != NULL);
+		DEBUGINATOR_assert(item->array_of_ptr_values != NULL);
 		DEBUGINATOR_assert(item->array_item_size > 0);
 	}
 
