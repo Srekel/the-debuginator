@@ -78,7 +78,9 @@
     <IncludePath>$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(ProjectDir)\..\..\..\external\sdl\SDL2-2.0.5\include;$(IncludePath)</IncludePath>
+    <IncludePath>$(IncludePath)</IncludePath>
+    <OutDir>$(SolutionDir)\Build\$(Platform)_$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)\Build\_$(ProjectName)\$(Platform)_$(Configuration)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -95,13 +97,27 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\external\SDL2-2.0.5\include;$(SolutionDir)..\..\external\SDL2_ttf-2.0.14\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>$(ProjectDir)..\..\..\external\sdl\SDL2-2.0.5\lib\x64\SDL2main.lib;$(ProjectDir)..\..\..\external\sdl\SDL2-2.0.5\lib\x64\SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>SDL2.lib;SDL2main.lib;SDL2_ttf.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)..\..\external\SDL2-2.0.5\lib\x64;$(SolutionDir)..\..\external\SDL2_ttf-2.0.14\lib\x64</AdditionalLibraryDirectories>
+      <SubSystem>Console</SubSystem>
     </Link>
+    <CustomBuildStep>
+      <Command>
+      </Command>
+    </CustomBuildStep>
+    <PostBuildEvent>
+      <Command>copy $(SolutionDir)..\..\external\SDL2-2.0.5\lib\x64\SDL2.dll $(OutputPath)
+
+copy $(SolutionDir)..\..\external\SDL2_ttf-2.0.14\lib\x64\*.dll $(OutputPath)
+
+copy $(SolutionDir)3rdparty\liberation-fonts-ttf-2.00.1\*.ttf $(OutputPath)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>

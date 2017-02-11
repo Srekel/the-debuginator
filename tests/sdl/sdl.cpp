@@ -13,14 +13,14 @@ struct UnitTestData
 	int simple_bool_counter;
 };
 
-static UnitTestData testdata = {};
+static UnitTestData g_testdata = {};
 
 static void unittest_debuginator_assert(bool test) {
-	if (testdata.error_index == 256) {
+	if (g_testdata.error_index == 256) {
 		assert(false);
 	}
 	if (!test) {
-		memcpy(testdata.errors[testdata.error_index++], "LOL", 4);
+		memcpy(g_testdata.errors[g_testdata.error_index++], "LOL", 4);
 	}
 	//DebugBreak();
 }
@@ -52,13 +52,13 @@ static void unittest_debuginator_assert(bool test) {
 
 
 
-static void on_item_changed_simplebool(DebuginatorItemDefinition* item, void* value, const char* value_title) {
-	UnitTestData* testdata = ((UnitTestData*)item->user_data);
-	testdata->simplebool_on_change = *((bool*)value);
-	testdata->simple_bool_counter++;
+static void on_item_changed_simplebool(DebuginatorItemDefinition* item, void* value, const char* /*value_title*/) {
+	UnitTestData* testdata_userdata = ((UnitTestData*)item->user_data);
+	testdata_userdata->simplebool_on_change = *((bool*)value);
+	testdata_userdata->simple_bool_counter++;
 }
 
-static void unittest_debug_menu_setup(TheDebuginator* debuginator, UnitTestData* testdata) {
+static void debug_menu_setup(TheDebuginator* debuginator, UnitTestData* testdata) {
 
 	DebuginatorItemDefinition* root = debuginator_new_folder_item(debuginator, 2);
 	root->type = DebuginatorItemType_Folder;
@@ -107,108 +107,98 @@ static void unittest_debug_menu_setup(TheDebuginator* debuginator, UnitTestData*
 	}
 }
 
-static void unittest_debug_menu_run() {
-	//UnitTestData testdata = {};
-	DebuginatorItemDefinition item_buffer[4];
-	DebuginatorItemDefinition* child_buffer[4];
-	TheDebuginator debuginator = debuginator_create(item_buffer, 4, child_buffer, 4);
-	unittest_debug_menu_setup(&debuginator, &testdata);
-	debuginator.hot_item = debuginator.root;
-	//debuginator.active_item = debuginator.root;
-	debuginator_validate(&debuginator);
-	
-	printf("Setup errors found: %d/%d\n", 
-		testdata.error_index, testdata.num_tests);
-	if (testdata.error_index > 0) {
-		printf("Errors found during setup, exiting.\n");
-		return;
-	}
-
-	testdata.num_tests = 0;
-
-	{
-		ASSERT(testdata.simplebool_target == false);
-		ASSERT(testdata.simplebool_on_change == false);
-		DebuginatorInput input = {};
-		debug_menu_handle_input(&debuginator, &input);
-		ASSERT(testdata.simplebool_target == false);
-		ASSERT(testdata.simplebool_on_change == false);
-	}
-	{
-		DebuginatorInput input = {};
-		input.go_child = true;
-		debug_menu_handle_input(&debuginator, &input);
-		ASSERT(debuginator.hot_item == debuginator.root->children[0]);
-		ASSERT(!debuginator.hot_item->is_active);
-		
-		debug_menu_handle_input(&debuginator, &input);
-		ASSERT(debuginator.hot_item == debuginator.root->children[0]);
-		ASSERT(debuginator.hot_item->is_active);
-	}
-	{
-		DebuginatorInput input = {};
-		input.activate = true;
-		debug_menu_handle_input(&debuginator, &input);
-		ASSERT(testdata.simplebool_target == true);
-		ASSERT(testdata.simplebool_on_change == true);
-		ASSERT(testdata.simple_bool_counter == 1);
-	}
-	{
-		DebuginatorInput input = {};
-		input.go_sibling_down = true;
-		input.activate = true;
-		debug_menu_handle_input(&debuginator, &input);
-		ASSERT(testdata.simplebool_target == false);
-		ASSERT(testdata.simplebool_on_change == false);
-		ASSERT(testdata.simple_bool_counter == 2);
-	}
-	{
-		DebuginatorInput input = {};
-		input.go_sibling_down = true;
-		input.activate = true;
-		debug_menu_handle_input(&debuginator, &input);
-		ASSERT(testdata.simplebool_target == true);
-		ASSERT(testdata.simplebool_on_change == true);
-		ASSERT(testdata.simple_bool_counter == 3);
-	}
-
-	printf("Run errors found:   %d/%d\n",
-		testdata.error_index, testdata.num_tests);
-}
 
 #include <SDL.h>
-//#include "SDL_main.h"
-//
-//#ifdef main
-//#  undef main
-//#endif /* main */
-//
-//#if defined(_MSC_VER)
-///* The VC++ compiler needs main defined */
-//#define console_main main
-//#endif
-
-/* This is where execution begins [console apps] */
-//int
-//console_main(int argc, char *argv[])
-//{
-//
-//	SDL_SetMainReady();
-//
-//	/* Run the application main() code */
-//	int status = SDL_main(argc, argv);
-//	return 0;
-//}
-
+#include <SDL_ttf.h>
 
 int main(int argc, char **argv)
 {
 	(void)(argc, argv);
 	//unittest_debug_menu_run();
 
-	SDL_Init(SDL_INIT_VIDEO);
+	if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+		SDL_Quit();
+		return 1;
+	}
+
+	if (TTF_Init() != 0) {
+		SDL_Quit();
+		return 1;
+	}
+
+	SDL_Window* window = SDL_CreateWindow("Debuginator SDL example", 
+		SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, SDL_WINDOW_OPENGL);
+	if (window == NULL) {
+		SDL_Quit();
+		return 1;
+	}
+
+	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+	if (renderer == NULL) {
+		SDL_Quit();
+		return 1;
+	}
+
+	TTF_Font* font = TTF_OpenFont("LiberationMono-Regular.ttf", 22);
+	if (font == NULL) {
+		SDL_Quit();
+		return 1;
+	}
+
+	SDL_Color text_color = { 150, 150, 0, 0 };
+	SDL_Surface* text_surface = TTF_RenderText_Solid(font, "LOLOL", text_color);
+	if (text_surface == NULL) {
+		SDL_Quit();
+		return 1;
+	}
+
+	SDL_Texture* text_texture = SDL_CreateTextureFromSurface(renderer, text_surface);
+	if (text_texture == NULL) {
+		SDL_Quit();
+		return 1;
+	}
+
+	SDL_FreeSurface(text_surface);
+	text_surface = NULL;
 
 
+	DebuginatorItemDefinition item_buffer[4];
+	DebuginatorItemDefinition* child_buffer[4];
+	TheDebuginator debuginator = debuginator_create(item_buffer, 4, child_buffer, 4);
+	debug_menu_setup(&debuginator, &g_testdata);
+	debuginator.hot_item = debuginator.root;
+	debuginator_validate(&debuginator);
+
+	SDL_Rect rectangle;
+	rectangle.x = 0;
+	rectangle.y = 0;
+	rectangle.w = 50;
+	rectangle.h = 50;
+	SDL_RenderFillRect(renderer, &rectangle);
+	SDL_RenderDrawRect(renderer, &rectangle);
+	SDL_RenderPresent(renderer);
+
+	SDL_SetRenderDrawColor(renderer, 0, 0, 50, 255);
+	SDL_RenderClear(renderer);
+	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+
+	SDL_Event event;
+	for (size_t i = 0; i < 500; i++) {
+		while (SDL_PollEvent(&event) != 0)
+		{
+			if (event.type == SDL_QUIT)
+			{
+				i = 10000;
+			}
+		}
+		//SDL_RenderFillRect(renderer, &rectangle);
+		//SDL_RenderDrawRect(renderer, &rectangle);
+		SDL_RenderCopy(renderer, text_texture, NULL, &rectangle);
+		SDL_RenderPresent(renderer);
+		SDL_Delay(10);
+	}
+
+	SDL_DestroyWindow(window);
 	SDL_Quit();
 	return 0;
 }
