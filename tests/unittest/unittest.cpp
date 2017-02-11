@@ -13,15 +13,15 @@ struct UnitTestData
 	int simple_bool_counter;
 };
 
-static UnitTestData testdata = {};
+static UnitTestData g_testdata = {};
 
 static void unittest_debuginator_assert(bool test) {
-	++testdata.num_tests;
-	if (testdata.error_index == 256) {
+	++g_testdata.num_tests;
+	if (g_testdata.error_index == 256) {
 		assert(false);
 	}
 	if (!test) {
-		memcpy(testdata.errors[testdata.error_index++], "LOL", 4);
+		memcpy(g_testdata.errors[g_testdata.error_index++], "LOL", 4);
 	}
 	//DebugBreak();
 }
@@ -53,10 +53,10 @@ static void unittest_debuginator_assert(bool test) {
 
 
 
-static void on_item_changed_simplebool(DebuginatorItemDefinition* item, void* value, const char* value_title) {
-	UnitTestData* testdata = ((UnitTestData*)item->user_data);
-	testdata->simplebool_on_change = *((bool*)value);
-	testdata->simple_bool_counter++;
+static void on_item_changed_simplebool(DebuginatorItemDefinition* item, void* value, const char* /*value_title*/) {
+	UnitTestData* testdata_userdata = ((UnitTestData*)item->user_data);
+	testdata_userdata->simplebool_on_change = *((bool*)value);
+	testdata_userdata->simple_bool_counter++;
 }
 
 static void unittest_debug_menu_setup(TheDebuginator* debuginator, UnitTestData* testdata) {
@@ -109,7 +109,7 @@ static void unittest_debug_menu_setup(TheDebuginator* debuginator, UnitTestData*
 }
 
 static void unittest_debug_menu_run() {
-	//UnitTestData testdata = {};
+	UnitTestData& testdata = g_testdata;
 	DebuginatorItemDefinition item_buffer[4];
 	DebuginatorItemDefinition* child_buffer[4];
 	TheDebuginator debuginator = debuginator_create(item_buffer, 4, child_buffer, 4);
@@ -118,7 +118,7 @@ static void unittest_debug_menu_run() {
 	//debuginator.active_item = debuginator.root;
 	debuginator_validate(&debuginator);
 	
-	printf("Setup errors found: %d/%d\n", 
+	printf("Setup errors found: %u/%u\n", 
 		testdata.error_index, testdata.num_tests);
 	if (testdata.error_index > 0) {
 		printf("Errors found during setup, exiting.\n");
@@ -173,7 +173,7 @@ static void unittest_debug_menu_run() {
 		ASSERT(testdata.simple_bool_counter == 3);
 	}
 
-	printf("Run errors found:   %d/%d\n",
+	printf("Run errors found:   %u/%u\n",
 		testdata.error_index, testdata.num_tests);
 }
 
