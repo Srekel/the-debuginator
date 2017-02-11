@@ -1,0 +1,3 @@
+tests/Build/
+*.VC.db
+*.VC.VC.opendb
