@@ -61,12 +61,22 @@ static void on_item_changed_simplebool(DebuginatorItemDefinition* item, void* va
 
 static void unittest_debug_menu_setup(TheDebuginator* debuginator, UnitTestData* testdata) {
 
-	DebuginatorItemDefinition* root = debuginator_new_folder_item(debuginator, 2);
+	DebuginatorItemDefinition* root = debuginator_new_folder_item(debuginator, "Menu Root", NULL);
 	root->type = DebuginatorItemType_Folder;
 	root->update_type = DebuginatorUpdateType_Never;
 	root->title = "Menu root";
 	root->description = "Menu root of The Debuginator.";
 	debuginator->root = root;
+
+	{
+		static bool bool_values[2] = { 1, 0 };
+		static const char* bool_titles[2] = { "True", "False" };
+
+
+		DEBUGINATOR_create_bool_item(debuginator,
+			"AI/Debug paths", "Show AI pathfinding",
+			on_item_changed_simplebool, g_testdata.simplebool_target);
+	}
 
 	{
 		static bool bool_values[2] = { 1, 0 };
@@ -112,7 +122,7 @@ static void unittest_debug_menu_run() {
 	UnitTestData& testdata = g_testdata;
 	DebuginatorItemDefinition item_buffer[4];
 	DebuginatorItemDefinition* child_buffer[4];
-	TheDebuginator debuginator = debuginator_create(item_buffer, 4, child_buffer, 4);
+	TheDebuginator debuginator = debuginator_create(item_buffer, 4);
 	unittest_debug_menu_setup(&debuginator, &testdata);
 	debuginator.hot_item = debuginator.root;
 	//debuginator.active_item = debuginator.root;

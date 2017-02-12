@@ -60,51 +60,6 @@ static void on_item_changed_simplebool(DebuginatorItemDefinition* item, void* va
 
 static void debug_menu_setup(TheDebuginator* debuginator, UnitTestData* testdata) {
 
-	DebuginatorItemDefinition* root = debuginator_new_folder_item(debuginator, 2);
-	root->type = DebuginatorItemType_Folder;
-	root->update_type = DebuginatorUpdateType_Never;
-	root->title = "Menu root";
-	root->description = "Menu root of The Debuginator.";
-	debuginator->root = root;
-
-	{
-		static bool bool_values[2] = { 1, 0 };
-		static const char* bool_titles[2] = { "True", "False" };
-
-		DebuginatorItemDefinition* bool_test = debuginator_new_leaf_item(debuginator);
-		bool_test->type = DebuginatorItemType_Array;
-		bool_test->update_type = DebuginatorUpdateType_Never;
-		bool_test->title = "bool_simple";
-		bool_test->description = "Simple boolean variable.";
-		bool_test->value_titles = bool_titles;
-		bool_test->array_values = bool_values;
-		bool_test->num_values = 2;
-		bool_test->array_item_size = sizeof(bool_values[0]);
-		bool_test->target = &testdata->simplebool_target;
-		bool_test->on_item_changed = on_item_changed_simplebool;
-		bool_test->user_data = testdata;
-		debuginator_add_child(root, bool_test);
-	}
-	{
-		static bool bool_array[2] = { 1, 0 };
-		static bool* bool_values[2] = { bool_array, bool_array+1};
-		static const char* bool_titles[2] = { "True", "False" };
-
-		DebuginatorItemDefinition* bool_test = debuginator_new_leaf_item(debuginator);
-		bool_test->type = DebuginatorItemType_ArrayOfPtrs;
-		bool_test->update_type = DebuginatorUpdateType_Never;
-		bool_test->title = "bool_simple array of ptrs";
-		bool_test->description = "Simple boolean variable 2.";
-		bool_test->value_titles = bool_titles;
-		bool_test->array_of_ptr_values = (void**)bool_values;
-		bool_test->num_values = 2;
-		bool_test->array_item_size = sizeof(bool_values[0][0]);
-		bool_test->target = &testdata->simplebool_target;
-		bool_test->on_item_changed = on_item_changed_simplebool;
-		bool_test->user_data = testdata;
-
-		debuginator_add_child(root, bool_test);
-	}
 }
 
 
@@ -114,7 +69,6 @@ static void debug_menu_setup(TheDebuginator* debuginator, UnitTestData* testdata
 int main(int argc, char **argv)
 {
 	(void)(argc, argv);
-	//unittest_debug_menu_run();
 
 	if (SDL_Init(SDL_INIT_VIDEO) != 0) {
 		SDL_Quit();
