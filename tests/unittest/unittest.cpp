@@ -33,10 +33,10 @@ static void unittest_debuginator_assert(bool test) {
 
 
 //
-//DebuginatorItemDefinition debug_menu_define(DebuginatorItemType type,
+//DebuginatorItem debug_menu_define(DebuginatorItemType type,
 //	const char** value_titles, const char** value_descriptions, void** values, unsigned num_values) {
 //
-//	DebuginatorItemDefinition item = {};
+//	DebuginatorItem item = {};
 //	item.type = type;
 //	item.value_titles = value_titles;
 //	item.value_descriptions = value_descriptions;
@@ -45,7 +45,7 @@ static void unittest_debuginator_assert(bool test) {
 //	return item;
 //}
 //
-//DebuginatorItemDefinition debug_menu_define_bool(const char** value_descriptions = 0x0) {
+//DebuginatorItem debug_menu_define_bool(const char** value_descriptions = 0x0) {
 //	static unsigned bool_values[2] = { 1, 0 };
 //	static const char* bool_titles[2] = { "True, False" };
 //	return debug_menu_define(ItemType_Array, bool_titles, value_descriptions, 0x0, bool_values, 2);
@@ -53,21 +53,20 @@ static void unittest_debuginator_assert(bool test) {
 
 
 
-static void on_item_changed_simplebool(DebuginatorItemDefinition* item, void* value, const char* /*value_title*/) {
+static void on_item_changed_simplebool(DebuginatorItem* item, void* value, const char* /*value_title*/) {
 	UnitTestData* testdata_userdata = ((UnitTestData*)item->user_data);
 	testdata_userdata->simplebool_on_change = *((bool*)value);
 	testdata_userdata->simple_bool_counter++;
 }
 
 static void unittest_debug_menu_setup(TheDebuginator* debuginator, UnitTestData* testdata) {
+	debuginator_create_bool_item(debuginator, "SimpleBool 1", "Change a bool.", &g_testdata.simplebool_target);
+	debuginator_create_bool_item(debuginator, "Folder/SimpleBool 2", "Change a bool.", &g_testdata.simplebool_target);
+	debuginator_create_bool_item(debuginator, "Folder/SimpleBool 3", "Change a bool.", &g_testdata.simplebool_target);
+	debuginator_new_folder_item(debuginator, NULL, "Folder2", 0);
+	debuginator_create_bool_item(debuginator, "Folder2/SimpleBool 4", "Change a bool.", &g_testdata.simplebool_target);
 
-	DebuginatorItemDefinition* root = debuginator_new_folder_item(debuginator, "Menu Root", NULL);
-	root->type = DebuginatorItemType_Folder;
-	root->update_type = DebuginatorUpdateType_Never;
-	root->title = "Menu root";
-	root->description = "Menu root of The Debuginator.";
-	debuginator->root = root;
-
+	/*
 	{
 		static bool bool_values[2] = { 1, 0 };
 		static const char* bool_titles[2] = { "True", "False" };
@@ -82,7 +81,7 @@ static void unittest_debug_menu_setup(TheDebuginator* debuginator, UnitTestData*
 		static bool bool_values[2] = { 1, 0 };
 		static const char* bool_titles[2] = { "True", "False" };
 
-		DebuginatorItemDefinition* bool_test = debuginator_new_leaf_item(debuginator);
+		DebuginatorItem* bool_test = debuginator_new_leaf_item(debuginator);
 		bool_test->type = DebuginatorItemType_Array;
 		bool_test->update_type = DebuginatorUpdateType_Never;
 		bool_test->title = "bool_simple";
@@ -101,7 +100,7 @@ static void unittest_debug_menu_setup(TheDebuginator* debuginator, UnitTestData*
 		static bool* bool_values[2] = { bool_array, bool_array+1};
 		static const char* bool_titles[2] = { "True", "False" };
 
-		DebuginatorItemDefinition* bool_test = debuginator_new_leaf_item(debuginator);
+		DebuginatorItem* bool_test = debuginator_new_leaf_item(debuginator);
 		bool_test->type = DebuginatorItemType_ArrayOfPtrs;
 		bool_test->update_type = DebuginatorUpdateType_Never;
 		bool_test->title = "bool_simple array of ptrs";
@@ -115,18 +114,14 @@ static void unittest_debug_menu_setup(TheDebuginator* debuginator, UnitTestData*
 		bool_test->user_data = testdata;
 
 		debuginator_add_child(root, bool_test);
-	}
+	}*/
 }
 
 static void unittest_debug_menu_run() {
 	UnitTestData& testdata = g_testdata;
-	DebuginatorItemDefinition item_buffer[4];
-	DebuginatorItemDefinition* child_buffer[4];
-	TheDebuginator debuginator = debuginator_create(item_buffer, 4);
+	DebuginatorItem item_buffer[16];
+	TheDebuginator debuginator = debuginator_create(item_buffer, sizeof(item_buffer) / sizeof(item_buffer[0]));
 	unittest_debug_menu_setup(&debuginator, &testdata);
-	debuginator.hot_item = debuginator.root;
-	//debuginator.active_item = debuginator.root;
-	debuginator_validate(&debuginator);
 	
 	printf("Setup errors found: %u/%u\n", 
 		testdata.error_index, testdata.num_tests);
@@ -139,13 +134,13 @@ static void unittest_debug_menu_run() {
 
 	{
 		ASSERT(testdata.simplebool_target == false);
-		ASSERT(testdata.simplebool_on_change == false);
 		DebuginatorInput input = {};
 		debug_menu_handle_input(&debuginator, &input);
 		ASSERT(testdata.simplebool_target == false);
-		ASSERT(testdata.simplebool_on_change == false);
+
 	}
-	{
+
+	/*{
 		DebuginatorInput input = {};
 		input.go_child = true;
 		debug_menu_handle_input(&debuginator, &input);
@@ -182,7 +177,7 @@ static void unittest_debug_menu_run() {
 		ASSERT(testdata.simplebool_on_change == true);
 		ASSERT(testdata.simple_bool_counter == 3);
 	}
-
+*/
 	printf("Run errors found:   %u/%u\n",
 		testdata.error_index, testdata.num_tests);
 }

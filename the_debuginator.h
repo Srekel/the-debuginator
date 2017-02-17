@@ -41,12 +41,16 @@
 #endif
 
 #ifndef DEBUGINATOR_memcpy
-#include <cstring.h>
+#include <string.h>
 #define DEBUGINATOR_memcpy memcpy
 #endif
 
 #ifndef DEBUGINATOR_FREE_LIST_CAPACITY
 #define DEBUGINATOR_FREE_LIST_CAPACITY 256
+#endif
+
+#ifndef DEBUGINATOR_max_title_length
+#define DEBUGINATOR_max_title_length 32
 #endif
 
 enum DebuginatorItemType {
@@ -76,48 +80,29 @@ struct DebuginatorFolderData {
 	DebuginatorItem* hot_child;
 };
 
-typedef void (*DebuginatorOnItemChangedCallback)(DebuginatorItem* item, void* value, const char value_title);
+typedef void (*DebuginatorOnItemChangedCallback)(DebuginatorItem* item, void* value, const char* value_title);
 
 struct DebuginatorLeafData {
-	void* user_data;
-	DebuginatorDescription_t description;
+	const char* description;
 
 	bool is_active;
 	char* hot_value;
 	unsigned hot_index;
 
-	DebuginatorTitle_t* value_titles;
-	DebuginatorDescription_t* value_descriptions;
-	union {
-		void* array_values;
-		void** array_of_ptr_values;
-	};
+	const char** value_titles;
+	const char** value_descriptions;
+	void* values;
 
 	unsigned num_values;
 	unsigned array_element_size;
 
-	void(*get_array_values)(DebuginatorItem* item,
-		void** out_values,
-		DebuginatorTitle_t** out_value_titles,
-		DebuginatorDescription_t** out_value_descriptions,
-		unsigned* out_num_values, unsigned* out_array_element_size);
-
-	void(*get_array_of_ptr_values)(DebuginatorItem* item,
-		void*** out_values,
-		DebuginatorTitle_t** out_value_titles,
-		DebuginatorDescription_t** out_value_descriptions,
-		unsigned* out_num_values, unsigned* out_array_element_size);
-
-	void* target;
-	DebuginatorOnItemChangedCallback on_item_changed;
+	DebuginatorOnItemChangedCallback on_item_changed_callback;
 };
 
 struct DebuginatorItem {
 	DebuginatorItemType type;
-
-	char path[128];
-	char* title;
-	unsigned title_length;
+	char title[DEBUGINATOR_max_title_length];
+	void* user_data;
 
 	DebuginatorItem* next_sibling;
 	DebuginatorItem* parent;
@@ -140,16 +125,6 @@ struct TheDebuginator {
 	unsigned free_list[DEBUGINATOR_FREE_LIST_CAPACITY];
 };
 
-TheDebuginator debuginator_create(DebuginatorItem* item_buffer, unsigned item_buffer_capacity) {
-	TheDebuginator debuginator = {};
-	debuginator.item_buffer_capacity = item_buffer_capacity;
-	debuginator.item_buffer = item_buffer;
-	memset(item_buffer, 0, sizeof(DebuginatorItem) * item_buffer_capacity);
-	DebuginatorItem* item = debuginator_new_folder_item(&debuginator, "Menu Root");
-	debuginator->root = item;
-	return debuginator;
-}
-
 DebuginatorItem* debuginator_new_leaf_item(TheDebuginator* debuginator) {
 	DEBUGINATOR_assert(debuginator->item_buffer_size < debuginator->item_buffer_capacity);
 	return &debuginator->item_buffer[debuginator->item_buffer_size++];
@@ -171,227 +146,158 @@ DebuginatorItem* debuginator_get_free_item(TheDebuginator* debuginator) {
 	return item;
 }
 
-DebuginatorItem* debuginator_find_item_recursively(DebuginatorItem* item, const char* path) {
-	char* first_slash = strchr(path, '/');
-	if (first_slash == NULL) {
-		// Reached a leaf item
-		if (strcmp(path, item->title) == 0) {
-			return item;
-		}
-
-		return NULL;
+void debuginator_set_title(DebuginatorItem* item, const char* title, unsigned title_length) {
+	if (title_length == 0) {
+		title_length = strlen(title);
 	}
 
-	#define DEBUGINATOR_min(a, b) (((a) < (b)) ? (a) : (b))
-	if (first_slash - path != strlen(item->title) || memcmp(path, item->title, first_slash - path) != 0) {
-		return NULL;
+	if (title_length >= DEBUGINATOR_max_title_length) {
+#pragma warning(suppress: 4996)
+		strncpy(item->title, title, DEBUGINATOR_max_title_length - 3);
+		item->title[DEBUGINATOR_max_title_length - 3] = '.';
+		item->title[DEBUGINATOR_max_title_length - 2] = '.';
+		item->title[DEBUGINATOR_max_title_length - 1] = '\0';
 	}
-
-	DebuginatorItem* child = item->first_child;
-	while (child) {
-		DebuginatorItem* found_item = debuginator_find_item_recursively(child, first_slash);
-		if (found_item != NULL) {
-			return found_item;
-		}
-
-		child = child->next_sibling;
-	}
-
-	return NULL;
-}
-
-DebuginatorItem* debuginator_find_item(TheDebuginator* debuginator, const char* path) {
-	DebuginatorItem* child = debuginator->root->first_child;
-	while (child) {
-		DebuginatorItem* found_item = debuginator_find_item_recursively(child, path);
-		if (found_item != NULL) {
-			return found_item;
-		}
-
-		child = child->next_sibling;
-	}
-
-	return NULL;
-}
-
-DebuginatorItem* debuginator_create_path_recursively(TheDebuginator* debuginator, const char* path) {
-
-}
-
-DebuginatorItem* debuginator_create_path(TheDebuginator* debuginator, const char* path) {
-	char* first_slash = strchr(path, '/');
-	DebuginatorItem* child = debuginator->root->first_child;
-	while (child) {
-		if (memcmp(child->title, path, DEBUGINATOR_min(first_slash - path, strlen(child->title) == 0)
-		DebuginatorItem* found_item = debuginator_find_item_recursively(child, path);
-		if (found_item != NULL) {
-			return found_item;
-		}
-
-		child = child->next_sibling;
+	else {
+#pragma warning(suppress: 4996)
+		strncpy(item->title, title, title_length);
 	}
 }
 
-DebuginatorItem* debuginator_new_folder_item(TheDebuginator* debuginator, const char* path, DebuginatorItem* parent) {
+void debuginator_set_parent(DebuginatorItem* item, DebuginatorItem* parent) {
+	if (parent == NULL)
+		return;
+
+	DEBUGINATOR_assert(item->parent == NULL || item->parent == parent);
+	item->parent = parent;
+	if (parent->folder.first_child == NULL) {
+		parent->folder.first_child = item;
+	}
+	else {
+		DebuginatorItem* last_sibling = parent->folder.first_child;
+		while (last_sibling != NULL)
+		{
+			if (last_sibling == item) {
+				// Item was already in parent
+				return;
+			}
+
+			if (last_sibling->next_sibling == NULL) {
+				// Found the last child, set item as the new last one
+				last_sibling->next_sibling = item;
+				return;
+			}
+
+			last_sibling = last_sibling->next_sibling;
+		}
+	}
+}
+
+DebuginatorItem* debuginator_new_folder_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* title, unsigned title_length) {
 	DEBUGINATOR_assert(debuginator->item_buffer_size < debuginator->item_buffer_capacity);
 	DebuginatorItem* folder_item;
 	if (debuginator->free_list_size > 0) {
 		folder_item = &debuginator->item_buffer[--debuginator->free_list_size];
 	}
 	else {
-	 	folder_item = &debuginator->item_buffer[debuginator->item_buffer_size++];
+		folder_item = &debuginator->item_buffer[debuginator->item_buffer_size++];
 	}
 
 	folder_item->type = DebuginatorItemType_Folder;
-	folder_item->title = title;
-	folder_item->user_data = user_data;
-
-	if (path != NULL) {
-		DebuginatorItem* parent = locate
-	}
-
+	debuginator_set_parent(folder_item, parent);
+	debuginator_set_title(folder_item, title, title_length);
 	return folder_item;
 }
 
-DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
-	const char* path, const char* description,
-	DebuginatorOnItemChangedCallback callback, void* target, unsigned element_size,
-	const char* value_titles, void* array_values, unsigned num_values, void* user_data) {
+DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* path, bool create_if_not_exist) {
 
-	DebuginatorItem* item = NULL;
-	DebuginatorItem* parent = debuginator->root;
+	parent = parent == NULL ? debuginator->root : parent;
 	const char* temp_path = path;
-	while (temp_path) {
+	while (true) {
 		const char* next_slash = strchr(temp_path, '/');
 
-		DebuginatorItem* parent_child = parent->first_child;
+		DebuginatorItem* current_item = NULL;
+		DebuginatorItem* parent_child = parent->folder.first_child;
 		while (parent_child) {
 			unsigned path_part_length = next_slash ? next_slash - temp_path : strlen(temp_path);
 			unsigned title_length = strlen(parent_child->title); // strlen :(
 			unsigned num_characters = (path_part_length > title_length) ? title_length : path_part_length;
 			if (memcmp(parent_child->title, temp_path, num_characters * sizeof(char)) == 0) {
-				parent = parent_child;
+				current_item = parent_child;
 				break;
 			}
 
 			parent_child = parent_child->next_sibling;
 		}
 
+		if (current_item == NULL && !create_if_not_exist) {
+			return NULL;
+		}
+
+		// If current_item is set, it means the item already existed and we're just going to reuse it
 		if (next_slash == NULL) {
 			// Found the last part of the path
-			DebuginatorItem* parent_child = parent->first_child;
-			while (parent_child) {
-				if (strcmp(parent_child->title, )
+			if (current_item == NULL) {
+				current_item = debuginator_get_free_item(debuginator);
+				debuginator_set_parent(current_item, parent);
+				debuginator_set_title(current_item, temp_path, 0);
 			}
+			
+			return current_item;
 		}
 		else {
 			// Found a folder
-
-			if (parent == NULL) {
+			parent = current_item;
+			if (current_item == NULL) {
 				// Parent item doesn't exist yet
-				parent = debuginator_new_folder_item(debuginator, path, path - next_slash, parent);
+				parent = debuginator_new_folder_item(debuginator, parent, temp_path, next_slash - temp_path);
 			}
-		}
-	}
-	// Find slash character between item and parent
-	unsigned path_index = DEBUGINATOR_strlen(path);
-	while(path_index > 0 && path[path_index] != '/') {
-		--path_index;
-	}
-
-	DebuginatorItem* item = debuginator_find_item(debuginator, path);
-	if (item == NULL) {
-		// Item has never existed, create new one
-		item = debuginator_get_free_item(debuginator);
-
-		if (path_index > 0) {
-			// Item has a parent, find it or create it (recursively)
-			DEBUGINATOR_assert(path_index < 128);
-			char parent_path[128];
-			strncpy(parent_path, path, path_index);
-			parent_path[path_index] = '\0';
-			parent = debuginator_create_folder_item(debuginator, parent_path);
-			item->parent = parent;
+			temp_path = next_slash + 1;
 		}
 	}
 
+	DEBUGINATOR_assert(false);
+	return NULL;
+}
+
+DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
+	DebuginatorItem* parent, const char* path, const char* description,
+	DebuginatorOnItemChangedCallback on_item_changed_callback, void* user_data,
+	const char** value_titles, void* values, unsigned num_values, unsigned value_size) {
+
+	DebuginatorItem* item = debuginator_get_item(debuginator, parent, path, true);
 	item->type = DebuginatorItemType_Array;
-	item->num_values = num_values;
-	item->array_values = array_values;
-	item->array_element_size = element_size;
-	item->value_titles = value_titles;
+	item->leaf.num_values = num_values;
+	item->leaf.values = values;
+	item->leaf.array_element_size = value_size;
+	item->leaf.value_titles = value_titles;
+	item->leaf.on_item_changed_callback = on_item_changed_callback;
 	item->user_data = user_data;
 
-	if (item->hot_index >= num_values) {
-		item->hot_index = num_values - 1;
+	if (item->leaf.hot_index >= num_values) {
+		item->leaf.hot_index = num_values - 1;
 	}
+
+	//TODO preserve hot item
+	return item;
 }
 
-void debuginator_add_child(DebuginatorItem* parent, DebuginatorItem* child) {
-	DEBUGINATOR_assert(parent->children_size < parent->children_capacity);
-	parent->children[parent->children_size++] = child;
-	child->parent = parent;
+TheDebuginator debuginator_create(DebuginatorItem* item_buffer, unsigned item_buffer_capacity) {
+	TheDebuginator debuginator = {};
+	debuginator.item_buffer_capacity = item_buffer_capacity;
+	debuginator.item_buffer = item_buffer;
+	memset(item_buffer, 0, sizeof(DebuginatorItem) * item_buffer_capacity);
+	DebuginatorItem* item = debuginator_new_folder_item(&debuginator, NULL, "Menu Root", 0);
+	debuginator.root = item;
+	return debuginator;
 }
 
-static void debuginator_validate_item(DebuginatorItem* item) {
-	DEBUGINATOR_assert(item->type != DebuginatorItemType_Undefined);
-
-	if (item->type == DebuginatorItemType_Folder) {
-		DEBUGINATOR_assert(item->children != 0);
-		//DEBUGINATOR_assert(item->children_capacity > 0);
-		//DEBUGINATOR_assert(item->title != NULL); // TODO typedef support
-		DEBUGINATOR_assert(item->target == 0);
-		DEBUGINATOR_assert(item->on_item_changed == 0);
-		DEBUGINATOR_assert(item->num_values == 0);
-		DEBUGINATOR_assert(item->value_titles == 0);
-		DEBUGINATOR_assert(item->value_descriptions == 0);
-		DEBUGINATOR_assert(item->array_values == 0);
-		DEBUGINATOR_assert(item->array_of_ptr_values == 0);
-		DEBUGINATOR_assert(item->array_element_size == 0);
-		DEBUGINATOR_assert(item->get_array_values == 0);
-		DEBUGINATOR_assert(item->get_array_of_ptr_values == 0);
-
-		for (unsigned i = 0; i < item->children_capacity; i++) {
-			debuginator_validate_item(item->children[i]);
-		}
-	}
-	else if (item->type == DebuginatorItemType_Array) {
-		DEBUGINATOR_assert(item->children == NULL);
-		DEBUGINATOR_assert(item->children_capacity == 0);
-		DEBUGINATOR_assert(item->target != NULL
-			|| item->on_item_changed != NULL);
-		DEBUGINATOR_assert(item->num_values > 0);
-		DEBUGINATOR_assert(item->value_titles != NULL);
-		//DEBUGINATOR_assert(item->value_descriptions == NULL);
-		DEBUGINATOR_assert(item->array_values != NULL);
-		DEBUGINATOR_assert(item->array_element_size > 0);
-	}
-	else if (item->type == DebuginatorItemType_ArrayOfPtrs) {
-		DEBUGINATOR_assert(item->children == NULL);
-		DEBUGINATOR_assert(item->children_capacity == 0);
-		DEBUGINATOR_assert(item->target != NULL
-			|| item->on_item_changed != NULL);
-		DEBUGINATOR_assert(item->num_values > 0);
-		DEBUGINATOR_assert(item->value_titles != NULL);
-		//DEBUGINATOR_assert(item->value_descriptions == NULL);
-		DEBUGINATOR_assert(item->array_of_ptr_values != NULL);
-		DEBUGINATOR_assert(item->array_element_size > 0);
-	}
-
-	if (item->update_type != DebuginatorUpdateType_Never) {
-		DEBUGINATOR_assert(item->get_array_values == 0
-			|| item->get_array_of_ptr_values == 0);
-	}
-}
-
-void debuginator_validate(TheDebuginator* debuginator) {
-	//printf("Root item:   %llx\n", &debuginator->root);
-	//printf("Hot item:    %llx\n", debuginator->hot_item);
-	//printf("Active item: %llx\n", debuginator->active_item);
-	DEBUGINATOR_assert(debuginator->hot_item == debuginator->root);
-	//DEBUGINATOR_assert(debuginator->active_item == debuginator->root);
-	debuginator_validate_item(debuginator->root);
-}
+//██╗███╗   ██╗██████╗ ██╗   ██╗████████╗
+//██║████╗  ██║██╔══██╗██║   ██║╚══██╔══╝
+//██║██╔██╗ ██║██████╔╝██║   ██║   ██║
+//██║██║╚██╗██║██╔═══╝ ██║   ██║   ██║
+//██║██║ ╚████║██║     ╚██████╔╝   ██║
+//╚═╝╚═╝  ╚═══╝╚═╝      ╚═════╝    ╚═╝
 
 struct DebuginatorInput {
 	bool activate;
@@ -402,54 +308,42 @@ struct DebuginatorInput {
 };
 
 static void debuginator_activate(DebuginatorItem* item) {
-	void* value;
-	if (item->type == DebuginatorItemType_ArrayOfPtrs) {
-		void** ptr_to_value = (item->array_of_ptr_values + item->hot_index);
-		value = *ptr_to_value;
-	}
-	else {
-		value = ((char*)item->array_values) + item->hot_index * item->array_element_size;
-	}
-
-	if (item->target) {
-		memcpy(item->target, value, item->array_element_size);
-	}
-
-	if (item->on_item_changed) {
-		item->on_item_changed(item, value, item->value_titles[item->hot_index]);
-	}
+	void* value = ((char*)item->leaf.values) + item->leaf.hot_index * item->leaf.array_element_size;
+	item->leaf.on_item_changed_callback(item, value, item->leaf.value_titles[item->leaf.hot_index]);
 }
 
 void debug_menu_handle_input(TheDebuginator* debuginator, DebuginatorInput* input) {
 	if (input->go_child) {
-		if (debuginator->hot_item->type != DebuginatorItemType_Folder && !debuginator->hot_item->is_active) {
-			debuginator->hot_item->is_active = true;
+		if (debuginator->hot_item->type != DebuginatorItemType_Folder && !debuginator->hot_item->leaf.is_active) {
+			debuginator->hot_item->leaf.is_active = true;
 		}
 		else {
 			DebuginatorItem* parent = debuginator->hot_item;
-			if (parent->type == DebuginatorItemType_Folder) {
-				debuginator->hot_item = parent->children[0];
+			if (parent->type == DebuginatorItemType_Folder && parent->folder.hot_child != NULL) {
+				debuginator->hot_item = parent->folder.hot_child;
 			}
 		}
 	}
 
 	if (input->go_sibling_down) {
-		if (debuginator->hot_item->is_active) {
-			if (++debuginator->hot_item->hot_index == debuginator->hot_item->num_values) {
-				debuginator->hot_item->hot_index = 0;
+		if (debuginator->hot_item->type != DebuginatorItemType_Folder && debuginator->hot_item->leaf.is_active) {
+			if (++debuginator->hot_item->leaf.hot_index == debuginator->hot_item->leaf.num_values) {
+				debuginator->hot_item->leaf.hot_index = 0;
 			}
 		}
 		else {
-			DebuginatorItem* parent = debuginator->hot_item->parent;
-			if (++parent->hot_index == parent->children_size) {
-				parent->hot_index = 0;
+			if (debuginator->hot_item->next_sibling != NULL) {
+				debuginator->hot_item = debuginator->hot_item->next_sibling;
+				debuginator->hot_item->parent->folder.hot_child = debuginator->hot_item;
 			}
-
-			debuginator->hot_item = parent->children[parent->hot_index];
+			else {
+				debuginator->hot_item = debuginator->hot_item->parent->folder.first_child;
+				debuginator->hot_item->parent->folder.hot_child = debuginator->hot_item;
+			}
 		}
 	}
 
-	if (input->activate && debuginator->hot_item->is_active) {
+	if (input->activate && debuginator->hot_item->type != DebuginatorItemType_Folder) {
 		debuginator_activate(debuginator->hot_item);
 	}
 }
@@ -461,14 +355,17 @@ void debug_menu_handle_input(TheDebuginator* debuginator, DebuginatorInput* inpu
 // ╚██████╔╝   ██║   ██║███████╗██║   ██║      ██║
 //  ╚═════╝    ╚═╝   ╚═╝╚══════╝╚═╝   ╚═╝      ╚═╝
 
+void debuginator_copy_1byte(DebuginatorItem* item, void* value, const char* value_title) {
+	memcpy(item->user_data, value, 1);
+}
 
-#define DEBUGINATOR_create_bool_item(debuginator, path, description, function, variable) \
-	do { \
-		static bool bool_values[2] = { true, false }; \
-		static const char* bool_titles[2] = { "True", "False" }; \
-		debuginator_create_item(debuginator, path, \
-			description, function, &variable, sizeof(variable), \
-			bool_titles, bool_values); \
-	} while(false)
+void debuginator_create_bool_item(TheDebuginator* debuginator, const char* path, const char* description, void* user_data) {
+	static bool bool_values[2] = { true, false }; 
+	static const char* bool_titles[2] = { "True", "False" };
+	DEBUGINATOR_assert(sizeof(bool_values[0]) == 1);
+	debuginator_create_array_item(debuginator, NULL, path,
+		description, debuginator_copy_1byte, user_data,
+		bool_titles, bool_values, 2, sizeof(bool_values[0]));
+}
 
 #endif // INCLUDE_THE_DEBUGINATOR_H
