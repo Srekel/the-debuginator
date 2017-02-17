@@ -292,6 +292,10 @@ TheDebuginator debuginator_create(DebuginatorItem* item_buffer, unsigned item_bu
 	return debuginator;
 }
 
+void debuginator_initialize(TheDebuginator* debuginator) {
+	debuginator->hot_item = debuginator->root->folder.first_child;
+}
+
 //██╗███╗   ██╗██████╗ ██╗   ██╗████████╗
 //██║████╗  ██║██╔══██╗██║   ██║╚══██╔══╝
 //██║██╔██╗ ██║██████╔╝██║   ██║   ██║
@@ -326,9 +330,15 @@ void debug_menu_handle_input(TheDebuginator* debuginator, DebuginatorInput* inpu
 	}
 
 	if (input->go_sibling_down) {
-		if (debuginator->hot_item->type != DebuginatorItemType_Folder && debuginator->hot_item->leaf.is_active) {
-			if (++debuginator->hot_item->leaf.hot_index == debuginator->hot_item->leaf.num_values) {
-				debuginator->hot_item->leaf.hot_index = 0;
+		DebuginatorItem* hot_item = debuginator->hot_item;
+		if (debuginator->hot_item->type != DebuginatorItemType_Folder) {
+			if (hot_item->leaf.is_active) {
+				if (++debuginator->hot_item->leaf.hot_index == debuginator->hot_item->leaf.num_values) {
+					debuginator->hot_item->leaf.hot_index = 0;
+				}
+			}
+			else {
+
 			}
 		}
 		else {

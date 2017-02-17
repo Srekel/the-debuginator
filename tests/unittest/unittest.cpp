@@ -66,55 +66,6 @@ static void unittest_debug_menu_setup(TheDebuginator* debuginator, UnitTestData*
 	debuginator_new_folder_item(debuginator, NULL, "Folder2", 0);
 	debuginator_create_bool_item(debuginator, "Folder2/SimpleBool 4", "Change a bool.", &g_testdata.simplebool_target);
 
-	/*
-	{
-		static bool bool_values[2] = { 1, 0 };
-		static const char* bool_titles[2] = { "True", "False" };
-
-
-		DEBUGINATOR_create_bool_item(debuginator,
-			"AI/Debug paths", "Show AI pathfinding",
-			on_item_changed_simplebool, g_testdata.simplebool_target);
-	}
-
-	{
-		static bool bool_values[2] = { 1, 0 };
-		static const char* bool_titles[2] = { "True", "False" };
-
-		DebuginatorItem* bool_test = debuginator_new_leaf_item(debuginator);
-		bool_test->type = DebuginatorItemType_Array;
-		bool_test->update_type = DebuginatorUpdateType_Never;
-		bool_test->title = "bool_simple";
-		bool_test->description = "Simple boolean variable.";
-		bool_test->value_titles = bool_titles;
-		bool_test->array_values = bool_values;
-		bool_test->num_values = 2;
-		bool_test->array_item_size = sizeof(bool_values[0]);
-		bool_test->target = &testdata->simplebool_target;
-		bool_test->on_item_changed = on_item_changed_simplebool;
-		bool_test->user_data = testdata;
-		debuginator_add_child(root, bool_test);
-	}
-	{
-		static bool bool_array[2] = { 1, 0 };
-		static bool* bool_values[2] = { bool_array, bool_array+1};
-		static const char* bool_titles[2] = { "True", "False" };
-
-		DebuginatorItem* bool_test = debuginator_new_leaf_item(debuginator);
-		bool_test->type = DebuginatorItemType_ArrayOfPtrs;
-		bool_test->update_type = DebuginatorUpdateType_Never;
-		bool_test->title = "bool_simple array of ptrs";
-		bool_test->description = "Simple boolean variable 2.";
-		bool_test->value_titles = bool_titles;
-		bool_test->array_of_ptr_values = (void**)bool_values;
-		bool_test->num_values = 2;
-		bool_test->array_item_size = sizeof(bool_values[0][0]);
-		bool_test->target = &testdata->simplebool_target;
-		bool_test->on_item_changed = on_item_changed_simplebool;
-		bool_test->user_data = testdata;
-
-		debuginator_add_child(root, bool_test);
-	}*/
 }
 
 static void unittest_debug_menu_run() {
@@ -122,6 +73,7 @@ static void unittest_debug_menu_run() {
 	DebuginatorItem item_buffer[16];
 	TheDebuginator debuginator = debuginator_create(item_buffer, sizeof(item_buffer) / sizeof(item_buffer[0]));
 	unittest_debug_menu_setup(&debuginator, &testdata);
+	debuginator_initialize(&debuginator);
 	
 	printf("Setup errors found: %u/%u\n", 
 		testdata.error_index, testdata.num_tests);
@@ -133,19 +85,48 @@ static void unittest_debug_menu_run() {
 	testdata.num_tests = 0;
 
 	{
+		// Are our expectations after setup correct?
+		DebuginatorItem* expected_hot_item = debuginator_get_item(&debuginator, NULL, "SimpleBool 1", false);
+		ASSERT(expected_hot_item == debuginator.hot_item);
+
 		ASSERT(testdata.simplebool_target == false);
+	}
+	{
+		// Nothing changes if nothing happens
 		DebuginatorInput input = {};
 		debug_menu_handle_input(&debuginator, &input);
 		ASSERT(testdata.simplebool_target == false);
-
 	}
-
-	/*{
+	{
+		// Activating SimpleBool 1 changes bool
+		DebuginatorInput input = {};
+		input.activate = true;
+		debug_menu_handle_input(&debuginator, &input);
+		ASSERT(testdata.simplebool_target == true);
+	}
+	{
+		// Activating SimpleBool 1's second option changes bool to false
+		DebuginatorInput input = {};
+		input.activate = true;
+		input.go_sibling_down = true;
+		debug_menu_handle_input(&debuginator, &input);
+		ASSERT(testdata.simplebool_target == false);
+	}
+	{
+		// Activating SimpleBool 1's first option changes bool to true
+		DebuginatorInput input = {};
+		input.activate = true;
+		input.go_sibling_down = true;
+		debug_menu_handle_input(&debuginator, &input);
+		ASSERT(testdata.simplebool_target == true);
+	}
+	/*
+	{
 		DebuginatorInput input = {};
 		input.go_child = true;
 		debug_menu_handle_input(&debuginator, &input);
-		ASSERT(debuginator.hot_item == debuginator.root->children[0]);
-		ASSERT(!debuginator.hot_item->is_active);
+		//ASSERT(debuginator.hot_item == debuginator.root->children[0]);
+		//ASSERT(!debuginator.hot_item->is_active);
 		
 		debug_menu_handle_input(&debuginator, &input);
 		ASSERT(debuginator.hot_item == debuginator.root->children[0]);
@@ -159,7 +140,8 @@ static void unittest_debug_menu_run() {
 		ASSERT(testdata.simplebool_on_change == true);
 		ASSERT(testdata.simple_bool_counter == 1);
 	}
-	{
+	*/
+	/*{
 		DebuginatorInput input = {};
 		input.go_sibling_down = true;
 		input.activate = true;
