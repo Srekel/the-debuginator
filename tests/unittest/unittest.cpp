@@ -35,8 +35,9 @@ static void unittest_debuginator_assert(bool test) {
 
 static void unittest_on_item_changed_stringtest(DebuginatorItem* item, void* value, const char* value_title) {
 	(void)value_title;
+	const char** string_ptr = (const char**)value;
 	UnitTestData* callback_data = (UnitTestData*)item->user_data; // same as &g_testdata
-	strncpy_s(callback_data->stringtest, (const char*)value, strlen((const char*)value));
+	strncpy_s(callback_data->stringtest, *string_ptr, strlen(*string_ptr));
 }
 
 static void unittest_debug_menu_setup(TheDebuginator* debuginator) {
@@ -51,7 +52,6 @@ static void unittest_debug_menu_setup(TheDebuginator* debuginator) {
 	debuginator_create_array_item(debuginator, NULL, "Folder 2/Choose Which String To Use",
 		"Do it", unittest_on_item_changed_stringtest, &g_testdata,
 		string_titles, string_values, 3, sizeof(string_values[0]));
-
 
 }
 
@@ -221,6 +221,47 @@ static void unittest_debug_menu_run() {
 		debug_menu_handle_input(&debuginator, &input);
 		DebuginatorItem* expected_hot_item = debuginator_get_item(&debuginator, NULL, "Folder 2/Choose Which String To Use", false);
 		ASSERT(expected_hot_item == debuginator.hot_item);
+	}
+	{
+		// Going to child activates string item
+		DebuginatorInput input = {};
+		input.go_child = true;
+		debug_menu_handle_input(&debuginator, &input);
+		ASSERT(debuginator.hot_item->leaf.is_active == true);
+	}
+	{
+		// Going to child changes string
+		DebuginatorInput input = {};
+		input.go_child = true;
+		debug_menu_handle_input(&debuginator, &input);
+		ASSERT(strcmp(testdata.stringtest, "gamestring 1") == 0);
+	}
+	{
+		// Going down goes to next string
+		DebuginatorInput input = {};
+		input.go_sibling_down = true;
+		debug_menu_handle_input(&debuginator, &input);
+		DebuginatorItem* expected_hot_item = debuginator_get_item(&debuginator, NULL, "Folder 2/Choose Which String To Use", false);
+		ASSERT(expected_hot_item == debuginator.hot_item);
+	}
+	{
+		// Going to child changes string
+		DebuginatorInput input = {};
+		input.go_child = true;
+		debug_menu_handle_input(&debuginator, &input);
+		ASSERT(strcmp(testdata.stringtest, "gamestring 2") == 0);
+	}
+	{
+		// Overwrite the item with another item
+		debuginator_create_bool_item(&debuginator, "Folder 2/Choose Which String To Use", "Change a bool.", &g_testdata.simplebool_target);
+	}
+	{
+		// Activate it, we should still be on the second value, so bool should turn to false
+		ASSERT(testdata.simplebool_target == true);
+		DebuginatorInput input = {};
+		input.go_child = true;
+		debug_menu_handle_input(&debuginator, &input);
+		ASSERT(testdata.simplebool_target == false);
 	}
 
 	printf("Run errors found:   %u/%u\n",
