@@ -9,8 +9,8 @@ struct UnitTestData
 	unsigned num_tests;
 
 	bool simplebool_target;
-	bool simplebool_on_change;
-	int simple_bool_counter;
+
+	char stringtest[256];
 };
 
 static UnitTestData g_testdata = {};
@@ -29,42 +29,30 @@ static void unittest_debuginator_assert(bool test) {
 #define DEBUGINATOR_assert unittest_debuginator_assert
 #define ASSERT unittest_debuginator_assert
 
+#define DEBUGINATOR_debug_print printf
+
 #include "../../the_debuginator.h"
 
-
-//
-//DebuginatorItem debug_menu_define(DebuginatorItemType type,
-//	const char** value_titles, const char** value_descriptions, void** values, unsigned num_values) {
-//
-//	DebuginatorItem item = {};
-//	item.type = type;
-//	item.value_titles = value_titles;
-//	item.value_descriptions = value_descriptions;
-//	item.array_values = *values;
-//	item.num_values = num_values;
-//	return item;
-//}
-//
-//DebuginatorItem debug_menu_define_bool(const char** value_descriptions = 0x0) {
-//	static unsigned bool_values[2] = { 1, 0 };
-//	static const char* bool_titles[2] = { "True, False" };
-//	return debug_menu_define(ItemType_Array, bool_titles, value_descriptions, 0x0, bool_values, 2);
-//}
-
-
-
-//static void on_item_changed_simplebool(DebuginatorItem* item, void* value, const char* /*value_title*/) {
-//	UnitTestData* testdata_userdata = ((UnitTestData*)item->user_data);
-//	testdata_userdata->simplebool_on_change = *((bool*)value);
-//	testdata_userdata->simple_bool_counter++;
-//}
+static void unittest_on_item_changed_stringtest(DebuginatorItem* item, void* value, const char* value_title) {
+	(void)value_title;
+	UnitTestData* callback_data = (UnitTestData*)item->user_data; // same as &g_testdata
+	strncpy_s(callback_data->stringtest, (const char*)value, strlen((const char*)value));
+}
 
 static void unittest_debug_menu_setup(TheDebuginator* debuginator) {
 	debuginator_create_bool_item(debuginator, "SimpleBool 1", "Change a bool.", &g_testdata.simplebool_target);
 	debuginator_create_bool_item(debuginator, "Folder/SimpleBool 2", "Change a bool.", &g_testdata.simplebool_target);
 	debuginator_create_bool_item(debuginator, "Folder/SimpleBool 3", "Change a bool.", &g_testdata.simplebool_target);
-	//debuginator_new_folder_item(debuginator, NULL, "Folder2", 0);
-	//debuginator_create_bool_item(debuginator, "Folder2/SimpleBool 4", "Change a bool.", &g_testdata.simplebool_target);
+
+	debuginator_new_folder_item(debuginator, NULL, "Folder 2", 0);
+
+	static const char* string_values[3] = { "gamestring 1", "gamestring 2", "gamestring 3"};
+	static const char* string_titles[3] = { "First value", "Second one", "This is the third." };
+	debuginator_create_array_item(debuginator, NULL, "Folder 2/Choose Which String To Use",
+		"Do it", unittest_on_item_changed_stringtest, &g_testdata,
+		string_titles, string_values, 3, sizeof(string_values[0]));
+
+
 }
 
 static void unittest_debug_menu_run() {
@@ -73,9 +61,11 @@ static void unittest_debug_menu_run() {
 	TheDebuginator debuginator = debuginator_create(item_buffer, sizeof(item_buffer) / sizeof(item_buffer[0]));
 	unittest_debug_menu_setup(&debuginator);
 	debuginator_initialize(&debuginator);
-	
+
+	printf("\n");
 	printf("Setup errors found: %u/%u\n", 
 		testdata.error_index, testdata.num_tests);
+
 	if (testdata.error_index > 0) {
 		printf("Errors found during setup, exiting.\n");
 		return;
@@ -98,21 +88,21 @@ static void unittest_debug_menu_run() {
 		ASSERT(testdata.simplebool_target == false);
 	}
 	{
-		// Activating SimpleBool 1 makes it actives
+		// Going to child activates SimpleBool 1
 		DebuginatorInput input = {};
 		input.go_child = true;
 		debug_menu_handle_input(&debuginator, &input);
 		ASSERT(debuginator.hot_item->leaf.is_active == true);
 	}
 	{
-		// Activating SimpleBool 1 changes bool
+		// Going to child changes SimpleBool 1 bool
 		DebuginatorInput input = {};
 		input.go_child = true;
 		debug_menu_handle_input(&debuginator, &input);
 		ASSERT(testdata.simplebool_target == true);
 	}
 	{
-		// Activating SimpleBool 1's second option changes bool to false
+		// Going to child and sibling at the same time changes SimpleBool 1's to second option and sets bool to false
 		DebuginatorInput input = {};
 		input.go_child = true;
 		input.go_sibling_down = true;
@@ -120,7 +110,7 @@ static void unittest_debug_menu_run() {
 		ASSERT(testdata.simplebool_target == false);
 	}
 	{
-		// Activating SimpleBool 1's first option changes bool to true
+		// Going to child SimpleBool 1's first option changes bool to true
 		DebuginatorInput input = {};
 		input.go_child = true;
 		input.go_sibling_down = true;
@@ -151,7 +141,15 @@ static void unittest_debug_menu_run() {
 		ASSERT(expected_hot_item == debuginator.hot_item);
 	}
 	{
-		// Going down goes to SimpleBool 1
+		// Going down goes to Folder 2
+		DebuginatorInput input = {};
+		input.go_sibling_down = true;
+		debug_menu_handle_input(&debuginator, &input);
+		DebuginatorItem* expected_hot_item = debuginator_get_item(&debuginator, NULL, "Folder 2", false);
+		ASSERT(expected_hot_item == debuginator.hot_item);
+	}
+	{
+		// Going down wraps to SimpleBool 1
 		DebuginatorInput input = {};
 		input.go_sibling_down = true;
 		debug_menu_handle_input(&debuginator, &input);
@@ -174,48 +172,67 @@ static void unittest_debug_menu_run() {
 		DebuginatorItem* expected_hot_item = debuginator_get_item(&debuginator, NULL, "Folder/SimpleBool 2", false);
 		ASSERT(expected_hot_item == debuginator.hot_item);
 	}
-	/*
 	{
+		// Going to child activates SimpleBool 2
 		DebuginatorInput input = {};
 		input.go_child = true;
 		debug_menu_handle_input(&debuginator, &input);
-		//ASSERT(debuginator.hot_item == debuginator.root->children[0]);
-		//ASSERT(!debuginator.hot_item->is_active);
-		
-		debug_menu_handle_input(&debuginator, &input);
-		ASSERT(debuginator.hot_item == debuginator.root->children[0]);
-		ASSERT(debuginator.hot_item->is_active);
+		ASSERT(debuginator.hot_item->leaf.is_active == true);
 	}
 	{
+		// Going to child changes SimpleBool 2 bool
 		DebuginatorInput input = {};
-		input.activate = true;
+		input.go_child = true;
 		debug_menu_handle_input(&debuginator, &input);
 		ASSERT(testdata.simplebool_target == true);
-		ASSERT(testdata.simplebool_on_change == true);
-		ASSERT(testdata.simple_bool_counter == 1);
-	}
-	*/
-	/*{
-		DebuginatorInput input = {};
-		input.go_sibling_down = true;
-		input.activate = true;
-		debug_menu_handle_input(&debuginator, &input);
-		ASSERT(testdata.simplebool_target == false);
-		ASSERT(testdata.simplebool_on_change == false);
-		ASSERT(testdata.simple_bool_counter == 2);
 	}
 	{
+		// Going to parent inactivates item
+		DebuginatorInput input = {};
+		input.go_parent = true;
+		debug_menu_handle_input(&debuginator, &input);
+		ASSERT(debuginator.hot_item->leaf.is_active == false);
+	}
+	{
+		// Going to sibling works as expected
 		DebuginatorInput input = {};
 		input.go_sibling_down = true;
-		input.activate = true;
 		debug_menu_handle_input(&debuginator, &input);
-		ASSERT(testdata.simplebool_target == true);
-		ASSERT(testdata.simplebool_on_change == true);
-		ASSERT(testdata.simple_bool_counter == 3);
+		DebuginatorItem* expected_hot_item = debuginator_get_item(&debuginator, NULL, "Folder/SimpleBool 3", false);
+		ASSERT(expected_hot_item == debuginator.hot_item);
+
+		debug_menu_handle_input(&debuginator, &input);
+		expected_hot_item = debuginator_get_item(&debuginator, NULL, "Folder/SimpleBool 2", false);
+		ASSERT(expected_hot_item == debuginator.hot_item);
+
+		debug_menu_handle_input(&debuginator, &input);
+		expected_hot_item = debuginator_get_item(&debuginator, NULL, "Folder/SimpleBool 3", false);
+		ASSERT(expected_hot_item == debuginator.hot_item);
 	}
-*/
+	{
+		// Go to Folder 2/Choose Which String To Use
+		DebuginatorInput input = {};
+		input.go_parent = true;
+		debug_menu_handle_input(&debuginator, &input);
+		debug_menu_handle_input(&debuginator, &input);
+		input.go_parent = false;
+		input.go_sibling_down = true;
+		input.go_child = true;
+		debug_menu_handle_input(&debuginator, &input);
+		DebuginatorItem* expected_hot_item = debuginator_get_item(&debuginator, NULL, "Folder 2/Choose Which String To Use", false);
+		ASSERT(expected_hot_item == debuginator.hot_item);
+	}
+
 	printf("Run errors found:   %u/%u\n",
 		testdata.error_index, testdata.num_tests);
+
+	printf("\n");
+	if (testdata.error_index == 0) {
+		printf("No errors found, YAY!\n");
+	}
+	else {
+		printf("U are teh sux.\n");
+	}
 }
 
 int main(int argc, char **argv)

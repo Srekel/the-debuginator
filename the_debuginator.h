@@ -45,12 +45,20 @@
 #define DEBUGINATOR_memcpy memcpy
 #endif
 
+#ifndef __cplusplus
+#include <stdbool.h>
+#endif
+
 #ifndef DEBUGINATOR_FREE_LIST_CAPACITY
 #define DEBUGINATOR_FREE_LIST_CAPACITY 256
 #endif
 
 #ifndef DEBUGINATOR_max_title_length
 #define DEBUGINATOR_max_title_length 32
+#endif
+
+#ifndef DEBUGINATOR_debug_print
+#define DEBUGINATOR_debug_print 
 #endif
 
 enum DebuginatorItemType {
@@ -215,14 +223,13 @@ DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, DebuginatorIt
 	const char* temp_path = path;
 	while (true) {
 		const char* next_slash = strchr(temp_path, '/');
+		size_t path_part_length = next_slash ? next_slash - temp_path : strlen(temp_path);
 
 		DebuginatorItem* current_item = NULL;
 		DebuginatorItem* parent_child = parent->folder.first_child;
 		while (parent_child) {
-			size_t path_part_length = next_slash ? next_slash - temp_path : strlen(temp_path);
 			size_t title_length = strlen(parent_child->title); // strlen :(
-			size_t num_characters = (path_part_length > title_length) ? title_length : path_part_length;
-			if (memcmp(parent_child->title, temp_path, num_characters * sizeof(char)) == 0) {
+			if (title_length == path_part_length && memcmp(parent_child->title, temp_path, title_length * sizeof(char)) == 0) {
 				current_item = parent_child;
 				break;
 			}
@@ -296,11 +303,30 @@ TheDebuginator debuginator_create(DebuginatorItem* item_buffer, size_t item_buff
 	return debuginator;
 }
 
+void debuginator_print(DebuginatorItem* item, int indentation) {
+
+	DEBUGINATOR_debug_print("%*s%s\n", indentation, "", item->title);
+	if (item->type == DebuginatorItemType_Folder) {
+		item = item->folder.first_child;
+		while (item) {
+			debuginator_print(item, indentation + 4);
+			item = item->next_sibling;
+		}
+	}
+	else {
+		for (size_t i = 0; i < item->leaf.num_values; i++) {
+			DEBUGINATOR_debug_print("%*s%s\n", indentation + 4, "", item->leaf.value_titles[i]);
+		}
+	}
+}
+
 void debuginator_initialize(TheDebuginator* debuginator) {
 	debuginator->hot_item = debuginator->root->folder.first_child;
 	//if (debuginator->hot_item->type != DebuginatorItemType_Folder) {
 	//	debuginator->hot_item->is
 	//}
+	debuginator_print(debuginator->root, 0);
+	
 }
 
 //██╗███╗   ██╗██████╗ ██╗   ██╗████████╗
@@ -345,6 +371,11 @@ void debug_menu_handle_input(TheDebuginator* debuginator, DebuginatorInput* inpu
 		}
 	}
 
+	if (hot_item != hot_item_new) {
+		// HACK
+		hot_item = hot_item_new;
+	}
+
 	if (input->go_child) {
 		if (hot_item->type != DebuginatorItemType_Folder) {
 			if (hot_item->leaf.is_active) {
@@ -374,9 +405,10 @@ void debug_menu_handle_input(TheDebuginator* debuginator, DebuginatorInput* inpu
 		}
 	}
 
-	if (hot_item != hot_item_new) {
+	// HACK
+	//if (hot_item != hot_item_new) {
 		debuginator->hot_item = hot_item_new;
-	}
+	//}
 
 	//if (input->activate && hot_item->type != DebuginatorItemType_Folder) {
 	//	debuginator_activate(debuginator->hot_item);		
