@@ -61,14 +61,6 @@
 #define DEBUGINATOR_debug_print 
 #endif
 
-enum DebuginatorItemType {
-	DebuginatorItemType_Undefined,
-	// ItemType_Single,
-	DebuginatorItemType_Folder,
-	DebuginatorItemType_Array,
-	DebuginatorItemType_ArrayOfPtrs,
-};
-
 /*
 enum DebuginatorUpdateType {
 	// Set content at init, will never change again.
@@ -82,15 +74,17 @@ enum DebuginatorUpdateType {
 };
 */
 
-struct DebuginatorItem;
-struct DebuginatorFolderData {
-	DebuginatorItem* first_child;
-	DebuginatorItem* hot_child;
-};
+//struct DebuginatorItem;
+typedef struct DebuginatorFolderData {
+	struct DebuginatorItem* first_child;
+	struct DebuginatorItem* hot_child;
+} DebuginatorFolderData;
 
-typedef void (*DebuginatorOnItemChangedCallback)(DebuginatorItem* item, void* value, const char* value_title);
+typedef struct DebuginatorItem DebuginatorItem;
 
-struct DebuginatorLeafData {
+typedef void (*DebuginatorOnItemChangedCallback)(struct DebuginatorItem* item, void* value, const char* value_title);
+
+typedef struct DebuginatorLeafData {
 	const char* description;
 
 	bool is_active;
@@ -105,11 +99,11 @@ struct DebuginatorLeafData {
 	size_t array_element_size;
 
 	DebuginatorOnItemChangedCallback on_item_changed_callback;
-};
+} DebuginatorLeafData;
 
-struct DebuginatorItem {
+typedef struct DebuginatorItem {
 	char title[DEBUGINATOR_max_title_length];
-	DebuginatorItemType type;
+	bool is_folder;
 	void* user_data;
 
 	DebuginatorItem* next_sibling;
@@ -118,10 +112,11 @@ struct DebuginatorItem {
 	union {
 		DebuginatorLeafData leaf;
 		DebuginatorFolderData folder;
+#pragma warning(suppress: 4201) // Unnamed union
 	};
-};
+} DebuginatorItem;
 
-struct TheDebuginator {
+typedef struct TheDebuginator {
 	DebuginatorItem* root;
 	DebuginatorItem* hot_item;
 
@@ -131,7 +126,7 @@ struct TheDebuginator {
 
 	size_t free_list_size;
 	size_t free_list[DEBUGINATOR_FREE_LIST_CAPACITY];
-};
+} TheDebuginator;
 
 DebuginatorItem* debuginator_new_leaf_item(TheDebuginator* debuginator) {
 	DEBUGINATOR_assert(debuginator->item_buffer_size < debuginator->item_buffer_capacity);
@@ -211,7 +206,7 @@ DebuginatorItem* debuginator_new_folder_item(TheDebuginator* debuginator, Debugi
 		folder_item = &debuginator->item_buffer[debuginator->item_buffer_size++];
 	}
 
-	folder_item->type = DebuginatorItemType_Folder;
+	folder_item->is_folder = true;
 	debuginator_set_title(folder_item, title, title_length);
 	debuginator_set_parent(folder_item, parent);
 	return folder_item;
@@ -282,7 +277,7 @@ DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 	const char** value_titles, void* values, unsigned num_values, size_t value_size) {
 
 	DebuginatorItem* item = debuginator_get_item(debuginator, parent, path, true);
-	item->type = DebuginatorItemType_Array;
+	item->is_folder = false;
 	item->leaf.num_values = num_values;
 	item->leaf.values = values;
 	item->leaf.array_element_size = value_size;
@@ -366,7 +361,7 @@ TheDebuginator debuginator_create(DebuginatorItem* item_buffer, size_t item_buff
 void debuginator_print(DebuginatorItem* item, int indentation) {
 
 	DEBUGINATOR_debug_print("%*s%s\n", indentation, "", item->title);
-	if (item->type == DebuginatorItemType_Folder) {
+	if (item->is_folder) {
 		item = item->folder.first_child;
 		while (item) {
 			debuginator_print(item, indentation + 4);
@@ -382,7 +377,7 @@ void debuginator_print(DebuginatorItem* item, int indentation) {
 
 void debuginator_initialize(TheDebuginator* debuginator) {
 	debuginator->hot_item = debuginator->root->folder.first_child;
-	//if (debuginator->hot_item->type != DebuginatorItemType_Folder) {
+	//if (debuginator->hot_item->!is_folder) {
 	//	debuginator->hot_item->is
 	//}
 	debuginator_print(debuginator->root, 0);
@@ -396,13 +391,13 @@ void debuginator_initialize(TheDebuginator* debuginator) {
 //██║██║ ╚████║██║     ╚██████╔╝   ██║
 //╚═╝╚═╝  ╚═══╝╚═╝      ╚═════╝    ╚═╝
 
-struct DebuginatorInput {
+typedef struct DebuginatorInput {
 	//bool activate;
 	bool go_sibling_up;
 	bool go_sibling_down;
 	bool go_parent;
 	bool go_child;
-};
+} DebuginatorInput;
 
 static void debuginator_activate(DebuginatorItem* item) {
 	void* value = ((char*)item->leaf.values) + item->leaf.hot_index * item->leaf.array_element_size;
@@ -414,7 +409,7 @@ void debug_menu_handle_input(TheDebuginator* debuginator, DebuginatorInput* inpu
 	DebuginatorItem* hot_item_new = debuginator->hot_item;
 
 	if (input->go_sibling_down) {
-		if (hot_item->type != DebuginatorItemType_Folder && hot_item->leaf.is_active) {
+		if (!hot_item->is_folder && hot_item->leaf.is_active) {
 			if (++hot_item->leaf.hot_index == hot_item->leaf.num_values) {
 				hot_item->leaf.hot_index = 0;
 			}
@@ -437,7 +432,7 @@ void debug_menu_handle_input(TheDebuginator* debuginator, DebuginatorInput* inpu
 	}
 
 	if (input->go_child) {
-		if (hot_item->type != DebuginatorItemType_Folder) {
+		if (!hot_item->is_folder) {
 			if (hot_item->leaf.is_active) {
 				debuginator_activate(debuginator->hot_item);
 			}
@@ -457,7 +452,7 @@ void debug_menu_handle_input(TheDebuginator* debuginator, DebuginatorInput* inpu
 	}
 
 	if (input->go_parent) {
-		if (hot_item->type != DebuginatorItemType_Folder && hot_item->leaf.is_active) {
+		if (!hot_item->is_folder && hot_item->leaf.is_active) {
 			hot_item->leaf.is_active = false;
 		}
 		else if (hot_item->parent != debuginator->root) {
@@ -470,7 +465,7 @@ void debug_menu_handle_input(TheDebuginator* debuginator, DebuginatorInput* inpu
 		debuginator->hot_item = hot_item_new;
 	//}
 
-	//if (input->activate && hot_item->type != DebuginatorItemType_Folder) {
+	//if (input->activate && hot_item->!is_folder) {
 	//	debuginator_activate(debuginator->hot_item);		
 	//}
 }
@@ -482,7 +477,8 @@ void debug_menu_handle_input(TheDebuginator* debuginator, DebuginatorInput* inpu
 // ╚██████╔╝   ██║   ██║███████╗██║   ██║      ██║
 //  ╚═════╝    ╚═╝   ╚═╝╚══════╝╚═╝   ╚═╝      ╚═╝
 
-void debuginator_copy_1byte(DebuginatorItem* item, void* value, const char* /*value_title*/) {
+void debuginator_copy_1byte(DebuginatorItem* item, void* value, const char* value_title) {
+	(void)value_title;
 	memcpy(item->user_data, value, 1);
 }
 

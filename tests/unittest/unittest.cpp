@@ -6,7 +6,7 @@
 #include <stdbool.h>
 #endif
 
-struct UnitTestData
+typedef struct UnitTestData
 {
 	char errors[256][256];
 	unsigned error_index;
@@ -15,9 +15,9 @@ struct UnitTestData
 	bool simplebool_target;
 
 	char stringtest[256];
-};
+} UnitTestData;
 
-static UnitTestData g_testdata = {};
+static UnitTestData g_testdata;
 
 static void unittest_debuginator_assert(bool test) {
 	++g_testdata.num_tests;
@@ -41,7 +41,12 @@ static void unittest_on_item_changed_stringtest(DebuginatorItem* item, void* val
 	(void)value_title;
 	const char** string_ptr = (const char**)value;
 	UnitTestData* callback_data = (UnitTestData*)item->user_data; // same as &g_testdata
+
+#ifdef __cplusplus
 	strncpy_s(callback_data->stringtest, *string_ptr, strlen(*string_ptr));
+#else
+	strncpy_s(callback_data->stringtest, sizeof(callback_data->stringtest), *string_ptr, strlen(*string_ptr));
+#endif
 }
 
 static void unittest_debug_menu_setup(TheDebuginator* debuginator) {
@@ -56,12 +61,13 @@ static void unittest_debug_menu_setup(TheDebuginator* debuginator) {
 	static const char* string_titles[3] = { "First value", "Second one", "This is the third." };
 	debuginator_create_array_item(debuginator, NULL, "Folder 2/String item",
 		"Do it", unittest_on_item_changed_stringtest, &g_testdata,
-		string_titles, string_values, 3, sizeof(string_values[0]));
+		string_titles, (void*)string_values, 3, sizeof(string_values[0]));
 
 }
 
 static void unittest_debug_menu_run() {
-	UnitTestData& testdata = g_testdata;
+	memset(&g_testdata, 0, sizeof(g_testdata));
+	UnitTestData* testdata = &g_testdata;
 	DebuginatorItem item_buffer[16];
 	TheDebuginator debuginator = debuginator_create(item_buffer, sizeof(item_buffer) / sizeof(item_buffer[0]));
 	unittest_debug_menu_setup(&debuginator);
@@ -69,14 +75,14 @@ static void unittest_debug_menu_run() {
 
 	printf("\n");
 	printf("Setup errors found: %u/%u\n", 
-		testdata.error_index, testdata.num_tests);
+		testdata->error_index, testdata->num_tests);
 
-	if (testdata.error_index > 0) {
+	if (testdata->error_index > 0) {
 		printf("Errors found during setup, exiting.\n");
 		return;
 	}
 
-	testdata.num_tests = 0;
+	testdata->num_tests = 0;
 
 	{
 		// Are our expectations after setup correct?
@@ -84,54 +90,54 @@ static void unittest_debug_menu_run() {
 		ASSERT(expected_hot_item == debuginator.hot_item);
 		ASSERT(expected_hot_item->leaf.is_active == false);
 
-		ASSERT(testdata.simplebool_target == false);
+		ASSERT(testdata->simplebool_target == false);
 	}
 	{
 		// Nothing changes if nothing happens
-		DebuginatorInput input = {};
+		DebuginatorInput input = {0};
 		debug_menu_handle_input(&debuginator, &input);
-		ASSERT(testdata.simplebool_target == false);
+		ASSERT(testdata->simplebool_target == false);
 	}
 	{
 		// Going to child activates SimpleBool 1
-		DebuginatorInput input = {};
+		DebuginatorInput input = {0};
 		input.go_child = true;
 		debug_menu_handle_input(&debuginator, &input);
 		ASSERT(debuginator.hot_item->leaf.is_active == true);
 	}
 	{
 		// Going to child changes SimpleBool 1 bool
-		DebuginatorInput input = {};
+		DebuginatorInput input = {0};
 		input.go_child = true;
 		debug_menu_handle_input(&debuginator, &input);
-		ASSERT(testdata.simplebool_target == true);
+		ASSERT(testdata->simplebool_target == true);
 	}
 	{
 		// Going to child and sibling at the same time changes SimpleBool 1's to second option and sets bool to false
-		DebuginatorInput input = {};
+		DebuginatorInput input = {0};
 		input.go_child = true;
 		input.go_sibling_down = true;
 		debug_menu_handle_input(&debuginator, &input);
-		ASSERT(testdata.simplebool_target == false);
+		ASSERT(testdata->simplebool_target == false);
 	}
 	{
 		// Going to child SimpleBool 1's first option changes bool to true
-		DebuginatorInput input = {};
+		DebuginatorInput input = {0};
 		input.go_child = true;
 		input.go_sibling_down = true;
 		debug_menu_handle_input(&debuginator, &input);
-		ASSERT(testdata.simplebool_target == true);
+		ASSERT(testdata->simplebool_target == true);
 	}
 	{
 		// Going to parent inactivates item
-		DebuginatorInput input = {};
+		DebuginatorInput input = {0};
 		input.go_parent = true;
 		debug_menu_handle_input(&debuginator, &input);
 		ASSERT(debuginator.hot_item->leaf.is_active == false);
 	}
 	{
 		// Going to parent does nothing
-		DebuginatorInput input = {};
+		DebuginatorInput input = {0};
 		input.go_parent = true;
 		debug_menu_handle_input(&debuginator, &input);
 		DebuginatorItem* expected_hot_item = debuginator_get_item(&debuginator, NULL, "SimpleBool 1", false);
@@ -139,7 +145,7 @@ static void unittest_debug_menu_run() {
 	}
 	{
 		// Going down goes to Folder
-		DebuginatorInput input = {};
+		DebuginatorInput input = {0};
 		input.go_sibling_down = true;
 		debug_menu_handle_input(&debuginator, &input);
 		DebuginatorItem* expected_hot_item = debuginator_get_item(&debuginator, NULL, "Folder", false);
@@ -147,7 +153,7 @@ static void unittest_debug_menu_run() {
 	}
 	{
 		// Going down goes to Folder 2
-		DebuginatorInput input = {};
+		DebuginatorInput input = {0};
 		input.go_sibling_down = true;
 		debug_menu_handle_input(&debuginator, &input);
 		DebuginatorItem* expected_hot_item = debuginator_get_item(&debuginator, NULL, "Folder 2", false);
@@ -155,7 +161,7 @@ static void unittest_debug_menu_run() {
 	}
 	{
 		// Going down wraps to SimpleBool 1
-		DebuginatorInput input = {};
+		DebuginatorInput input = {0};
 		input.go_sibling_down = true;
 		debug_menu_handle_input(&debuginator, &input);
 		DebuginatorItem* expected_hot_item = debuginator_get_item(&debuginator, NULL, "SimpleBool 1", false);
@@ -163,7 +169,7 @@ static void unittest_debug_menu_run() {
 	}
 	{
 		// Go to Folder
-		DebuginatorInput input = {};
+		DebuginatorInput input = {0};
 		input.go_sibling_down = true;
 		debug_menu_handle_input(&debuginator, &input);
 		DebuginatorItem* expected_hot_item = debuginator_get_item(&debuginator, NULL, "Folder", false);
@@ -171,7 +177,7 @@ static void unittest_debug_menu_run() {
 	}
 	{
 		// Going to child goes to SimpleBool 2
-		DebuginatorInput input = {};
+		DebuginatorInput input = {0};
 		input.go_child = true;
 		debug_menu_handle_input(&debuginator, &input);
 		DebuginatorItem* expected_hot_item = debuginator_get_item(&debuginator, NULL, "Folder/SimpleBool 2", false);
@@ -179,28 +185,28 @@ static void unittest_debug_menu_run() {
 	}
 	{
 		// Going to child activates SimpleBool 2
-		DebuginatorInput input = {};
+		DebuginatorInput input = {0};
 		input.go_child = true;
 		debug_menu_handle_input(&debuginator, &input);
 		ASSERT(debuginator.hot_item->leaf.is_active == true);
 	}
 	{
 		// Going to child changes SimpleBool 2 bool
-		DebuginatorInput input = {};
+		DebuginatorInput input = {0};
 		input.go_child = true;
 		debug_menu_handle_input(&debuginator, &input);
-		ASSERT(testdata.simplebool_target == true);
+		ASSERT(testdata->simplebool_target == true);
 	}
 	{
 		// Going to parent inactivates item
-		DebuginatorInput input = {};
+		DebuginatorInput input = {0};
 		input.go_parent = true;
 		debug_menu_handle_input(&debuginator, &input);
 		ASSERT(debuginator.hot_item->leaf.is_active == false);
 	}
 	{
 		// Going to sibling works as expected
-		DebuginatorInput input = {};
+		DebuginatorInput input = {0};
 		input.go_sibling_down = true;
 		debug_menu_handle_input(&debuginator, &input);
 		DebuginatorItem* expected_hot_item = debuginator_get_item(&debuginator, NULL, "Folder/SimpleBool 3", false);
@@ -220,7 +226,7 @@ static void unittest_debug_menu_run() {
 	}
 	{
 		// Go to Folder 2/String item
-		DebuginatorInput input = {};
+		DebuginatorInput input = {0};
 		input.go_parent = true;
 		debug_menu_handle_input(&debuginator, &input);
 		debug_menu_handle_input(&debuginator, &input);
@@ -233,21 +239,21 @@ static void unittest_debug_menu_run() {
 	}
 	{
 		// Going to child activates string item
-		DebuginatorInput input = {};
+		DebuginatorInput input = {0};
 		input.go_child = true;
 		debug_menu_handle_input(&debuginator, &input);
 		ASSERT(debuginator.hot_item->leaf.is_active == true);
 	}
 	{
 		// Going to child changes string
-		DebuginatorInput input = {};
+		DebuginatorInput input = {0};
 		input.go_child = true;
 		debug_menu_handle_input(&debuginator, &input);
-		ASSERT(strcmp(testdata.stringtest, "gamestring 1") == 0);
+		ASSERT(strcmp(testdata->stringtest, "gamestring 1") == 0);
 	}
 	{
 		// Going down goes to next string
-		DebuginatorInput input = {};
+		DebuginatorInput input = {0};
 		input.go_sibling_down = true;
 		debug_menu_handle_input(&debuginator, &input);
 		DebuginatorItem* expected_hot_item = debuginator_get_item(&debuginator, NULL, "Folder 2/String item", false);
@@ -255,22 +261,22 @@ static void unittest_debug_menu_run() {
 	}
 	{
 		// Going to child changes string
-		DebuginatorInput input = {};
+		DebuginatorInput input = {0};
 		input.go_child = true;
 		debug_menu_handle_input(&debuginator, &input);
-		ASSERT(strcmp(testdata.stringtest, "gamestring 2") == 0);
+		ASSERT(strcmp(testdata->stringtest, "gamestring 2") == 0);
 	}
 	{
 		// Overwrite the item with another item
-		debuginator_create_bool_item(&debuginator, "Folder 2/String item", "Change a bool.", &g_testdata.simplebool_target);
+		debuginator_create_bool_item(&debuginator, "Folder 2/String item", "Change a bool.", &testdata->simplebool_target);
 	}
 	{
 		// Activate it, we should still be on the second value, so bool should turn to false
-		ASSERT(testdata.simplebool_target == true);
-		DebuginatorInput input = {};
+		ASSERT(testdata->simplebool_target == true);
+		DebuginatorInput input = {0};
 		input.go_child = true;
 		debug_menu_handle_input(&debuginator, &input);
-		ASSERT(testdata.simplebool_target == false);
+		ASSERT(testdata->simplebool_target == false);
 	}
 	{
 		// Remove item
@@ -290,10 +296,10 @@ static void unittest_debug_menu_run() {
 	}
 
 	printf("Run errors found:   %u/%u\n",
-		testdata.error_index, testdata.num_tests);
+		testdata->error_index, testdata->num_tests);
 
 	printf("\n");
-	if (testdata.error_index == 0) {
+	if (testdata->error_index == 0) {
 		printf("No errors found, YAY!\n");
 	}
 	else {
