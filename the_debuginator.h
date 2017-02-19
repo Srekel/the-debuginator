@@ -218,7 +218,6 @@ DebuginatorItem* debuginator_new_folder_item(TheDebuginator* debuginator, Debugi
 }
 
 DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* path, bool create_if_not_exist) {
-
 	parent = parent == NULL ? debuginator->root : parent;
 	const char* temp_path = path;
 	while (true) {
@@ -228,7 +227,15 @@ DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, DebuginatorIt
 		DebuginatorItem* current_item = NULL;
 		DebuginatorItem* parent_child = parent->folder.first_child;
 		while (parent_child) {
-			size_t title_length = strlen(parent_child->title); // strlen :(
+			const char* item_title = parent_child->title;
+			size_t title_length = strlen(item_title); // strlen :(
+			if (path_part_length >= DEBUGINATOR_max_title_length 
+				&& title_length == DEBUGINATOR_max_title_length - 1 
+				&& item_title[DEBUGINATOR_max_title_length - 2] == '.'
+				&& item_title[DEBUGINATOR_max_title_length - 3] == '.') {
+				path_part_length = title_length = DEBUGINATOR_max_title_length - 3;
+			}
+
 			if (title_length == path_part_length && memcmp(parent_child->title, temp_path, title_length * sizeof(char)) == 0) {
 				current_item = parent_child;
 				break;
@@ -290,6 +297,59 @@ DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 
 	//TODO preserve hot item
 	return item;
+}
+
+void debuginator_set_hot_item(TheDebuginator* debuginator, const char* path) {
+	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, false);
+	if (item == NULL) {
+		return;
+	}
+
+	debuginator->hot_item = item;
+	item->parent->folder.hot_child = item;
+}
+
+void debuginator_remove_item(TheDebuginator* debuginator, const char* path) {
+	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, false);
+	if (item == NULL) {
+		return;
+	}
+
+	DebuginatorItem* parent = item->parent;
+	DebuginatorItem* parent_child = parent->folder.first_child;
+	DebuginatorItem* previous_child = NULL;
+	while (true) {
+		if (parent_child == item) {
+			if (previous_child == NULL) {
+				parent->folder.first_child = item->next_sibling;
+			}
+			else {
+				previous_child->next_sibling = item->next_sibling;
+			}
+			break;
+		}
+
+		previous_child = parent_child;
+		parent_child = parent_child->next_sibling;
+	}
+
+	if (parent->folder.hot_child == item) {
+		if (item->next_sibling == NULL) {
+			parent->folder.hot_child = parent->folder.first_child;
+		}
+		else {
+			parent->folder.hot_child = item->next_sibling;
+		}
+	}
+
+	if (debuginator->hot_item == item) {
+		if (parent->folder.hot_child == NULL) {
+			debuginator->hot_item = parent;
+		}
+		else {
+			debuginator->hot_item = parent->folder.hot_child;
+		}
+	}
 }
 
 TheDebuginator debuginator_create(DebuginatorItem* item_buffer, size_t item_buffer_capacity) {

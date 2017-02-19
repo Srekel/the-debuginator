@@ -2,6 +2,10 @@
 #include <assert.h>
 #include <string.h>
 
+#ifndef __cplusplus
+#include <stdbool.h>
+#endif
+
 struct UnitTestData
 {
 	char errors[256][256];
@@ -44,12 +48,13 @@ static void unittest_debug_menu_setup(TheDebuginator* debuginator) {
 	debuginator_create_bool_item(debuginator, "SimpleBool 1", "Change a bool.", &g_testdata.simplebool_target);
 	debuginator_create_bool_item(debuginator, "Folder/SimpleBool 2", "Change a bool.", &g_testdata.simplebool_target);
 	debuginator_create_bool_item(debuginator, "Folder/SimpleBool 3", "Change a bool.", &g_testdata.simplebool_target);
+	debuginator_create_bool_item(debuginator, "Folder/SimpleBool 4 with a really long long title", "Change a bool.", &g_testdata.simplebool_target);
 
 	debuginator_new_folder_item(debuginator, NULL, "Folder 2", 0);
 
 	static const char* string_values[3] = { "gamestring 1", "gamestring 2", "gamestring 3"};
 	static const char* string_titles[3] = { "First value", "Second one", "This is the third." };
-	debuginator_create_array_item(debuginator, NULL, "Folder 2/Choose Which String To Use",
+	debuginator_create_array_item(debuginator, NULL, "Folder 2/String item",
 		"Do it", unittest_on_item_changed_stringtest, &g_testdata,
 		string_titles, string_values, 3, sizeof(string_values[0]));
 
@@ -202,6 +207,10 @@ static void unittest_debug_menu_run() {
 		ASSERT(expected_hot_item == debuginator.hot_item);
 
 		debug_menu_handle_input(&debuginator, &input);
+		expected_hot_item = debuginator_get_item(&debuginator, NULL, "Folder/SimpleBool 4 with a really long long title", false);
+		ASSERT(expected_hot_item == debuginator.hot_item);
+
+		debug_menu_handle_input(&debuginator, &input);
 		expected_hot_item = debuginator_get_item(&debuginator, NULL, "Folder/SimpleBool 2", false);
 		ASSERT(expected_hot_item == debuginator.hot_item);
 
@@ -210,7 +219,7 @@ static void unittest_debug_menu_run() {
 		ASSERT(expected_hot_item == debuginator.hot_item);
 	}
 	{
-		// Go to Folder 2/Choose Which String To Use
+		// Go to Folder 2/String item
 		DebuginatorInput input = {};
 		input.go_parent = true;
 		debug_menu_handle_input(&debuginator, &input);
@@ -219,7 +228,7 @@ static void unittest_debug_menu_run() {
 		input.go_sibling_down = true;
 		input.go_child = true;
 		debug_menu_handle_input(&debuginator, &input);
-		DebuginatorItem* expected_hot_item = debuginator_get_item(&debuginator, NULL, "Folder 2/Choose Which String To Use", false);
+		DebuginatorItem* expected_hot_item = debuginator_get_item(&debuginator, NULL, "Folder 2/String item", false);
 		ASSERT(expected_hot_item == debuginator.hot_item);
 	}
 	{
@@ -241,7 +250,7 @@ static void unittest_debug_menu_run() {
 		DebuginatorInput input = {};
 		input.go_sibling_down = true;
 		debug_menu_handle_input(&debuginator, &input);
-		DebuginatorItem* expected_hot_item = debuginator_get_item(&debuginator, NULL, "Folder 2/Choose Which String To Use", false);
+		DebuginatorItem* expected_hot_item = debuginator_get_item(&debuginator, NULL, "Folder 2/String item", false);
 		ASSERT(expected_hot_item == debuginator.hot_item);
 	}
 	{
@@ -253,7 +262,7 @@ static void unittest_debug_menu_run() {
 	}
 	{
 		// Overwrite the item with another item
-		debuginator_create_bool_item(&debuginator, "Folder 2/Choose Which String To Use", "Change a bool.", &g_testdata.simplebool_target);
+		debuginator_create_bool_item(&debuginator, "Folder 2/String item", "Change a bool.", &g_testdata.simplebool_target);
 	}
 	{
 		// Activate it, we should still be on the second value, so bool should turn to false
@@ -262,6 +271,22 @@ static void unittest_debug_menu_run() {
 		input.go_child = true;
 		debug_menu_handle_input(&debuginator, &input);
 		ASSERT(testdata.simplebool_target == false);
+	}
+	{
+		// Remove item
+		debuginator_remove_item(&debuginator, "Folder 2/String item");
+		DebuginatorItem* expected_null_item = debuginator_get_item(&debuginator, NULL, "Folder 2/String item", false);
+		ASSERT(expected_null_item == NULL);
+
+		DebuginatorItem* expected_hot_item = debuginator_get_item(&debuginator, NULL, "Folder 2", false);
+		ASSERT(expected_hot_item == debuginator.hot_item);
+	}
+	{
+		// Set hot item
+		debuginator_set_hot_item(&debuginator, "Folder/SimpleBool 2");
+
+		DebuginatorItem* expected_hot_item = debuginator_get_item(&debuginator, NULL, "Folder/SimpleBool 2", false);
+		ASSERT(expected_hot_item == debuginator.hot_item);
 	}
 
 	printf("Run errors found:   %u/%u\n",
