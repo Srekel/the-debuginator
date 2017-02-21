@@ -82,7 +82,7 @@ typedef struct DebuginatorFolderData {
 
 typedef struct DebuginatorItem DebuginatorItem;
 
-typedef void (*DebuginatorOnItemChangedCallback)(struct DebuginatorItem* item, void* value, const char* value_title);
+typedef void (*DebuginatorOnItemChangedCallback)(DebuginatorItem* item, void* value, const char* value_title);
 
 typedef struct DebuginatorLeafData {
 	const char* description;
