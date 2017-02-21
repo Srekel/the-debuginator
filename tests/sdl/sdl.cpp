@@ -2,26 +2,13 @@
 #include <assert.h>
 #include <string.h>
 
-struct UnitTestData
-{
-	char errors[256][256];
-	unsigned error_index;
-	unsigned num_tests;
-
-	bool simplebool_target;
-	bool simplebool_on_change;
-	int simple_bool_counter;
-};
-
-static UnitTestData g_testdata = {};
+#include <SDL.h>
+#include <SDL_ttf.h>
 
 static void unittest_debuginator_assert(bool test) {
-	if (g_testdata.error_index == 256) {
-		assert(false);
-	}
 	if (!test) {
-		memcpy(g_testdata.errors[g_testdata.error_index++], "LOL", 4);
 	}
+	assert(test);
 	//DebugBreak();
 }
 
@@ -30,41 +17,45 @@ static void unittest_debuginator_assert(bool test) {
 
 #include "../../the_debuginator.h"
 
+struct GameData {
+	bool mybool;
+	char mystring[256];
+};
 
-//
-//DebuginatorItemDefinition debug_menu_define(DebuginatorItemType type,
-//	const char** value_titles, const char** value_descriptions, void** values, unsigned num_values) {
-//
-//	DebuginatorItemDefinition item = {};
-//	item.type = type;
-//	item.value_titles = value_titles;
-//	item.value_descriptions = value_descriptions;
-//	item.array_values = *values;
-//	item.num_values = num_values;
-//	return item;
-//}
-//
-//DebuginatorItemDefinition debug_menu_define_bool(const char** value_descriptions = 0x0) {
-//	static unsigned bool_values[2] = { 1, 0 };
-//	static const char* bool_titles[2] = { "True, False" };
-//	return debug_menu_define(ItemType_Array, bool_titles, value_descriptions, 0x0, bool_values, 2);
-//}
+static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
+	debuginator_create_bool_item(debuginator, "SimpleBool 1", "Change a bool.", &data->mybool);
+	debuginator_create_bool_item(debuginator, "Folder/SimpleBool 2", "Change a bool.", &data->mybool);
+	debuginator_create_bool_item(debuginator, "Folder/SimpleBool 3", "Change a bool.", &data->mybool);
+	debuginator_create_bool_item(debuginator, "Folder/SimpleBool 4 with a really long long title", "Change a bool.", &data->mybool);
 
-
-
-static void on_item_changed_simplebool(DebuginatorItemDefinition* item, void* value, const char* /*value_title*/) {
-	UnitTestData* testdata_userdata = ((UnitTestData*)item->user_data);
-	testdata_userdata->simplebool_on_change = *((bool*)value);
-	testdata_userdata->simple_bool_counter++;
+	debuginator_new_folder_item(debuginator, NULL, "Folder 2", 0);
+/*
+	static const char* string_values[3] = { "gamestring 1", "gamestring 2", "gamestring 3" };
+	static const char* string_titles[3] = { "First value", "Second one", "This is the third." };
+	debuginator_create_array_item(debuginator, NULL, "Folder 2/String item",
+		"Do it", unittest_on_item_changed_stringtest, &g_testdata,
+		string_titles, (void*)string_values, 3, sizeof(string_values[0]));
+*/
 }
 
-static void debug_menu_setup(TheDebuginator* debuginator, UnitTestData* testdata) {
+void draw_item(DebuginatorItem* item, SDL_Point offset, SDL_Renderer* renderer) {
+	SDL_Rect rect;
+	rect.x = offset.x;
+	rect.y = offset.y;
+	rect.w = 100;
+	rect.h = 30;
+	SDL_RenderFillRect(renderer, &rect);
 
+	if (item->is_folder) {
+		offset.x += 20;
+		item = item->folder.first_child;
+		while (item) {
+			offset.y += 35;
+			draw_item(item, offset, renderer);
+			item = item->next_sibling;
+		}
+	}
 }
-
-
-#include <SDL.h>
-#include <SDL_ttf.h>
 
 int main(int argc, char **argv)
 {
@@ -114,28 +105,30 @@ int main(int argc, char **argv)
 
 	SDL_FreeSurface(text_surface);
 	text_surface = NULL;
+	
 
+	DebuginatorItem item_buffer[256];
+	TheDebuginator debuginator = debuginator_create(item_buffer, 256);
 
-	DebuginatorItemDefinition item_buffer[4];
-	DebuginatorItemDefinition* child_buffer[4];
-	TheDebuginator debuginator = debuginator_create(item_buffer, 4, child_buffer, 4);
-	debug_menu_setup(&debuginator, &g_testdata);
-	debuginator.hot_item = debuginator.root;
-	debuginator_validate(&debuginator);
+	GameData data = { 0 };
+	debug_menu_setup(&debuginator, &data);
 
+	SDL_Rect bgrectangle;
+	bgrectangle.x = 000;
+	bgrectangle.y = 000;
+	bgrectangle.w = 200;
+	bgrectangle.h = 500;
 	SDL_Rect rectangle;
-	rectangle.x = 0;
-	rectangle.y = 0;
-	rectangle.w = 50;
+	rectangle.x = 100;
+	rectangle.y = 200;
+	rectangle.w = 250;
 	rectangle.h = 50;
-	SDL_RenderFillRect(renderer, &rectangle);
+	/*SDL_RenderFillRect(renderer, &rectangle);
 	SDL_RenderDrawRect(renderer, &rectangle);
 	SDL_RenderPresent(renderer);
+*/
 
-	SDL_SetRenderDrawColor(renderer, 0, 0, 50, 255);
-	SDL_RenderClear(renderer);
-	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-
+	SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 	SDL_Event event;
 	for (size_t i = 0; i < 500; i++) {
 		while (SDL_PollEvent(&event) != 0)
@@ -145,8 +138,19 @@ int main(int argc, char **argv)
 				i = 10000;
 			}
 		}
-		//SDL_RenderFillRect(renderer, &rectangle);
-		//SDL_RenderDrawRect(renderer, &rectangle);
+
+		SDL_SetRenderDrawColor(renderer, 50, 50, 50, 255);
+		SDL_RenderClear(renderer);
+
+		SDL_SetRenderDrawColor(renderer, 150, 255, 0, 50);
+		SDL_RenderFillRect(renderer, &bgrectangle);
+
+		SDL_SetRenderDrawColor(renderer, 150, 255, 0, 150);
+		SDL_Point item_offset;
+		item_offset.x = 0;
+		item_offset.y = 0;
+		draw_item(debuginator.root, item_offset, renderer);
+		
 		SDL_RenderCopy(renderer, text_texture, NULL, &rectangle);
 		SDL_RenderPresent(renderer);
 		SDL_Delay(10);

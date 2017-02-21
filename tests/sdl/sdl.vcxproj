@@ -20,9 +20,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sdl.cpp" />
+    <ClCompile Include="gui.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\the_debuginator.h" />
+    <ClInclude Include="gui.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{56259B2E-7D95-4AB0-83E4-369B9361F8A2}</ProjectGuid>
