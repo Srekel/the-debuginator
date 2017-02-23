@@ -45,9 +45,11 @@ Only the memory buffer passed in at creation. May change in the future to accept
 
 Will possibly use @incrediblejr handle vector if needed in future.
 
+For the demo and unit test projects I have a dependency and may add more in the future if it seems like a good idea. I'm less concerned about keeping those "clean" as they aren't a part of the library itself.
+
 ### Single header
 
-Though tests and examples are in separate projects.
+Though tests and examples are in separate files/folders/projects.
 
 ### Scrollable
 
@@ -96,11 +98,12 @@ So you start up with the settings you had when you exited.
 Sure. This is my first public single-header C library. Any helpful comments appreciated. PRs are welcome. Though I'd hold off until it's in a more finished state. Feel free to fork it and convert it to a C++17 templatey thing if that's your thing.
 
 ## License
-Public Domain, Unlicense, WTFPL. Anything you or your lawyers want. I accept no responsibility. In practice, here's a good license I guess (taken from STB):
+In theory: Public Domain, Unlicense, WTFPL. Anything you or your lawyers want. I accept no responsibility. In practice, here's a good license I guess (taken from STB's guide https://github.com/nothings/stb/blob/master/docs/stb_howto.txt ):
 
-    All files in this directory are in the public domain. Where
-    a public domain declaration is not recognized, you are granted
-    a license to freely use, modify, and redistribute them in
-    any way you choose.
+   This software is dual-licensed to the public domain and under the following
+   license: you are granted a perpetual, irrevocable license to copy, modify,
+   publish, and distribute this file as you see fit.
 
-Note that this does **NOT** include any folders that has LICENSE or README files that specifies their own license. They retain their own licenses.
+Note that this does **NOT** include any folders that has LICENSE or README files that specifies their own license. They retain their own licenses. 
+
+
