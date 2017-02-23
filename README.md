@@ -2,7 +2,7 @@
 
 A super sweet hierarchical scrollable accordion debug menu intended for games.
 
-It's onceptually based on the one I wrote at Fatshark for Warhammer End Times: Vermintide, where it was used extensively by everyone. Quote by one of the designers during the Christmas party: "The debug menu saved man-years for us".
+It's conceptually based on the debug menu I wrote at Fatshark for **Warhammer: End Times – Vermintide**, where it was used extensively by everyone. Quote by one of the designers during the Christmas party: "The debug menu saved man-years for us". He was drunk. But not wrong.
 
 ## Current status
 
@@ -90,3 +90,15 @@ Written in SDL, roughly based on Stingray's Gui interface.
 ### Save/Load of settings
 
 So you start up with the settings you had when you exited.
+
+## Can I help? 
+
+Sure. This is my first public single-header C library. Any helpful comments appreciated. PRs are welcome. Though I'd hold off until it's in a more finished state. Feel free to fork it and convert it to a C++17 templatey thing if that's your thing.
+
+## License
+Public Domain, Unlicense, WTFPL. Anything you or your lawyers want. I accept no responsibility. In practice, here's a good license I guess (taken from STB):
+
+    All files in this directory are in the public domain. Where
+    a public domain declaration is not recognized, you are granted
+    a license to freely use, modify, and redistribute them in
+    any way you choose.
