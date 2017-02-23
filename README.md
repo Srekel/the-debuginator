@@ -102,3 +102,5 @@ Public Domain, Unlicense, WTFPL. Anything you or your lawyers want. I accept no 
     a public domain declaration is not recognized, you are granted
     a license to freely use, modify, and redistribute them in
     any way you choose.
+
+Note that this does **NOT** include any folders that has LICENSE or README files that specifies their own license. They retain their own licenses.
