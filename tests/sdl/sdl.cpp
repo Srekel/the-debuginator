@@ -51,12 +51,12 @@ static bool theme_setup(GuiHandle gui) {
 	s_colors[1][COLOR_Background]      = Color(50, 50, 150, 200);
 	s_colors[1][COLOR_ItemTitle]       = Color(120, 120, 120, 255);
 	s_colors[1][COLOR_ItemTitleHot]    = Color(200, 200, 200, 255);
-	s_colors[1][COLOR_ItemTitleActive] = Color(220, 220, 255, 255);
+	s_colors[1][COLOR_ItemTitleActive] = Color(200, 200, 255, 255);
 	
 	s_colors[2][COLOR_Background]      = Color(100, 100, 100, 200);
 	s_colors[2][COLOR_ItemTitle]       = Color(150, 150, 150, 255);
 	s_colors[2][COLOR_ItemTitleHot]    = Color(200, 200, 200, 255);
-	s_colors[2][COLOR_ItemTitleActive] = Color(255, 255, 255, 255);
+	s_colors[2][COLOR_ItemTitleActive] = Color(255, 255, 220, 255);
 
 	s_theme = s_colors[0];
 
@@ -102,7 +102,7 @@ float draw_item(TheDebuginator* debuginator, DebuginatorItem* item, Vector2 offs
 		offset.x += 20;
 		DebuginatorItem* child = item->folder.first_child;
 		while (child) {
-			offset.y += 35;
+			offset.y += 30;
 			offset.y = draw_item(debuginator, child, offset, hot && child == item->folder.hot_child, gui);
 			child = child->next_sibling;
 		}
@@ -112,13 +112,13 @@ float draw_item(TheDebuginator* debuginator, DebuginatorItem* item, Vector2 offs
 		draw_text(gui, item->title, offset, s_fonts[FONT_ItemTitle], s_theme[color_index]);
 
 		Vector2 lol = offset;
-		lol.x = 200;
+		lol.x = 300;
 		draw_text(gui, item->leaf.value_titles[item->leaf.active_index], lol, s_fonts[FONT_ItemTitle], s_theme[color_index]);
 		
 		if (item->leaf.is_active) {
 			offset.x += 20;
 			for (size_t i = 0; i < item->leaf.num_values; i++) {
-				offset.y += 35;
+				offset.y += 25;
 				const char* value_title = item->leaf.value_titles[i];
 				bool value_hot = hot && i == item->leaf.hot_index;
 				bool value_active = value_hot && item->leaf.is_active;
@@ -188,13 +188,15 @@ int main(int argc, char **argv)
 
 		frame_begin(gui, i);
 
-		draw_rect_filled(gui, Vector2(0, 0), Vector2(300, res_y), s_theme[COLOR_Background]);
+		draw_rect_filled(gui, Vector2(i % 500, i % 500), Vector2(300, 300), Color(255, 255, 255, 255));
+		draw_rect_filled(gui, Vector2((i/2) % 350, i % 700), Vector2(200, 200), Color(0, 0, 0, 255));
+		draw_rect_filled(gui, Vector2(0, 0), Vector2(400, res_y), s_theme[COLOR_Background]);
 
 		Vector2 item_offset(0, 0);
 		draw_item(&debuginator, debuginator.root, item_offset, true, gui);
-		//SDL_RenderCopy(renderer, text_texture, NULL, &rectangle);
+
 		frame_end(gui);
-		SDL_Delay(10);
+		SDL_Delay(30);
 	}
 
 	for (size_t i = 0; i < 16; i++) { // TODO unhardcode
