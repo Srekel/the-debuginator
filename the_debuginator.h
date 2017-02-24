@@ -90,6 +90,7 @@ typedef struct DebuginatorLeafData {
 	bool is_active;
 	char* hot_value;
 	size_t hot_index;
+	size_t active_index;
 
 	const char** value_titles;
 	const char** value_descriptions;
@@ -392,13 +393,50 @@ void debuginator_initialize(TheDebuginator* debuginator) {
 //╚═╝╚═╝  ╚═══╝╚═╝      ╚═════╝    ╚═╝
 
 static void debuginator_activate(DebuginatorItem* item) {
+	item->leaf.active_index = item->leaf.hot_index;
 	void* value = ((char*)item->leaf.values) + item->leaf.hot_index * item->leaf.array_element_size;
 	item->leaf.on_item_changed_callback(item, value, item->leaf.value_titles[item->leaf.hot_index]);
 }
 
+void debuginator_move_sibling_previous(TheDebuginator* debuginator) {
+	// This is a bit stupid, consider changing to doubly linked list
+	DebuginatorItem* hot_item = debuginator->hot_item;
+
+	if (!hot_item->is_folder && hot_item->leaf.is_active) {
+		if (--hot_item->leaf.hot_index < 0) {
+			hot_item->leaf.hot_index = hot_item->leaf.num_values - 1;
+		}
+	}
+	else {
+		DebuginatorItem* hot_item_new = debuginator->hot_item;
+		DebuginatorItem* parent_child = hot_item_new->parent->folder.first_child;
+		if (parent_child == hot_item_new) {
+			while (parent_child) {
+				hot_item_new = parent_child;
+				parent_child = parent_child->next_sibling;
+			}
+		}
+		else {
+			while (parent_child) {
+				if (parent_child->next_sibling == hot_item_new) {
+					hot_item_new = parent_child;
+					break;
+				}
+
+				parent_child = parent_child->next_sibling;
+			}
+		}
+
+		if (hot_item != hot_item_new) {
+			hot_item_new->parent->folder.hot_child = hot_item_new;
+			debuginator->hot_item = hot_item_new;
+		}
+	}
+}
+
 void debuginator_move_sibling_next(TheDebuginator* debuginator) {
 	DebuginatorItem* hot_item = debuginator->hot_item;
-	
+
 	if (!hot_item->is_folder && hot_item->leaf.is_active) {
 		if (++hot_item->leaf.hot_index == hot_item->leaf.num_values) {
 			hot_item->leaf.hot_index = 0;
