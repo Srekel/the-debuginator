@@ -66,9 +66,9 @@ void destroy_gui(GuiHandle gui_handle) {
 	SDL_Quit();
 }
 
-void frame_begin(GuiHandle gui_handle) {
+void frame_begin(GuiHandle gui_handle, int lolframe) {
 	Gui* gui = (Gui*)gui_handle;
-	SDL_SetRenderDrawColor(gui->renderer, 50, 150, 50, 255);
+	SDL_SetRenderDrawColor(gui->renderer, (lolframe/4) % 255, (lolframe / 2 + 100) % 255, 100, 255);
 	SDL_RenderClear(gui->renderer);
 }
 
@@ -120,8 +120,8 @@ void draw_text(GuiHandle gui_handle, const char* text, Vector2 position, FontTem
 void draw_rect_filled(GuiHandle gui_handle, Vector2 position, Vector2 size, Color color) {
 	Gui* gui = (Gui*)gui_handle;
 	SDL_Rect rect;
-	rect.x = position.x+100;
-	rect.y = position.y+100;
+	rect.x = position.x;
+	rect.y = position.y;
 	rect.w = size.x;
 	rect.h = size.y;
 

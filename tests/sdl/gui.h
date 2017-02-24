@@ -8,23 +8,25 @@ typedef intptr_t GuiHandle;
 typedef intptr_t FontTemplateHandle;
 
 struct Vector2 {
+	Vector2() : x(0), y(0) {}
 	Vector2(float x, float y) : x(x), y(y) {}
 	float x;
 	float y;
 };
 
 struct Color {
+	Color() : r(0), g(0), b(0), a(0) {}
 	Color(char r, char g, char b, char a) : r(r), g(g), b(b), a(a) {}
-	char r;
-	char g;
-	char b;
-	char a;
+	unsigned char r;
+	unsigned char g;
+	unsigned char b;
+	unsigned char a;
 };
 
 GuiHandle create_gui(int resx, int resy, const char* window_title);
 void destroy_gui(GuiHandle gui);
 
-void frame_begin(GuiHandle gui_hande);
+void frame_begin(GuiHandle gui_hande, int lolframe);
 void frame_end(GuiHandle gui_hande);
 
 FontTemplateHandle register_font_template(GuiHandle gui, const char* font, int size);

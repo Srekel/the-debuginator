@@ -101,44 +101,44 @@ static void unittest_debug_menu_run() {
 	{
 		// Going to child activates SimpleBool 1
 		DebuginatorInput input = {0};
-		input.go_child = true;
+		input.move_to_child = true;
 		debug_menu_handle_input(&debuginator, &input);
 		ASSERT(debuginator.hot_item->leaf.is_active == true);
 	}
 	{
 		// Going to child changes SimpleBool 1 bool
 		DebuginatorInput input = {0};
-		input.go_child = true;
+		input.move_to_child = true;
 		debug_menu_handle_input(&debuginator, &input);
 		ASSERT(testdata->simplebool_target == true);
 	}
 	{
 		// Going to child and sibling at the same time changes SimpleBool 1's to second option and sets bool to false
 		DebuginatorInput input = {0};
-		input.go_child = true;
-		input.go_sibling_down = true;
+		input.move_to_child = true;
+		input.move_sibling_next = true;
 		debug_menu_handle_input(&debuginator, &input);
 		ASSERT(testdata->simplebool_target == false);
 	}
 	{
 		// Going to child SimpleBool 1's first option changes bool to true
 		DebuginatorInput input = {0};
-		input.go_child = true;
-		input.go_sibling_down = true;
+		input.move_to_child = true;
+		input.move_sibling_next = true;
 		debug_menu_handle_input(&debuginator, &input);
 		ASSERT(testdata->simplebool_target == true);
 	}
 	{
 		// Going to parent inactivates item
 		DebuginatorInput input = {0};
-		input.go_parent = true;
+		input.move_to_parent = true;
 		debug_menu_handle_input(&debuginator, &input);
 		ASSERT(debuginator.hot_item->leaf.is_active == false);
 	}
 	{
 		// Going to parent does nothing
 		DebuginatorInput input = {0};
-		input.go_parent = true;
+		input.move_to_parent = true;
 		debug_menu_handle_input(&debuginator, &input);
 		DebuginatorItem* expected_hot_item = debuginator_get_item(&debuginator, NULL, "SimpleBool 1", false);
 		ASSERT(expected_hot_item == debuginator.hot_item);
@@ -146,7 +146,7 @@ static void unittest_debug_menu_run() {
 	{
 		// Going down goes to Folder
 		DebuginatorInput input = {0};
-		input.go_sibling_down = true;
+		input.move_sibling_next = true;
 		debug_menu_handle_input(&debuginator, &input);
 		DebuginatorItem* expected_hot_item = debuginator_get_item(&debuginator, NULL, "Folder", false);
 		ASSERT(expected_hot_item == debuginator.hot_item);
@@ -154,7 +154,7 @@ static void unittest_debug_menu_run() {
 	{
 		// Going down goes to Folder 2
 		DebuginatorInput input = {0};
-		input.go_sibling_down = true;
+		input.move_sibling_next = true;
 		debug_menu_handle_input(&debuginator, &input);
 		DebuginatorItem* expected_hot_item = debuginator_get_item(&debuginator, NULL, "Folder 2", false);
 		ASSERT(expected_hot_item == debuginator.hot_item);
@@ -162,7 +162,7 @@ static void unittest_debug_menu_run() {
 	{
 		// Going down wraps to SimpleBool 1
 		DebuginatorInput input = {0};
-		input.go_sibling_down = true;
+		input.move_sibling_next = true;
 		debug_menu_handle_input(&debuginator, &input);
 		DebuginatorItem* expected_hot_item = debuginator_get_item(&debuginator, NULL, "SimpleBool 1", false);
 		ASSERT(expected_hot_item == debuginator.hot_item);
@@ -170,7 +170,7 @@ static void unittest_debug_menu_run() {
 	{
 		// Go to Folder
 		DebuginatorInput input = {0};
-		input.go_sibling_down = true;
+		input.move_sibling_next = true;
 		debug_menu_handle_input(&debuginator, &input);
 		DebuginatorItem* expected_hot_item = debuginator_get_item(&debuginator, NULL, "Folder", false);
 		ASSERT(expected_hot_item == debuginator.hot_item);
@@ -178,7 +178,7 @@ static void unittest_debug_menu_run() {
 	{
 		// Going to child goes to SimpleBool 2
 		DebuginatorInput input = {0};
-		input.go_child = true;
+		input.move_to_child = true;
 		debug_menu_handle_input(&debuginator, &input);
 		DebuginatorItem* expected_hot_item = debuginator_get_item(&debuginator, NULL, "Folder/SimpleBool 2", false);
 		ASSERT(expected_hot_item == debuginator.hot_item);
@@ -186,28 +186,28 @@ static void unittest_debug_menu_run() {
 	{
 		// Going to child activates SimpleBool 2
 		DebuginatorInput input = {0};
-		input.go_child = true;
+		input.move_to_child = true;
 		debug_menu_handle_input(&debuginator, &input);
 		ASSERT(debuginator.hot_item->leaf.is_active == true);
 	}
 	{
 		// Going to child changes SimpleBool 2 bool
 		DebuginatorInput input = {0};
-		input.go_child = true;
+		input.move_to_child = true;
 		debug_menu_handle_input(&debuginator, &input);
 		ASSERT(testdata->simplebool_target == true);
 	}
 	{
 		// Going to parent inactivates item
 		DebuginatorInput input = {0};
-		input.go_parent = true;
+		input.move_to_parent = true;
 		debug_menu_handle_input(&debuginator, &input);
 		ASSERT(debuginator.hot_item->leaf.is_active == false);
 	}
 	{
 		// Going to sibling works as expected
 		DebuginatorInput input = {0};
-		input.go_sibling_down = true;
+		input.move_sibling_next = true;
 		debug_menu_handle_input(&debuginator, &input);
 		DebuginatorItem* expected_hot_item = debuginator_get_item(&debuginator, NULL, "Folder/SimpleBool 3", false);
 		ASSERT(expected_hot_item == debuginator.hot_item);
@@ -227,12 +227,12 @@ static void unittest_debug_menu_run() {
 	{
 		// Go to Folder 2/String item
 		DebuginatorInput input = {0};
-		input.go_parent = true;
+		input.move_to_parent = true;
 		debug_menu_handle_input(&debuginator, &input);
 		debug_menu_handle_input(&debuginator, &input);
-		input.go_parent = false;
-		input.go_sibling_down = true;
-		input.go_child = true;
+		input.move_to_parent = false;
+		input.move_sibling_next = true;
+		input.move_to_child = true;
 		debug_menu_handle_input(&debuginator, &input);
 		DebuginatorItem* expected_hot_item = debuginator_get_item(&debuginator, NULL, "Folder 2/String item", false);
 		ASSERT(expected_hot_item == debuginator.hot_item);
@@ -240,21 +240,21 @@ static void unittest_debug_menu_run() {
 	{
 		// Going to child activates string item
 		DebuginatorInput input = {0};
-		input.go_child = true;
+		input.move_to_child = true;
 		debug_menu_handle_input(&debuginator, &input);
 		ASSERT(debuginator.hot_item->leaf.is_active == true);
 	}
 	{
 		// Going to child changes string
 		DebuginatorInput input = {0};
-		input.go_child = true;
+		input.move_to_child = true;
 		debug_menu_handle_input(&debuginator, &input);
 		ASSERT(strcmp(testdata->stringtest, "gamestring 1") == 0);
 	}
 	{
 		// Going down goes to next string
 		DebuginatorInput input = {0};
-		input.go_sibling_down = true;
+		input.move_sibling_next = true;
 		debug_menu_handle_input(&debuginator, &input);
 		DebuginatorItem* expected_hot_item = debuginator_get_item(&debuginator, NULL, "Folder 2/String item", false);
 		ASSERT(expected_hot_item == debuginator.hot_item);
@@ -262,7 +262,7 @@ static void unittest_debug_menu_run() {
 	{
 		// Going to child changes string
 		DebuginatorInput input = {0};
-		input.go_child = true;
+		input.move_to_child = true;
 		debug_menu_handle_input(&debuginator, &input);
 		ASSERT(strcmp(testdata->stringtest, "gamestring 2") == 0);
 	}
@@ -274,7 +274,7 @@ static void unittest_debug_menu_run() {
 		// Activate it, we should still be on the second value, so bool should turn to false
 		ASSERT(testdata->simplebool_target == true);
 		DebuginatorInput input = {0};
-		input.go_child = true;
+		input.move_to_child = true;
 		debug_menu_handle_input(&debuginator, &input);
 		ASSERT(testdata->simplebool_target == false);
 	}
