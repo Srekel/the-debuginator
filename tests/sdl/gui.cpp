@@ -90,11 +90,17 @@ FontTemplateHandle register_font_template(GuiHandle gui_handle, const char* font
 	return (FontTemplateHandle)font_template;
 }
 
+void unregister_font_template(GuiHandle gui_handle, FontTemplateHandle font_handle) {
+	FontTemplate* font_template = (FontTemplate*)font_handle;
+	TTF_CloseFont(font_template->font);
+	font_template->font = 0;
+}
+
 void draw_text(GuiHandle gui_handle, const char* text, Vector2 position, FontTemplateHandle font_handle, Color color) {
 	Gui* gui = (Gui*)gui_handle;
 	SDL_Color* text_color = (SDL_Color*)&color;
 	FontTemplate* font_template = (FontTemplate*)font_handle;
-	SDL_Surface* text_surface = TTF_RenderText_Solid(font_template->font, text, *text_color);
+	SDL_Surface* text_surface = TTF_RenderText_Blended(font_template->font, text, *text_color);
 	if (text_surface == NULL) {
 		// TODO Assert
 		return;

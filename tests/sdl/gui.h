@@ -30,6 +30,8 @@ void frame_begin(GuiHandle gui_hande, int lolframe);
 void frame_end(GuiHandle gui_hande);
 
 FontTemplateHandle register_font_template(GuiHandle gui, const char* font, int size);
+void unregister_font_template(GuiHandle gui_handle, FontTemplateHandle font_handle);
+
 void draw_text(GuiHandle gui, const char* text, Vector2 position, FontTemplateHandle font, Color color);
 void draw_rect_filled(GuiHandle gui_handle, Vector2 position, Vector2 size, Color color);
 

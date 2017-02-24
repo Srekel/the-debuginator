@@ -40,6 +40,7 @@ enum ColorTemplates {
 };
 
 static bool theme_setup(GuiHandle gui) {
+	memset(s_fonts, 0, sizeof(*s_fonts));
 	s_fonts[FONT_ItemTitle] = register_font_template(gui, "LiberationMono-Regular.ttf", 18);
 
 	s_colors[0][COLOR_Background]      = Color(50, 150, 50, 200);
@@ -194,6 +195,12 @@ int main(int argc, char **argv)
 		//SDL_RenderCopy(renderer, text_texture, NULL, &rectangle);
 		frame_end(gui);
 		SDL_Delay(10);
+	}
+
+	for (size_t i = 0; i < 16; i++) { // TODO unhardcode
+		if (s_fonts[i] != 0x0) { // TODO invalid handle
+			unregister_font_template(gui, s_fonts[i]);
+		}
 	}
 
 	destroy_gui(gui);
