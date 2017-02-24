@@ -40,7 +40,8 @@ enum ColorTemplates {
 };
 
 static bool theme_setup(GuiHandle gui) {
-	s_fonts[FONT_ItemTitle] = register_font_template(gui, "LiberationMono-Regular.ttf", 22);
+	s_fonts[FONT_ItemTitle] = register_font_template(gui, "LiberationMono-Regular.ttf", 18);
+
 	s_colors[0][COLOR_Background]      = Color(50, 150, 50, 200);
 	s_colors[0][COLOR_ItemTitle]       = Color(160, 160, 160, 255);
 	s_colors[0][COLOR_ItemTitleHot]    = Color(200, 200, 200, 255);
@@ -108,15 +109,21 @@ float draw_item(TheDebuginator* debuginator, DebuginatorItem* item, Vector2 offs
 	else {
 		unsigned color_index = item == debuginator->hot_item && !item->leaf.is_active ? COLOR_ItemTitleActive : (hot ? COLOR_ItemTitleHot : COLOR_ItemTitle);
 		draw_text(gui, item->title, offset, s_fonts[FONT_ItemTitle], s_theme[color_index]);
+
+		Vector2 lol = offset;
+		lol.x = 200;
+		draw_text(gui, item->leaf.value_titles[item->leaf.active_index], lol, s_fonts[FONT_ItemTitle], s_theme[color_index]);
 		
-		offset.x += 20;
-		for (size_t i = 0; i < item->leaf.num_values; i++) {
-			offset.y += 35;
-			const char* value_title = item->leaf.value_titles[i];
-			bool value_hot = hot && i == item->leaf.hot_index;
-			bool value_active = value_hot && item->leaf.is_active;
-			unsigned value_color_index = value_active ? COLOR_ItemTitleActive : (value_hot ? COLOR_ItemTitleHot : COLOR_ItemTitle);
-			draw_text(gui, value_title, offset, s_fonts[value_hot ? FONT_ItemTitle : FONT_ItemTitle], s_theme[value_color_index]);
+		if (item->leaf.is_active) {
+			offset.x += 20;
+			for (size_t i = 0; i < item->leaf.num_values; i++) {
+				offset.y += 35;
+				const char* value_title = item->leaf.value_titles[i];
+				bool value_hot = hot && i == item->leaf.hot_index;
+				bool value_active = value_hot && item->leaf.is_active;
+				unsigned value_color_index = value_active ? COLOR_ItemTitleActive : (value_hot ? COLOR_ItemTitleHot : COLOR_ItemTitle);
+				draw_text(gui, value_title, offset, s_fonts[value_hot ? FONT_ItemTitle : FONT_ItemTitle], s_theme[value_color_index]);
+			}
 		}
 	}
 
@@ -146,18 +153,21 @@ int main(int argc, char **argv)
 	debug_menu_setup(&debuginator, &data);
 
 	SDL_Event event;
-	for (size_t i = 0; i < 4000; i++) {
+	for (size_t i = 0; i < 400000; i++) {
 		while (SDL_PollEvent(&event) != 0)
 		{
 			switch (event.type) {
 			case SDL_QUIT:
 			{
-				i = 10000;
+				i = 10000000;
 				break;
 			}
 			case SDL_KEYDOWN:
 			{
-				if (event.key.keysym.sym == SDLK_DOWN) {
+				if (event.key.keysym.sym == SDLK_UP) {
+					debuginator_move_sibling_previous(&debuginator);
+				}
+				else if (event.key.keysym.sym == SDLK_DOWN) {
 					debuginator_move_sibling_next(&debuginator);
 				}
 				else if (event.key.keysym.sym == SDLK_LEFT) {
@@ -167,7 +177,7 @@ int main(int argc, char **argv)
 					debuginator_move_to_child(&debuginator);
 				}
 				else if (event.key.keysym.sym == SDLK_ESCAPE) {
-					i = 10000;
+					i = 10000000;
 				}
 			}
 			//default:
@@ -177,7 +187,7 @@ int main(int argc, char **argv)
 
 		frame_begin(gui, i);
 
-		draw_rect_filled(gui, Vector2(0, 0), Vector2(200, res_y), s_theme[COLOR_Background]);
+		draw_rect_filled(gui, Vector2(0, 0), Vector2(300, res_y), s_theme[COLOR_Background]);
 
 		Vector2 item_offset(0, 0);
 		draw_item(&debuginator, debuginator.root, item_offset, true, gui);
