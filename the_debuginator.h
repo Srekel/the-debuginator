@@ -54,7 +54,7 @@
 #endif
 
 #ifndef DEBUGINATOR_max_title_length
-#define DEBUGINATOR_max_title_length 32
+#define DEBUGINATOR_max_title_length 20
 #endif
 
 #ifndef DEBUGINATOR_debug_print
@@ -89,14 +89,14 @@ typedef struct DebuginatorLeafData {
 
 	bool is_active;
 	char* hot_value;
-	size_t hot_index;
-	size_t active_index;
+	int hot_index;
+	int active_index;
 
 	const char** value_titles;
 	const char** value_descriptions;
 	void* values;
 
-	size_t num_values;
+	int num_values;
 	size_t array_element_size;
 
 	DebuginatorOnItemChangedCallback on_item_changed_callback;
@@ -275,7 +275,7 @@ DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, DebuginatorIt
 DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 	DebuginatorItem* parent, const char* path, const char* description,
 	DebuginatorOnItemChangedCallback on_item_changed_callback, void* user_data,
-	const char** value_titles, void* values, unsigned num_values, size_t value_size) {
+	const char** value_titles, void* values, int num_values, size_t value_size) {
 
 	DebuginatorItem* item = debuginator_get_item(debuginator, parent, path, true);
 	item->is_folder = false;
