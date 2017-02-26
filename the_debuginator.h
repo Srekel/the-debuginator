@@ -458,6 +458,39 @@ void debuginator_move_sibling_next(TheDebuginator* debuginator) {
 	}
 }
 
+void debuginator_move_to_next(TheDebuginator* debuginator) {
+	DebuginatorItem* hot_item = debuginator->hot_item;
+	DebuginatorItem* hot_item_new = debuginator->hot_item;
+	if (!hot_item->is_folder && hot_item->leaf.is_active) {
+		if (++hot_item->leaf.hot_index == hot_item->leaf.num_values) {
+			hot_item->leaf.hot_index = 0;
+		}
+	}
+	else if (hot_item->next_sibling) {
+		hot_item_new = hot_item->next_sibling;
+	}
+	else {
+		DebuginatorItem* parent = hot_item->parent;
+		while (parent != NULL) {
+			if (parent->next_sibling != NULL) {
+				hot_item_new = parent->next_sibling;
+				break;
+			}
+
+			parent = parent->next_sibling;
+		}
+
+		if (parent == NULL) {
+			hot_item_new = debuginator->root->folder.first_child;
+		}
+	}
+
+	if (hot_item != hot_item_new) {
+		hot_item_new->parent->folder.hot_child = hot_item_new;
+		debuginator->hot_item = hot_item_new;
+	}
+}
+
 void debuginator_move_to_child(TheDebuginator* debuginator) {
 	DebuginatorItem* hot_item = debuginator->hot_item;
 	DebuginatorItem* hot_item_new = debuginator->hot_item;
@@ -546,8 +579,8 @@ void debuginator_copy_1byte(DebuginatorItem* item, void* value, const char* valu
 }
 
 void debuginator_create_bool_item(TheDebuginator* debuginator, const char* path, const char* description, void* user_data) {
-	static bool bool_values[2] = { true, false }; 
-	static const char* bool_titles[2] = { "True", "False" };
+	static bool bool_values[2] = { false, true }; 
+	static const char* bool_titles[2] = { "False", "True" };
 	DEBUGINATOR_assert(sizeof(bool_values[0]) == 1);
 	debuginator_create_array_item(debuginator, NULL, path,
 		description, debuginator_copy_1byte, user_data,
