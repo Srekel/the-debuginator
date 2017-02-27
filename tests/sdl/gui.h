@@ -35,3 +35,5 @@ void unregister_font_template(GuiHandle gui_handle, FontTemplateHandle font_hand
 void draw_text(GuiHandle gui, const char* text, Vector2 position, FontTemplateHandle font, Color color);
 void draw_rect_filled(GuiHandle gui_handle, Vector2 position, Vector2 size, Color color);
 
+
+const char* word_wrap(GuiHandle gui_handle, FontTemplateHandle font_handle, const char* text, int max_width, char* buffer, int buffer_size);

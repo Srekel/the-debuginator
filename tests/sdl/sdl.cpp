@@ -27,6 +27,7 @@ struct GameData {
 static FontTemplateHandle s_fonts[16];
 enum FontTemplates {
 	FONT_ItemTitle,
+	FONT_ItemDescription,
 	FONT_count
 };
 
@@ -50,9 +51,10 @@ enum ColorTemplates {
 static bool theme_setup(GuiHandle gui) {
 	memset(s_fonts, 0, sizeof(*s_fonts));
 	s_fonts[FONT_ItemTitle] = register_font_template(gui, "LiberationMono-Regular.ttf", 18);
+	s_fonts[FONT_ItemDescription] = register_font_template(gui, "LiberationSerif-Italic.ttf", 18);
 
 	s_colors[0][COLOR_Background]          = Color(25, 50, 25, 220);
-	s_colors[0][COLOR_FolderTitle]         = Color(150, 150, 200, 250);
+	s_colors[0][COLOR_FolderTitle]         = Color(255, 255, 255, 255);
 	s_colors[0][COLOR_ItemTitle]           = Color(120, 120, 0, 250);
 	s_colors[0][COLOR_ItemTitleOverridden] = Color(200, 200, 0, 255);
 	s_colors[0][COLOR_ItemTitleHot]        = Color(230, 230, 200, 255);
@@ -109,8 +111,11 @@ static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
 	{
 		static int theme_indices[3] = { 0, 1, 2 };
 		static const char* string_titles[3] = { "Classic", "Blue", "Gray" };
+		debuginator_create_array_item(debuginator, NULL, "Debuginator/Help",
+			"The Debuginator is a debug menu. With a keyboard, you open it with Right Arrow and close it with Left Arrow. You use those keys, plus Up/Down arrows to navigate. Right Arrow is also used to change value on a menu item.", NULL, NULL,
+			NULL, NULL, 0, 0);
 		debuginator_create_array_item(debuginator, NULL, "Debuginator/Theme",
-			"Change the color theme", on_change_theme, NULL,
+			"Change color theme of The Debuginator.", on_change_theme, NULL,
 			string_titles, (void*)theme_indices, 3, sizeof(theme_indices[0]));
 	}
 	debuginator_create_bool_item(debuginator, "SimpleBool 1", "Change a bool.", &data->mybool);
@@ -126,16 +131,16 @@ static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
 float draw_item(TheDebuginator* debuginator, DebuginatorItem* item, Vector2 offset, bool hot, GuiHandle gui) {
 	//draw_rect_filled(gui, offset, Vector2(100, 30), Color(200, 100, 50, 200));
 
-	/*
-	if (debuginator->hot_item == item && !debuginator->hot_item->is_folder && debuginator->hot_item->leaf.is_active) {
-		for (size_t i = 0; i < item->leaf.num_values; i++) {
-			draw_rect_filled(gui, Vector2(0, offset.y + i * 30), Vector2(10, 10), Color(255, 255, 255, 255));
+	if (!debuginator->hot_item->is_folder && debuginator->hot_item->leaf.is_active) {
+		if (debuginator->hot_item == item) {
+			for (size_t i = 0; i < item->leaf.num_values; i++) {
+				draw_rect_filled(gui, Vector2(0, offset.y + (i+1) * 30), Vector2(3, 20), Color(0, 255, 0, 255));
+			}
 		}
 	}
 	else if (debuginator->hot_item->parent == item->parent) {
-		draw_rect_filled(gui, Vector2(0, offset.y), Vector2(10, 10), Color(255, 255, 255, 255));
+		draw_rect_filled(gui, Vector2(0, offset.y), Vector2(3, 20), Color(0, 255, 0, 255));
 	}
-	*/
 
 	if (item->is_folder) {
 		if (debuginator->hot_item == item) {
@@ -153,7 +158,7 @@ float draw_item(TheDebuginator* debuginator, DebuginatorItem* item, Vector2 offs
 		}
 	}
 	else {
-		if (debuginator->hot_item == item && !item->leaf.is_active) {
+		if (debuginator->hot_item == item && (!item->leaf.is_active || item->leaf.num_values == 0)) {
 			draw_rect_filled(gui, Vector2(0, offset.y - 5), Vector2(400, 30), s_theme[COLOR_LineHighlight]);
 		}
 
@@ -163,12 +168,24 @@ float draw_item(TheDebuginator* debuginator, DebuginatorItem* item, Vector2 offs
 		draw_text(gui, item->title, offset, s_fonts[FONT_ItemTitle], s_theme[color_index]);
 
 		// Draw quick representation of value
-		Vector2 value_offset = offset;
-		value_offset.x = 300;
-		draw_text(gui, item->leaf.value_titles[item->leaf.active_index], value_offset, s_fonts[FONT_ItemTitle], s_theme[default_color_index]);
+		if (item->leaf.num_values > 0) {
+			Vector2 value_offset = offset;
+			value_offset.x = 300;
+			draw_text(gui, item->leaf.value_titles[item->leaf.active_index], value_offset, s_fonts[FONT_ItemTitle], s_theme[default_color_index]);
+		}
 		
 		if (item->leaf.is_active) {
 			offset.x += 20;
+
+			char description_line[64];
+			const char* description = item->leaf.description;
+			while (description) {
+				description = word_wrap(gui, s_fonts[FONT_ItemDescription], description, 350 - offset.x, description_line, 64);
+
+				offset.y += 30;
+				draw_text(gui, description_line, offset, s_fonts[FONT_ItemDescription], s_theme[COLOR_ItemDescription]);
+			}
+
 			for (size_t i = 0; i < item->leaf.num_values; i++) {
 				offset.y += 30;
 
@@ -226,7 +243,7 @@ int main(int argc, char **argv)
 					debuginator_move_sibling_previous(&debuginator);
 				}
 				else if (event.key.keysym.sym == SDLK_DOWN) {
-					debuginator_move_sibling_next(&debuginator);
+					debuginator_move_to_next_leaf(&debuginator);
 					//debuginator_move_to_next(&debuginator);
 				}
 				else if (event.key.keysym.sym == SDLK_LEFT) {

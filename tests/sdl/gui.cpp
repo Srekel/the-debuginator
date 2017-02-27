@@ -1,6 +1,8 @@
 #include <SDL.h>
 #include <SDL_ttf.h>
 
+#include <string.h>
+
 #include "gui.h"
 
 struct FontTemplate {
@@ -134,4 +136,37 @@ void draw_rect_filled(GuiHandle gui_handle, Vector2 position, Vector2 size, Colo
 
 	SDL_SetRenderDrawColor(gui->renderer, color.r, color.g, color.b, color.a);
 	SDL_RenderFillRect(gui->renderer, &rect);
+}
+
+const char* word_wrap(GuiHandle gui_handle, FontTemplateHandle font_handle, const char* text, int max_width, char* buffer, int buffer_size) {
+
+	// This is really stupid but it works for now.
+	// TODO: Fix dropping words bug.
+	FontTemplate* font_template = (FontTemplate*)font_handle;
+	char temp_buffer[256];
+	const char* next_word = strchr(text, ' ');
+	while (true) {
+		if (next_word) {
+			strncpy_s(temp_buffer, 256, text, next_word - text);
+		}
+		else {
+			strncpy_s(temp_buffer, 256, text, strlen(text));
+		}
+
+		int width;
+		if (TTF_SizeText(font_template->font, temp_buffer, &width, NULL) != 0) {
+			return next_word;
+		}
+
+		if (width >= max_width) {
+			return next_word;
+		}
+			
+		strcpy_s(buffer, buffer_size, temp_buffer);
+		if (next_word == NULL) {
+			return NULL;
+		}
+
+		next_word = strchr(next_word + 1, ' ');
+	}
 }
