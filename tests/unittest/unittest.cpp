@@ -110,23 +110,23 @@ static void unittest_debug_menu_run() {
 		DebuginatorInput input = {0};
 		input.move_to_child = true;
 		debug_menu_handle_input(&debuginator, &input);
+		ASSERT(testdata->simplebool_target == false);
+	}
+	{
+		// Going to child and sibling at the same time changes SimpleBool 1's to second option and sets bool to true
+		DebuginatorInput input = {0};
+		input.move_to_child = true;
+		input.move_sibling_next = true;
+		debug_menu_handle_input(&debuginator, &input);
 		ASSERT(testdata->simplebool_target == true);
 	}
 	{
-		// Going to child and sibling at the same time changes SimpleBool 1's to second option and sets bool to false
+		// Going to child SimpleBool 1's first option changes bool to false
 		DebuginatorInput input = {0};
 		input.move_to_child = true;
 		input.move_sibling_next = true;
 		debug_menu_handle_input(&debuginator, &input);
 		ASSERT(testdata->simplebool_target == false);
-	}
-	{
-		// Going to child SimpleBool 1's first option changes bool to true
-		DebuginatorInput input = {0};
-		input.move_to_child = true;
-		input.move_sibling_next = true;
-		debug_menu_handle_input(&debuginator, &input);
-		ASSERT(testdata->simplebool_target == true);
 	}
 	{
 		// Going to parent inactivates item
@@ -195,7 +195,7 @@ static void unittest_debug_menu_run() {
 		DebuginatorInput input = {0};
 		input.move_to_child = true;
 		debug_menu_handle_input(&debuginator, &input);
-		ASSERT(testdata->simplebool_target == true);
+		ASSERT(testdata->simplebool_target == false);
 	}
 	{
 		// Going to parent inactivates item
@@ -271,12 +271,12 @@ static void unittest_debug_menu_run() {
 		debuginator_create_bool_item(&debuginator, "Folder 2/String item", "Change a bool.", &testdata->simplebool_target);
 	}
 	{
-		// Activate it, we should still be on the second value, so bool should turn to false
-		ASSERT(testdata->simplebool_target == true);
+		// Activate it, we should still be on the second value, so bool should turn to true
+		ASSERT(testdata->simplebool_target == false);
 		DebuginatorInput input = {0};
 		input.move_to_child = true;
 		debug_menu_handle_input(&debuginator, &input);
-		ASSERT(testdata->simplebool_target == false);
+		ASSERT(testdata->simplebool_target == true);
 	}
 	{
 		// Remove item

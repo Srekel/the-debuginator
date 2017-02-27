@@ -107,6 +107,7 @@ typedef struct DebuginatorItem {
 	bool is_folder;
 	void* user_data;
 
+	DebuginatorItem* prev_sibling;
 	DebuginatorItem* next_sibling;
 	DebuginatorItem* parent;
 
@@ -189,6 +190,7 @@ void debuginator_set_parent(DebuginatorItem* item, DebuginatorItem* parent) {
 			if (last_sibling->next_sibling == NULL) {
 				// Found the last child, set item as the new last one
 				last_sibling->next_sibling = item;
+				item->prev_sibling = last_sibling;
 				return;
 			}
 
@@ -311,30 +313,27 @@ void debuginator_remove_item(TheDebuginator* debuginator, const char* path) {
 		return;
 	}
 
-	DebuginatorItem* parent = item->parent;
-	DebuginatorItem* parent_child = parent->folder.first_child;
-	DebuginatorItem* previous_child = NULL;
-	while (true) {
-		if (parent_child == item) {
-			if (previous_child == NULL) {
-				parent->folder.first_child = item->next_sibling;
-			}
-			else {
-				previous_child->next_sibling = item->next_sibling;
-			}
-			break;
-		}
-
-		previous_child = parent_child;
-		parent_child = parent_child->next_sibling;
+	if (item->prev_sibling) {
+		item->prev_sibling->next_sibling = item->next_sibling;
 	}
-
+	if (item->next_sibling) {
+		item->next_sibling->prev_sibling = item->prev_sibling;
+	}
+	
+	DebuginatorItem* parent = item->parent;
 	if (parent->folder.hot_child == item) {
-		if (item->next_sibling == NULL) {
-			parent->folder.hot_child = parent->folder.first_child;
+		if (item->next_sibling != NULL) {
+			parent->folder.hot_child = item->next_sibling;
+		}
+		else if (item->prev_sibling != NULL) {
+			parent->folder.hot_child = item->prev_sibling;
 		}
 		else {
-			parent->folder.hot_child = item->next_sibling;
+			parent->folder.hot_child = NULL;
+		}
+
+		if (parent->folder.first_child == item) {
+			parent->folder.first_child = item->next_sibling;
 		}
 	}
 
@@ -388,6 +387,37 @@ DebuginatorItem* debuginator__find_first_leaf(DebuginatorItem* item) {
 				if (leaf_item != NULL) {
 					return leaf_item;
 				}
+
+				child = child->next_sibling;
+			}
+			else {
+				return child;
+			}
+		}
+	}
+
+	return NULL;
+}
+
+DebuginatorItem* debuginator__find_last_leaf(DebuginatorItem* item) {
+	if (!item->is_folder) {
+		return item;
+	}
+
+	if (item->is_folder && item->folder.first_child != NULL) {
+		DebuginatorItem* child = item->folder.first_child;
+		while (child->next_sibling) {
+			child = child->next_sibling;
+		}
+
+		while (child) {
+			if (child->is_folder) {
+				DebuginatorItem* leaf_item = debuginator__find_last_leaf(child);
+				if (leaf_item != NULL) {
+					return leaf_item;
+				}
+
+				child = child->prev_sibling;
 			}
 			else {
 				return child;
@@ -419,6 +449,11 @@ static void debuginator_activate(DebuginatorItem* item) {
 	}
 
 	item->leaf.active_index = item->leaf.hot_index;
+	
+	if (item->leaf.on_item_changed_callback == NULL) {
+		return;
+	}
+
 	void* value = ((char*)item->leaf.values) + item->leaf.hot_index * item->leaf.array_element_size;
 	item->leaf.on_item_changed_callback(item, value, item->leaf.value_titles[item->leaf.hot_index]);
 }
@@ -566,6 +601,65 @@ void debuginator_move_to_next_leaf(TheDebuginator* debuginator) {
 			}
 
 			sibling = parent->next_sibling;
+		}
+
+		hot_item_new->parent->folder.hot_child = hot_item_new;
+		debuginator->hot_item = hot_item_new;
+	}
+}
+
+
+void debuginator_move_to_prev_leaf(TheDebuginator* debuginator) {
+	DebuginatorItem* hot_item = debuginator->hot_item;
+	DebuginatorItem* hot_item_new = debuginator->hot_item;
+	if (!hot_item->is_folder && hot_item->leaf.is_active) {
+		if (--hot_item->leaf.hot_index < 0) {
+			hot_item->leaf.hot_index = hot_item->leaf.num_values - 1;
+		}
+	}
+	else {
+		/*
+		MR
+		A
+		A1
+		A2
+		A3
+		A4
+		B
+		B1
+		B2
+		*/
+
+
+		DebuginatorItem* sibling = hot_item->prev_sibling;
+		DebuginatorItem* parent = hot_item->parent;
+		hot_item_new = NULL;
+		while (hot_item_new == NULL) {
+			while (sibling != NULL) {
+				DebuginatorItem* leaf_item = debuginator__find_last_leaf(sibling);
+				if (leaf_item != NULL) {
+					hot_item_new = leaf_item;
+					break;
+				}
+
+				sibling = sibling->prev_sibling;
+			}
+
+			if (hot_item_new != NULL) {
+				break;
+			}
+
+			while (parent->prev_sibling == NULL) {
+				if (parent == debuginator->root) {
+					DebuginatorItem* leaf_item = debuginator__find_last_leaf(parent);
+					hot_item_new = leaf_item;
+					break;
+				}
+
+				parent = parent->parent;
+			}
+
+			sibling = parent->prev_sibling;
 		}
 
 		hot_item_new->parent->folder.hot_child = hot_item_new;
