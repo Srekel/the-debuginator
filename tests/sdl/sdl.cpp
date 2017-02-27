@@ -62,7 +62,7 @@ static bool theme_setup(GuiHandle gui) {
 	s_colors[0][COLOR_ItemDescription]     = Color(150, 150, 150, 255);
 	s_colors[0][COLOR_ItemValueDefault]    = Color(50,  150, 50,  200);
 	s_colors[0][COLOR_ItemValueOverridden] = Color(100, 255, 100, 200);
-	s_colors[0][COLOR_ItemValueHot]        = Color(200, 255, 200, 200);
+	s_colors[0][COLOR_ItemValueHot]        = Color(100, 255, 100, 200);
 	s_colors[0][COLOR_LineHighlight]       = Color(100, 100, 50, 150);
 	
 	/*
@@ -118,6 +118,16 @@ static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
 			"Change color theme of The Debuginator.", on_change_theme, NULL,
 			string_titles, (void*)theme_indices, 3, sizeof(theme_indices[0]));
 	}
+	{
+		static int string_indices[3] = { 0, 1, 2 };
+		static const char* string_titles[5] = { "String A", "String B", "String C", "String D", "String E" };
+		debuginator_create_array_item(debuginator, NULL, "Debuginator/Help",
+			"The Debuginator is a debug menu. With a keyboard, you open it with Right Arrow and close it with Left Arrow. You use those keys, plus Up/Down arrows to navigate. Right Arrow is also used to change value on a menu item.", NULL, NULL,
+			NULL, NULL, 0, 0);
+		debuginator_create_array_item(debuginator, NULL, "Debuginator/String Test",
+			"Change color theme of The Debuginator.", NULL, NULL,
+			string_titles, NULL, 5, 0);
+	}
 	debuginator_create_bool_item(debuginator, "SimpleBool 1", "Change a bool.", &data->mybool);
 	debuginator_create_bool_item(debuginator, "Folder/SimpleBool 2", "Change a bool.", &data->mybool);
 	//debuginator_create_bool_item(debuginator, "Folder/SimpleBool 3", "Change a bool.", &data->mybool);
@@ -130,7 +140,7 @@ static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
 
 float draw_item(TheDebuginator* debuginator, DebuginatorItem* item, Vector2 offset, bool hot, GuiHandle gui) {
 	//draw_rect_filled(gui, offset, Vector2(100, 30), Color(200, 100, 50, 200));
-
+/*
 	if (!debuginator->hot_item->is_folder && debuginator->hot_item->leaf.is_active) {
 		if (debuginator->hot_item == item) {
 			for (size_t i = 0; i < item->leaf.num_values; i++) {
@@ -140,7 +150,7 @@ float draw_item(TheDebuginator* debuginator, DebuginatorItem* item, Vector2 offs
 	}
 	else if (debuginator->hot_item->parent == item->parent) {
 		draw_rect_filled(gui, Vector2(0, offset.y), Vector2(3, 20), Color(0, 255, 0, 255));
-	}
+	}*/
 
 	if (item->is_folder) {
 		if (debuginator->hot_item == item) {
@@ -153,7 +163,7 @@ float draw_item(TheDebuginator* debuginator, DebuginatorItem* item, Vector2 offs
 		DebuginatorItem* child = item->folder.first_child;
 		while (child) {
 			offset.y += 30;
-			offset.y = draw_item(debuginator, child, offset, hot && child == item->folder.hot_child && debuginator->hot_item != item, gui);
+			offset.y = draw_item(debuginator, child, offset, debuginator->hot_item == child, gui);
 			child = child->next_sibling;
 		}
 	}
@@ -194,9 +204,9 @@ float draw_item(TheDebuginator* debuginator, DebuginatorItem* item, Vector2 offs
 				}
 
 				const char* value_title = item->leaf.value_titles[i];
-				bool value_hot = hot && i == item->leaf.hot_index;
-				bool value_active = value_hot && item->leaf.is_active;
-				unsigned value_color_index = value_active ? COLOR_ItemTitleActive : (value_hot ? COLOR_ItemTitleHot : COLOR_ItemTitle);
+				bool value_hot = i == item->leaf.hot_index;
+				bool value_overridden = i == item->leaf.active_index;
+				unsigned value_color_index = value_hot ? COLOR_ItemValueHot : (value_overridden ? COLOR_ItemTitleOverridden : COLOR_ItemValueDefault);
 				draw_text(gui, value_title, offset, s_fonts[value_hot ? FONT_ItemTitle : FONT_ItemTitle], s_theme[value_color_index]);
 			}
 		}
@@ -240,7 +250,7 @@ int main(int argc, char **argv)
 			case SDL_KEYDOWN:
 			{
 				if (event.key.keysym.sym == SDLK_UP) {
-					debuginator_move_sibling_previous(&debuginator);
+					debuginator_move_to_prev_leaf(&debuginator);
 				}
 				else if (event.key.keysym.sym == SDLK_DOWN) {
 					debuginator_move_to_next_leaf(&debuginator);
