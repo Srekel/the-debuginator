@@ -375,14 +375,35 @@ void debuginator_print(DebuginatorItem* item, int indentation) {
 	}
 }
 
+DebuginatorItem* debuginator__find_first_leaf(DebuginatorItem* item) {
+	if (!item->is_folder) {
+		return item;
+	}
+
+	if (item->is_folder && item->folder.first_child != NULL) {
+		DebuginatorItem* child = item->folder.first_child;
+		while (child) {
+			if (child->is_folder) {
+				DebuginatorItem* leaf_item = debuginator__find_first_leaf(child);
+				if (leaf_item != NULL) {
+					return leaf_item;
+				}
+			}
+			else {
+				return child;
+			}
+		}
+	}
+
+	return NULL;
+}
+
 void debuginator_initialize(TheDebuginator* debuginator) {
-	debuginator->hot_item = debuginator->root->folder.first_child;
-	debuginator->root->folder.hot_child = debuginator->root->folder.first_child;
-	//if (debuginator->hot_item->!is_folder) {
-	//	debuginator->hot_item->is
-	//}
-	debuginator_print(debuginator->root, 0);
-	
+	DebuginatorItem* hot_item = debuginator__find_first_leaf(debuginator->root);
+	debuginator->hot_item = hot_item;
+
+	debuginator->root->folder.hot_child = hot_item;
+	//debuginator_print(debuginator->root, 0);
 }
 
 //██╗███╗   ██╗██████╗ ██╗   ██╗████████╗
@@ -393,6 +414,10 @@ void debuginator_initialize(TheDebuginator* debuginator) {
 //╚═╝╚═╝  ╚═══╝╚═╝      ╚═════╝    ╚═╝
 
 static void debuginator_activate(DebuginatorItem* item) {
+	if (item->leaf.num_values == 0) {
+		return;
+	}
+
 	item->leaf.active_index = item->leaf.hot_index;
 	void* value = ((char*)item->leaf.values) + item->leaf.hot_index * item->leaf.array_element_size;
 	item->leaf.on_item_changed_callback(item, value, item->leaf.value_titles[item->leaf.hot_index]);
@@ -486,6 +511,63 @@ void debuginator_move_to_next(TheDebuginator* debuginator) {
 	}
 
 	if (hot_item != hot_item_new) {
+		hot_item_new->parent->folder.hot_child = hot_item_new;
+		debuginator->hot_item = hot_item_new;
+	}
+}
+
+void debuginator_move_to_next_leaf(TheDebuginator* debuginator) {
+	DebuginatorItem* hot_item = debuginator->hot_item;
+	DebuginatorItem* hot_item_new = debuginator->hot_item;
+	if (!hot_item->is_folder && hot_item->leaf.is_active) {
+		if (++hot_item->leaf.hot_index == hot_item->leaf.num_values) {
+			hot_item->leaf.hot_index = 0;
+		}
+	}
+	else {
+		/*
+		MR
+		  A
+			A1
+			A2
+			  A3
+			  A4
+		  B
+			B1
+			B2
+		*/
+
+		DebuginatorItem* sibling = hot_item->next_sibling;
+		DebuginatorItem* parent = hot_item->parent;
+		hot_item_new = NULL;
+		while (hot_item_new == NULL) {
+			while (sibling != NULL) {
+				DebuginatorItem* leaf_item = debuginator__find_first_leaf(sibling);
+				if (leaf_item != NULL) {
+					hot_item_new = leaf_item;
+					break;
+				}
+
+				sibling = sibling->next_sibling;
+			}
+
+			if (hot_item_new != NULL) {
+				break;
+			}
+
+			while (parent->next_sibling == NULL) {
+				if (parent == debuginator->root) {
+					DebuginatorItem* leaf_item = debuginator__find_first_leaf(parent);
+					hot_item_new = leaf_item;
+					break;
+				}
+
+				parent = parent->parent;
+			}
+
+			sibling = parent->next_sibling;
+		}
+
 		hot_item_new->parent->folder.hot_child = hot_item_new;
 		debuginator->hot_item = hot_item_new;
 	}
