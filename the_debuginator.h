@@ -128,6 +128,10 @@ typedef struct TheDebuginator {
 
 	size_t free_list_size;
 	size_t free_list[DEBUGINATOR_FREE_LIST_CAPACITY];
+
+	bool is_open;
+	float openness_timer; // range [0,1]
+	float openness; // range [0,1]
 } TheDebuginator;
 
 DebuginatorItem* debuginator_new_leaf_item(TheDebuginator* debuginator) {
@@ -436,12 +440,43 @@ void debuginator_initialize(TheDebuginator* debuginator) {
 	//debuginator_print(debuginator->root, 0);
 }
 
+float debuginator_ease_out(float t, float start_value, float change, float duration) {
+	t /= duration;
+	return -change * t * (t - 2) + start_value;
+}
+
+void debuginator_update(TheDebuginator* debuginator, float dt) {
+	if (debuginator->is_open && debuginator->openness < 1) {
+		debuginator->openness_timer += dt;
+		if (debuginator->openness_timer > 1) {
+			debuginator->openness_timer = 1;
+		}
+
+		debuginator->openness = debuginator_ease_out(debuginator->openness_timer, 0, 1, 1);
+		//debuginator->openness = debuginator->openness_timer * debuginator->openness_timer;
+	}
+
+	else if (!debuginator->is_open && debuginator->openness > 0) {
+		debuginator->openness_timer -= dt;
+		if (debuginator->openness_timer < 0) {
+			debuginator->openness_timer = 0;
+		}
+
+		debuginator->openness = debuginator_ease_out(debuginator->openness_timer, 0, 1, 1);
+		//debuginator->openness = debuginator->openness_timer == 0 ? 0 : (1 / debuginator->openness_timer);
+	}
+}
+
 //██╗███╗   ██╗██████╗ ██╗   ██╗████████╗
 //██║████╗  ██║██╔══██╗██║   ██║╚══██╔══╝
 //██║██╔██╗ ██║██████╔╝██║   ██║   ██║
 //██║██║╚██╗██║██╔═══╝ ██║   ██║   ██║
 //██║██║ ╚████║██║     ╚██████╔╝   ██║
 //╚═╝╚═╝  ╚═══╝╚═╝      ╚═════╝    ╚═╝
+
+void debuginator_set_open(TheDebuginator* debuginator, bool is_open) {
+	debuginator->is_open = is_open;
+}
 
 static void debuginator_activate(DebuginatorItem* item) {
 	if (item->leaf.num_values == 0) {
