@@ -31,8 +31,9 @@ enum FontTemplates {
 	FONT_count
 };
 
-static Color* s_theme;
-static Color s_colors[3][16];
+static int s_theme_index = 0;
+static Color s_theme[16];
+static Color s_themes[3][16];
 enum ColorTemplates {
 	COLOR_Background,
 	COLOR_FolderTitle,
@@ -53,17 +54,17 @@ static bool theme_setup(GuiHandle gui) {
 	s_fonts[FONT_ItemTitle] = register_font_template(gui, "LiberationMono-Regular.ttf", 18);
 	s_fonts[FONT_ItemDescription] = register_font_template(gui, "LiberationSerif-Italic.ttf", 18);
 
-	s_colors[0][COLOR_Background]          = Color(25, 50, 25, 220);
-	s_colors[0][COLOR_FolderTitle]         = Color(255, 255, 255, 255);
-	s_colors[0][COLOR_ItemTitle]           = Color(120, 120, 0, 250);
-	s_colors[0][COLOR_ItemTitleOverridden] = Color(200, 200, 0, 255);
-	s_colors[0][COLOR_ItemTitleHot]        = Color(230, 230, 200, 255);
-	s_colors[0][COLOR_ItemTitleActive]     = Color(100, 255, 100, 255);
-	s_colors[0][COLOR_ItemDescription]     = Color(150, 150, 150, 255);
-	s_colors[0][COLOR_ItemValueDefault]    = Color(50,  150, 50,  200);
-	s_colors[0][COLOR_ItemValueOverridden] = Color(100, 255, 100, 200);
-	s_colors[0][COLOR_ItemValueHot]        = Color(100, 255, 100, 200);
-	s_colors[0][COLOR_LineHighlight]       = Color(100, 100, 50, 150);
+	s_themes[0][COLOR_Background]          = Color(25, 50, 25, 220);
+	s_themes[0][COLOR_FolderTitle]         = Color(255, 255, 255, 255);
+	s_themes[0][COLOR_ItemTitle]           = Color(120, 120, 0, 250);
+	s_themes[0][COLOR_ItemTitleOverridden] = Color(200, 200, 0, 255);
+	s_themes[0][COLOR_ItemTitleHot]        = Color(230, 230, 200, 255);
+	s_themes[0][COLOR_ItemTitleActive]     = Color(100, 255, 100, 255);
+	s_themes[0][COLOR_ItemDescription]     = Color(150, 150, 150, 255);
+	s_themes[0][COLOR_ItemValueDefault]    = Color(50,  150, 50,  200);
+	s_themes[0][COLOR_ItemValueOverridden] = Color(100, 255, 100, 200);
+	s_themes[0][COLOR_ItemValueHot]        = Color(100, 255, 100, 200);
+	s_themes[0][COLOR_LineHighlight]       = Color(100, 100, 50, 150);
 	
 	/*
 	background						   Color(offset_lerp*220,25,50,25)
@@ -80,17 +81,18 @@ static bool theme_setup(GuiHandle gui) {
 	dotdotdot                        = Vector4Box(75,  75,  0  , 255, ),
 	*/
 
-	s_colors[1][COLOR_Background]      = Color(50, 50, 150, 200);
-	s_colors[1][COLOR_ItemTitle]       = Color(120, 120, 120, 255);
-	s_colors[1][COLOR_ItemTitleHot]    = Color(200, 200, 200, 255);
-	s_colors[1][COLOR_ItemTitleActive] = Color(200, 200, 255, 255);
+	s_themes[1][COLOR_Background]      = Color(50, 50, 150, 200);
+	s_themes[1][COLOR_ItemTitle]       = Color(120, 120, 120, 255);
+	s_themes[1][COLOR_ItemTitleHot]    = Color(200, 200, 200, 255);
+	s_themes[1][COLOR_ItemTitleActive] = Color(200, 200, 255, 255);
 	
-	s_colors[2][COLOR_Background]      = Color(100, 100, 100, 200);
-	s_colors[2][COLOR_ItemTitle]       = Color(150, 150, 150, 255);
-	s_colors[2][COLOR_ItemTitleHot]    = Color(200, 200, 200, 255);
-	s_colors[2][COLOR_ItemTitleActive] = Color(255, 255, 220, 255);
+	s_themes[2][COLOR_Background]      = Color(100, 100, 100, 200);
+	s_themes[2][COLOR_ItemTitle]       = Color(150, 150, 150, 255);
+	s_themes[2][COLOR_ItemTitleHot]    = Color(200, 200, 200, 255);
+	s_themes[2][COLOR_ItemTitleActive] = Color(255, 255, 220, 255);
 
-	s_theme = s_colors[0];
+	s_theme_index = 0;
+	memcpy(s_theme, s_themes[s_theme_index], sizeof(s_theme));
 
 	for (size_t i = 0; i < FONT_count; i++) {
 		if (s_fonts[i] == 0) {
@@ -102,8 +104,8 @@ static bool theme_setup(GuiHandle gui) {
 }
 
 static void on_change_theme(DebuginatorItem* item, void* value, const char* value_title) {
-	int theme_index = *(int*)value;
-	s_theme = s_colors[theme_index];
+	s_theme_index = *(int*)value;
+	memcpy(s_theme, s_themes[s_theme_index], sizeof(s_theme));
 }
 
 static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
@@ -169,7 +171,7 @@ float draw_item(TheDebuginator* debuginator, DebuginatorItem* item, Vector2 offs
 	}
 	else {
 		if (debuginator->hot_item == item && (!item->leaf.is_active || item->leaf.num_values == 0)) {
-			draw_rect_filled(gui, Vector2(0, offset.y - 5), Vector2(400, 30), s_theme[COLOR_LineHighlight]);
+			draw_rect_filled(gui, Vector2(debuginator->openness * 400 - 400, offset.y - 5), Vector2(400, 30), s_theme[COLOR_LineHighlight]);
 		}
 
 		bool is_overriden = item->leaf.active_index != 0;
@@ -180,7 +182,7 @@ float draw_item(TheDebuginator* debuginator, DebuginatorItem* item, Vector2 offs
 		// Draw quick representation of value
 		if (item->leaf.num_values > 0) {
 			Vector2 value_offset = offset;
-			value_offset.x = 300;
+			value_offset.x = 300 + debuginator->openness * 400 - 400;
 			draw_text(gui, item->leaf.value_titles[item->leaf.active_index], value_offset, s_fonts[FONT_ItemTitle], s_theme[default_color_index]);
 		}
 		
@@ -257,10 +259,20 @@ int main(int argc, char **argv)
 					//debuginator_move_to_next(&debuginator);
 				}
 				else if (event.key.keysym.sym == SDLK_LEFT) {
-					debuginator_move_to_parent(&debuginator);
+					if (debuginator.is_open && !debuginator.hot_item->leaf.is_active) {
+						debuginator_set_open(&debuginator, false);
+					}
+					else {
+						debuginator_move_to_parent(&debuginator);
+					}
 				}
 				else if (event.key.keysym.sym == SDLK_RIGHT) {
-					debuginator_move_to_child(&debuginator);
+					if (!debuginator.is_open) {
+						debuginator_set_open(&debuginator, true);
+					}
+					else {
+						debuginator_move_to_child(&debuginator);
+					}
 				}
 				else if (event.key.keysym.sym == SDLK_ESCAPE) {
 					i = 10000000;
@@ -271,17 +283,30 @@ int main(int argc, char **argv)
 			}
 		}
 
+		float dt = 0.1;
+		debuginator_update(&debuginator, dt * 0.5f);
+
+		// update theme opacity
+		for (size_t i = 0; i < COLOR_NumColors; i++) {
+			s_theme[i].a = s_themes[s_theme_index][i].a * debuginator.openness;
+		}
+
 		frame_begin(gui, i);
 
+		// bouncing boxes
 		draw_rect_filled(gui, Vector2(i % 500, i % 500), Vector2(300, 300), Color(255, 255, 255, 255));
-		draw_rect_filled(gui, Vector2((i/2) % 350, i % 700), Vector2(200, 200), Color(0, 0, 0, 255));
-		draw_rect_filled(gui, Vector2(0, 0), Vector2(400, res_y), s_theme[COLOR_Background]);
+		draw_rect_filled(gui, Vector2((i / 2) % 350, i % 700), Vector2(200, 200), Color(0, 0, 0, 255));
 
-		Vector2 item_offset(0, 0);
-		draw_item(&debuginator, debuginator.root, item_offset, true, gui);
+		float width = 400;
+		Vector2 offset(-width * (1 - debuginator.openness), 0);
+
+		// Background
+		draw_rect_filled(gui, offset, Vector2(400, res_y), s_theme[COLOR_Background]);
+
+		draw_item(&debuginator, debuginator.root, offset, true, gui);
 
 		frame_end(gui);
-		SDL_Delay(30);
+		SDL_Delay(1 / dt);
 	}
 
 	for (size_t i = 0; i < 16; i++) { // TODO unhardcode
