@@ -124,6 +124,8 @@ void draw_text(GuiHandle gui_handle, const char* text, Vector2 position, FontTem
 	
 	SDL_SetRenderDrawColor(gui->renderer, 255, 255, 255, 255);
 	SDL_RenderCopy(gui->renderer, text_texture, NULL, &rectangle);
+
+	SDL_DestroyTexture(text_texture);
 }
 
 void draw_rect_filled(GuiHandle gui_handle, Vector2 position, Vector2 size, Color color) {
