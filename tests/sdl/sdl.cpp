@@ -2,10 +2,15 @@
 #include <assert.h>
 #include <string.h>
 
+#include <time.h>
+#include <stdlib.h>
+
 #include <SDL.h>
 #include <SDL_ttf.h>
 
 #include "gui.h"
+
+static const int WIDTH = 500;
 
 static void unittest_debuginator_assert(bool test) {
 	if (!test) {
@@ -19,10 +24,34 @@ static void unittest_debuginator_assert(bool test) {
 
 #include "../../the_debuginator.h"
 
+struct GameBox {
+	GameBox() {
+	}
+	void randomize() {
+		pos.x = pos.y = 0;
+		pos.x = pos.y = 0;
+		size.x = 50 + 100 * ((float)rand()) / RAND_MAX;
+		size.y = 50 + 100 * ((float)rand()) / RAND_MAX;
+		velocity.x = 10 + 10 * ((float)rand()) / RAND_MAX;
+		velocity.y = 10 + 10 * ((float)rand()) / RAND_MAX;
+		color.r = 50 + 100 * ((float)rand()) / RAND_MAX;
+		color.g = 50 + 100 * ((float)rand()) / RAND_MAX;
+		color.b = 50 + 100 * ((float)rand()) / RAND_MAX;
+		color.a = 150 + 100 * ((float)rand()) / RAND_MAX;
+	}
+	Vector2 pos;
+	Vector2 size;
+	Vector2 velocity;
+	Color color;
+};
+
 struct GameData {
 	bool mybool;
 	bool draw_boxes;
 	char mystring[256];
+	GameBox boxes[256];
+	int boxes_n;
+	char box_string[32];
 };
 
 static FontTemplateHandle s_fonts[16];
@@ -109,6 +138,19 @@ static void on_change_theme(DebuginatorItem* item, void* value, const char* valu
 	memcpy(s_theme, s_themes[s_theme_index], sizeof(s_theme));
 }
 
+static void on_boxes_activated(DebuginatorItem* item, void* value, const char* value_title) {
+	GameData* data = (GameData*)item->user_data;
+	if (strcmp(value_title, "Add box") == 0 && data->boxes_n < 256) {
+		GameBox* box = &data->boxes[data->boxes_n++];
+		box->randomize();
+	}
+	else if (strcmp(value_title, "Clear all boxes") == 0 && data->boxes_n < 256) {
+		data->boxes_n = 0;
+	}
+
+	sprintf_s(data->box_string, "Box count: %d", data->boxes_n);
+}
+
 static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
 
 	{
@@ -122,7 +164,6 @@ static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
 			string_titles, (void*)theme_indices, 3, sizeof(theme_indices[0]));
 	}
 	{
-		static int string_indices[3] = { 0, 1, 2 };
 		static const char* string_titles[5] = { "String A", "String B", "String C", "String D", "String E" };
 		debuginator_create_array_item(debuginator, NULL, "Debuginator/Help",
 			"The Debuginator is a debug menu. With a keyboard, you open it with Right Arrow and close it with Left Arrow. You use those keys, plus Up/Down arrows to navigate. Right Arrow is also used to change value on a menu item.", NULL, NULL,
@@ -132,9 +173,16 @@ static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
 			string_titles, NULL, 5, 0);
 	}
 	debuginator_create_bool_item(debuginator, "SDL Demo/Draw boxes", "Whether to draw the animated boxes or not.", &data->draw_boxes);
+
+	{
+		static const char* string_titles[3] = { "Clear all boxes", "Add box", data->box_string };
+		debuginator_create_array_item(debuginator, NULL, "SDL Demo/Boxes",
+			"Box things", on_boxes_activated, data,
+			string_titles, NULL, 3, 0);	}
+
 	debuginator_create_bool_item(debuginator, "SimpleBool 1", "Change a bool.", &data->mybool);
 	debuginator_create_bool_item(debuginator, "Folder/SimpleBool 2", "Change a bool.", &data->mybool);
-	//debuginator_create_bool_item(debuginator, "Folder/SimpleBool 3", "Change a bool.", &data->mybool);
+	debuginator_create_bool_item(debuginator, "Folder/SimpleBool 3", "Change a bool.", &data->mybool);
 	debuginator_create_bool_item(debuginator, "Folder/Subfolder/SimpleBool 4 with a really long long title", "Change a bool.", &data->mybool);
 
 	debuginator_new_folder_item(debuginator, NULL, "Folder 2", 0);
@@ -158,7 +206,7 @@ float draw_item(TheDebuginator* debuginator, DebuginatorItem* item, Vector2 offs
 
 	if (item->is_folder) {
 		if (debuginator->hot_item == item) {
-			draw_rect_filled(gui, Vector2(0, offset.y - 5), Vector2(400, 30), s_theme[COLOR_LineHighlight]);
+			draw_rect_filled(gui, Vector2(0, offset.y - 5), Vector2(500, 30), s_theme[COLOR_LineHighlight]);
 		}
 
 		unsigned color_index = item == debuginator->hot_item ? COLOR_ItemTitleActive : (hot ? COLOR_ItemTitleHot : COLOR_FolderTitle);
@@ -173,7 +221,7 @@ float draw_item(TheDebuginator* debuginator, DebuginatorItem* item, Vector2 offs
 	}
 	else {
 		if (debuginator->hot_item == item && (!item->leaf.is_active || item->leaf.num_values == 0)) {
-			draw_rect_filled(gui, Vector2(debuginator->openness * 400 - 400, offset.y - 5), Vector2(400, 30), s_theme[COLOR_LineHighlight]);
+			draw_rect_filled(gui, Vector2(debuginator->openness * 500 - 500, offset.y - 5), Vector2(500, 30), s_theme[COLOR_LineHighlight]);
 		}
 
 		bool is_overriden = item->leaf.active_index != 0;
@@ -184,7 +232,7 @@ float draw_item(TheDebuginator* debuginator, DebuginatorItem* item, Vector2 offs
 		// Draw quick representation of value
 		if (item->leaf.num_values > 0) {
 			Vector2 value_offset = offset;
-			value_offset.x = 300 + debuginator->openness * 400 - 400;
+			value_offset.x = 300 + debuginator->openness * 500 - 500;
 			draw_text(gui, item->leaf.value_titles[item->leaf.active_index], value_offset, s_fonts[FONT_ItemTitle], s_theme[default_color_index]);
 		}
 		
@@ -204,7 +252,7 @@ float draw_item(TheDebuginator* debuginator, DebuginatorItem* item, Vector2 offs
 				offset.y += 30;
 
 				if (debuginator->hot_item == item && item->leaf.hot_index == i) {
-					draw_rect_filled(gui, Vector2(0, offset.y - 5), Vector2(400, 30), s_theme[COLOR_LineHighlight]);
+					draw_rect_filled(gui, Vector2(0, offset.y - 5), Vector2(500, 30), s_theme[COLOR_LineHighlight]);
 				}
 
 				const char* value_title = item->leaf.value_titles[i];
@@ -329,11 +377,24 @@ int main(int argc, char **argv)
 			draw_rect_filled(gui, Vector2((i / 2) % 350, i % 700), Vector2(200, 200), Color(0, 0, 0, 255));
 		}
 
+		for (size_t i = 0; i < data.boxes_n; i++) {
+			GameBox* box = &data.boxes[i];
+			box->pos.x += box->velocity.x * dt;
+			box->pos.y += box->velocity.y * dt;
+			if (box->pos.x < 0 && box->velocity.x < 0 || box->pos.x > res_x && box->velocity.x > 0) {
+				box->velocity.x *= -1;
+			}
+			if (box->pos.y < 0 && box->velocity.y < 0 || box->pos.y > res_x && box->velocity.y > 0) {
+				box->velocity.y *= -1;
+			}
+			draw_rect_filled(gui, box->pos, box->size, box->color);
+		}
+
 		float width = 400;
 		Vector2 offset(-width * (1 - debuginator.openness), 0);
 
 		// Background
-		draw_rect_filled(gui, offset, Vector2(400, res_y), s_theme[COLOR_Background]);
+		draw_rect_filled(gui, offset, Vector2(500, res_y), s_theme[COLOR_Background]);
 
 		// Ensure hot item is smoothly placed at a nice position
 		distance_to_hot_item(debuginator.root, debuginator.hot_item, &offset.y);
