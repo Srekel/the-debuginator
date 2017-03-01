@@ -21,6 +21,7 @@ static void unittest_debuginator_assert(bool test) {
 
 struct GameData {
 	bool mybool;
+	bool draw_boxes;
 	char mystring[256];
 };
 
@@ -130,6 +131,7 @@ static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
 			"Change color theme of The Debuginator.", NULL, NULL,
 			string_titles, NULL, 5, 0);
 	}
+	debuginator_create_bool_item(debuginator, "SDL Demo/Draw boxes", "Whether to draw the animated boxes or not.", &data->draw_boxes);
 	debuginator_create_bool_item(debuginator, "SimpleBool 1", "Change a bool.", &data->mybool);
 	debuginator_create_bool_item(debuginator, "Folder/SimpleBool 2", "Change a bool.", &data->mybool);
 	//debuginator_create_bool_item(debuginator, "Folder/SimpleBool 3", "Change a bool.", &data->mybool);
@@ -217,6 +219,31 @@ float draw_item(TheDebuginator* debuginator, DebuginatorItem* item, Vector2 offs
 	return offset.y;
 }
 
+bool distance_to_hot_item(DebuginatorItem* item, DebuginatorItem* hot_item, float* distance) {
+	if (item == hot_item) {
+		return true;
+	}
+
+	*distance += 30;
+	if (item->is_folder) {
+		DebuginatorItem* child = item->folder.first_child;
+		while (child) {
+			bool found = distance_to_hot_item(child, hot_item, distance);
+			if (found) {
+				return true;
+			}
+
+			child = child->next_sibling;
+		}
+	}
+
+	return false;
+}
+
+float lerp(float a, float b, float t) {
+	return a * (1-t) + b * t;
+}
+
 int main(int argc, char **argv)
 {
 	(void)(argc, argv);
@@ -238,6 +265,8 @@ int main(int argc, char **argv)
 
 	GameData data = { 0 };
 	debug_menu_setup(&debuginator, &data);
+
+	float current_y = 0;
 
 	SDL_Event event;
 	for (size_t i = 0; i < 400000; i++) {
@@ -283,7 +312,8 @@ int main(int argc, char **argv)
 			}
 		}
 
-		float dt = 0.1;
+		float fps = 10;
+		float dt = 1 / fps;
 		debuginator_update(&debuginator, dt * 0.5f);
 
 		// update theme opacity
@@ -294,8 +324,10 @@ int main(int argc, char **argv)
 		frame_begin(gui, i);
 
 		// bouncing boxes
-		draw_rect_filled(gui, Vector2(i % 500, i % 500), Vector2(300, 300), Color(255, 255, 255, 255));
-		draw_rect_filled(gui, Vector2((i / 2) % 350, i % 700), Vector2(200, 200), Color(0, 0, 0, 255));
+		if (data.draw_boxes) {
+			draw_rect_filled(gui, Vector2(i % 500, i % 500), Vector2(300, 300), Color(255, 255, 255, 255));
+			draw_rect_filled(gui, Vector2((i / 2) % 350, i % 700), Vector2(200, 200), Color(0, 0, 0, 255));
+		}
 
 		float width = 400;
 		Vector2 offset(-width * (1 - debuginator.openness), 0);
@@ -303,10 +335,18 @@ int main(int argc, char **argv)
 		// Background
 		draw_rect_filled(gui, offset, Vector2(400, res_y), s_theme[COLOR_Background]);
 
+		// Ensure hot item is smoothly placed at a nice position
+		distance_to_hot_item(debuginator.root, debuginator.hot_item, &offset.y);
+		float wanted_y = res_y * 0.25f;
+		float distance_to_wanted_y = wanted_y - offset.y;
+		offset.y = lerp(current_y, distance_to_wanted_y, 0.1f);
+		current_y = offset.y;
+
+		// Draw all items
 		draw_item(&debuginator, debuginator.root, offset, true, gui);
 
 		frame_end(gui);
-		SDL_Delay(1 / dt);
+		SDL_Delay(dt);
 	}
 
 	for (size_t i = 0; i < 16; i++) { // TODO unhardcode
