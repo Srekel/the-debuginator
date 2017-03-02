@@ -6,6 +6,8 @@
 
 typedef intptr_t GuiHandle;
 typedef intptr_t FontTemplateHandle;
+//typedef DebuginatorVector2 Vector2;
+
 
 struct Vector2 {
 	Vector2() : x(0), y(0) {}
@@ -23,17 +25,16 @@ struct Color {
 	unsigned char a;
 };
 
-GuiHandle create_gui(int resx, int resy, const char* window_title);
-void destroy_gui(GuiHandle gui);
+GuiHandle gui_create_gui(int resx, int resy, const char* window_title);
+void gui_destroy_gui(GuiHandle gui);
 
-void frame_begin(GuiHandle gui_hande, int lolframe);
-void frame_end(GuiHandle gui_hande);
+void gui_frame_begin(GuiHandle gui_hande, int lolframe);
+void gui_frame_end(GuiHandle gui_hande);
 
-FontTemplateHandle register_font_template(GuiHandle gui, const char* font, int size);
-void unregister_font_template(GuiHandle gui_handle, FontTemplateHandle font_handle);
+FontTemplateHandle gui_register_font_template(GuiHandle gui, const char* font, int size);
+void gui_unregister_font_template(GuiHandle gui_handle, FontTemplateHandle font_handle);
 
-void draw_text(GuiHandle gui, const char* text, Vector2 position, FontTemplateHandle font, Color color);
-void draw_rect_filled(GuiHandle gui_handle, Vector2 position, Vector2 size, Color color);
+void gui_draw_text(GuiHandle gui, const char* text, Vector2 position, FontTemplateHandle font, Color color);
+void gui_draw_rect_filled(GuiHandle gui_handle, Vector2 position, Vector2 size, Color color);
 
-
-const char* word_wrap(GuiHandle gui_handle, FontTemplateHandle font_handle, const char* text, int max_width, char* buffer, int buffer_size);
+const char* gui_word_wrap(GuiHandle gui_handle, FontTemplateHandle font_handle, const char* text, int max_width, char* buffer, int buffer_size);

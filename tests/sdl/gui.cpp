@@ -23,7 +23,7 @@ static Gui guis[1];
 static int gui_count = 0;
 
 
-GuiHandle create_gui(int resx, int resy, const char* window_title) {
+GuiHandle gui_create_gui(int resx, int resy, const char* window_title) {
 	if (gui_count > 0) {
 		return (GuiHandle)nullptr;
 	}
@@ -61,26 +61,26 @@ GuiHandle create_gui(int resx, int resy, const char* window_title) {
 	return (GuiHandle)gui;
 }
 
-void destroy_gui(GuiHandle gui_handle) {
+void gui_destroy_gui(GuiHandle gui_handle) {
 	Gui* gui = (Gui*)gui_handle;
 
 	SDL_DestroyWindow(gui->window);
 	SDL_Quit();
 }
 
-void frame_begin(GuiHandle gui_handle, int lolframe) {
+void gui_frame_begin(GuiHandle gui_handle, int lolframe) {
 	Gui* gui = (Gui*)gui_handle;
 	//SDL_SetRenderDrawColor(gui->renderer, (lolframe/4) % 255, (lolframe / 2 + 100) % 255, 100, 255);
 	SDL_SetRenderDrawColor(gui->renderer, 0, 0, 0, 255);
 	SDL_RenderClear(gui->renderer);
 }
 
-void frame_end(GuiHandle gui_handle){
+void gui_frame_end(GuiHandle gui_handle){
 	Gui* gui = (Gui*)gui_handle;
 	SDL_RenderPresent(gui->renderer);
 }
 
-FontTemplateHandle register_font_template(GuiHandle gui_handle, const char* font, int size) {
+FontTemplateHandle gui_register_font_template(GuiHandle gui_handle, const char* font, int size) {
 	TTF_Font* ttf_font = TTF_OpenFont(font, size);
 	if (ttf_font == NULL) {
 		return 0;
@@ -93,13 +93,13 @@ FontTemplateHandle register_font_template(GuiHandle gui_handle, const char* font
 	return (FontTemplateHandle)font_template;
 }
 
-void unregister_font_template(GuiHandle gui_handle, FontTemplateHandle font_handle) {
+void gui_unregister_font_template(GuiHandle gui_handle, FontTemplateHandle font_handle) {
 	FontTemplate* font_template = (FontTemplate*)font_handle;
 	TTF_CloseFont(font_template->font);
 	font_template->font = 0;
 }
 
-void draw_text(GuiHandle gui_handle, const char* text, Vector2 position, FontTemplateHandle font_handle, Color color) {
+void gui_draw_text(GuiHandle gui_handle, const char* text, Vector2 position, FontTemplateHandle font_handle, Color color) {
 	Gui* gui = (Gui*)gui_handle;
 	SDL_Color* text_color = (SDL_Color*)&color;
 	FontTemplate* font_template = (FontTemplate*)font_handle;
@@ -128,7 +128,7 @@ void draw_text(GuiHandle gui_handle, const char* text, Vector2 position, FontTem
 	SDL_DestroyTexture(text_texture);
 }
 
-void draw_rect_filled(GuiHandle gui_handle, Vector2 position, Vector2 size, Color color) {
+void gui_draw_rect_filled(GuiHandle gui_handle, Vector2 position, Vector2 size, Color color) {
 	Gui* gui = (Gui*)gui_handle;
 	SDL_Rect rect;
 	rect.x = position.x;
@@ -140,7 +140,7 @@ void draw_rect_filled(GuiHandle gui_handle, Vector2 position, Vector2 size, Colo
 	SDL_RenderFillRect(gui->renderer, &rect);
 }
 
-const char* word_wrap(GuiHandle gui_handle, FontTemplateHandle font_handle, const char* text, int max_width, char* buffer, int buffer_size) {
+const char* gui_word_wrap(GuiHandle gui_handle, FontTemplateHandle font_handle, const char* text, int max_width, char* buffer, int buffer_size) {
 
 	// This is really stupid but it works for now.
 	// TODO: Fix dropping words bug.

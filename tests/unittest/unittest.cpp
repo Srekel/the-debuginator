@@ -37,6 +37,20 @@ static void unittest_debuginator_assert(bool test) {
 
 #include "../../the_debuginator.h"
 
+
+#pragma warning(suppress: 4100) // Unreferenced param
+void draw_text(const char* text, DebuginatorVector2 position, DebuginatorColor color, DebuginatorFont font, void* userdata) {
+}
+
+#pragma warning(suppress: 4100) // Unreferenced param
+void draw_rect(DebuginatorVector2 position, DebuginatorVector2 size, DebuginatorColor color, void* userdata) {
+}
+
+#pragma warning(suppress: 4100) // Unreferenced param
+const char* word_wrap(const char* text, DebuginatorFont font, float max_width, char* buffer, int buffer_size, void* userdata) {
+	return NULL;
+}
+
 static void unittest_on_item_changed_stringtest(DebuginatorItem* item, void* value, const char* value_title) {
 	(void)value_title;
 	const char** string_ptr = (const char**)value;
@@ -69,7 +83,7 @@ static void unittest_debug_menu_run() {
 	memset(&g_testdata, 0, sizeof(g_testdata));
 	UnitTestData* testdata = &g_testdata;
 	DebuginatorItem item_buffer[16];
-	TheDebuginator debuginator = debuginator_create(item_buffer, sizeof(item_buffer) / sizeof(item_buffer[0]));
+	TheDebuginator debuginator = debuginator_create(item_buffer, sizeof(item_buffer) / sizeof(item_buffer[0]), draw_text, draw_rect, word_wrap, NULL);
 	unittest_debug_menu_setup(&debuginator);
 	debuginator_initialize(&debuginator);
 
