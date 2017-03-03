@@ -39,7 +39,7 @@ static void unittest_debuginator_assert(bool test) {
 
 
 #pragma warning(suppress: 4100) // Unreferenced param
-void draw_text(const char* text, DebuginatorVector2 position, DebuginatorColor color, DebuginatorFont font, void* userdata) {
+void draw_text(const char* text, DebuginatorVector2* position, DebuginatorColor* color, DebuginatorFont* font, void* userdata) {
 }
 
 #pragma warning(suppress: 4100) // Unreferenced param

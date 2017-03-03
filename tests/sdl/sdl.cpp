@@ -150,9 +150,11 @@ static bool theme_setup(GuiHandle gui) {
 	return true;
 }
 
-void draw_text(const char* text, DebuginatorVector2 position, DebuginatorColor color, DebuginatorFont font, void* userdata) {
+void draw_text(const char* text, DebuginatorVector2* position, DebuginatorColor* color, DebuginatorFont* font, void* userdata) {
 	GuiHandle gui = (GuiHandle)userdata;
-	gui_draw_text(gui, text, *(Vector2*)&position, (FontTemplateHandle)font.userdata, *(Color*)&color);
+	//gui_draw_text(gui, text, *(Vector2*)&position, (FontTemplateHandle)font.userdata, *(Color*)&color);
+	int color_index = font->italic ? (int)FONT_ItemDescription : (int)FONT_ItemTitle;
+	gui_draw_text(gui, text, *(Vector2*)position, s_fonts[color_index], *(Color*)color);
 }
 
 void draw_rect(DebuginatorVector2 position, DebuginatorVector2 size, DebuginatorColor color, void* userdata) {
@@ -160,7 +162,7 @@ void draw_rect(DebuginatorVector2 position, DebuginatorVector2 size, Debuginator
 }
 
 const char* word_wrap(const char* text, DebuginatorFont font, float max_width, char* buffer, int buffer_size, void* userdata) {
-	return gui_word_wrap((GuiHandle)userdata, (FontTemplateHandle)font.userdata, text, (int)max_width, buffer, buffer_size);
+	return gui_word_wrap((GuiHandle)userdata, s_fonts[font.italic ? FONT_ItemDescription : FONT_ItemTitle], text, (int)max_width, buffer, buffer_size);
 }
 
 
@@ -446,8 +448,8 @@ int main(int argc, char **argv)
 		current_y = offset.y;
 
 		// Draw all items
-		draw_item(&debuginator, debuginator.root, offset, true, gui);
-		//debuginator_draw_item(&debuginator, debuginator.root, *(DebuginatorVector2*)&offset, true);
+		//draw_item(&debuginator, debuginator.root, offset, true, gui);
+		debuginator_draw_item(&debuginator, debuginator.root, *(DebuginatorVector2*)&offset, true);
 
 		gui_frame_end(gui);
 		SDL_Delay(dt);

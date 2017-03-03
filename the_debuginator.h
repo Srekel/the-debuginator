@@ -68,6 +68,7 @@
 #define DEBUGINATOR_debug_print 
 #endif
 
+// TODO C99-ify these
 typedef struct DebuginatorVector2 {
 	DebuginatorVector2() : x(0), y(0) {}
 	DebuginatorVector2(float x, float y) : x(x), y(y) {}
@@ -85,10 +86,10 @@ typedef struct DebuginatorColor {
 } DebuginatorColor;
 
 typedef struct DebuginatorFont {
+	void* userdata;
 	int size;
 	bool bold;
 	bool italic;
-	void* userdata;
 } DebuginatorFont;
 
 typedef enum DebuginatorDrawTypes {
@@ -106,6 +107,11 @@ typedef enum DebuginatorDrawTypes {
 	DEBUGINATOR_NumDrawTypes
 } DebuginatorDrawTypes;
 
+DebuginatorVector2 debuginator__vector2(float x, float y) {
+	DebuginatorVector2 v; v.x = x; v.y = y;
+	return v;
+}
+
 typedef struct DebuginatorTheme {
 	DebuginatorColor colors[DEBUGINATOR_NumDrawTypes];
 	DebuginatorFont fonts[DEBUGINATOR_NumDrawTypes];
@@ -119,7 +125,7 @@ typedef struct DebuginatorFolderData {
 typedef struct DebuginatorItem DebuginatorItem;
 
 typedef void (*DebuginatorDrawTextCallback)
-	(const char* text, DebuginatorVector2 position, DebuginatorColor color, DebuginatorFont font, void* userdata);
+	(const char* text, DebuginatorVector2* position, DebuginatorColor* color, DebuginatorFont* font, void* userdata);
 typedef void (*DebuginatorDrawRectCallback)
 	(DebuginatorVector2 position, DebuginatorVector2 size, DebuginatorColor color, void* userdata);
 typedef const char* (*DebuginatorWordWrapCallback)
@@ -427,8 +433,7 @@ TheDebuginator debuginator_create(DebuginatorItem* item_buffer, size_t item_buff
 
 	// Initialize default themes
 	DebuginatorTheme* themes = debuginator.themes;
-	memset(themes, 123, sizeof(*themes)); // Should make it obvious if something isn't inialized
-
+	
 	// Classic theme
 	themes[0].colors[DEBUGINATOR_Background] = DebuginatorColor(25, 50, 25, 220);
 	themes[0].colors[DEBUGINATOR_FolderTitle] = DebuginatorColor(255, 255, 255, 255);
@@ -441,6 +446,9 @@ TheDebuginator debuginator_create(DebuginatorItem* item_buffer, size_t item_buff
 	themes[0].colors[DEBUGINATOR_ItemValueOverridden] = DebuginatorColor(100, 255, 100, 200);
 	themes[0].colors[DEBUGINATOR_ItemValueHot] = DebuginatorColor(100, 255, 100, 200);
 	themes[0].colors[DEBUGINATOR_LineHighlight] = DebuginatorColor(100, 100, 50, 150);
+	//themes[0].fonts[DEBUGINATOR_FolderTitle].italic = true;
+	//themes[0].fonts[DEBUGINATOR_ItemTitle].italic = true;
+	themes[0].fonts[DEBUGINATOR_ItemDescription].italic = true;
 
 	// Neon theme
 	themes[1].colors[DEBUGINATOR_Background] = DebuginatorColor(25, 25, 50, 220);
@@ -615,7 +623,7 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 		}
 
 		unsigned color_index = item == debuginator->hot_item ? DEBUGINATOR_ItemTitleActive : (hot ? DEBUGINATOR_ItemTitleHot : DEBUGINATOR_FolderTitle);
-		debuginator->draw_text(item->title, offset, debuginator->theme.colors[color_index], debuginator->theme.fonts[DEBUGINATOR_ItemTitle], debuginator->draw_user_data);
+		debuginator->draw_text(item->title, &offset, &debuginator->theme.colors[color_index], &debuginator->theme.fonts[DEBUGINATOR_ItemTitle], debuginator->draw_user_data);
 		offset.x += 20;
 		DebuginatorItem* child = item->folder.first_child;
 		while (child) {
@@ -626,13 +634,14 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 	}
 	else {
 		if (debuginator->hot_item == item && (!item->leaf.is_active || item->leaf.num_values == 0)) {
-			debuginator->draw_rect(DebuginatorVector2(debuginator->openness * 500 - 500, offset.y - 5), DebuginatorVector2(500, 30), debuginator->theme.colors[DEBUGINATOR_LineHighlight], debuginator->draw_user_data);
+			debuginator->draw_rect(debuginator__vector2(debuginator->openness * 500 - 500, offset.y - 5), debuginator__vector2(500, 30), debuginator->theme.colors[DEBUGINATOR_LineHighlight], debuginator->draw_user_data);
 		}
 
 		bool is_overriden = item->leaf.active_index != 0;
 		unsigned default_color_index = is_overriden ? DEBUGINATOR_ItemTitleOverridden : DEBUGINATOR_ItemTitle;
 		unsigned color_index = item == debuginator->hot_item && !item->leaf.is_active ? DEBUGINATOR_ItemTitleActive : (hot ? DEBUGINATOR_ItemTitleHot : default_color_index);
-		debuginator->draw_text(item->title, offset, debuginator->theme.colors[color_index], debuginator->theme.fonts[DEBUGINATOR_ItemTitle], debuginator->draw_user_data);
+		DebuginatorFont lolfont = debuginator->theme.fonts[DEBUGINATOR_ItemTitle];
+		debuginator->draw_text(item->title, &offset, &debuginator->theme.colors[color_index], &lolfont, debuginator->draw_user_data);
 
 		// Draw quick representation of value
 		if (item->leaf.quick_draw_callback) {
@@ -643,7 +652,7 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 		else if (item->leaf.num_values > 0) {
 			DebuginatorVector2 value_offset = offset;
 			value_offset.x = 300 + debuginator->openness * 500 - 500;
-			debuginator->draw_text(item->leaf.value_titles[item->leaf.active_index], value_offset, debuginator->theme.colors[default_color_index], debuginator->theme.fonts[DEBUGINATOR_ItemTitle], debuginator->draw_user_data);
+			debuginator->draw_text(item->leaf.value_titles[item->leaf.active_index], &value_offset, &debuginator->theme.colors[default_color_index], &debuginator->theme.fonts[DEBUGINATOR_ItemTitle], debuginator->draw_user_data);
 		}
 
 		if (item->leaf.is_active) {
@@ -655,21 +664,23 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 				description = debuginator->word_wrap(description, debuginator->theme.fonts[DEBUGINATOR_ItemDescription], 350 - offset.x, description_line, 64, debuginator->draw_user_data);
 
 				offset.y += 30;
-				debuginator->draw_text(description_line, offset, debuginator->theme.colors[DEBUGINATOR_ItemDescription], debuginator->theme.fonts[DEBUGINATOR_ItemDescription], debuginator->draw_user_data);
+				debuginator->draw_text(description_line, &offset, &debuginator->theme.colors[DEBUGINATOR_ItemDescription], &debuginator->theme.fonts[DEBUGINATOR_ItemDescription], debuginator->draw_user_data);
 			}
 
 			for (size_t i = 0; i < item->leaf.num_values; i++) {
 				offset.y += 30;
 
 				if (debuginator->hot_item == item && item->leaf.hot_index == i) {
-					debuginator->draw_rect(DebuginatorVector2(0, offset.y - 5), DebuginatorVector2(500, 30), debuginator->theme.colors[DEBUGINATOR_LineHighlight], debuginator->draw_user_data);
+					DebuginatorVector2 pos = debuginator__vector2(0, offset.y - 5);
+					DebuginatorVector2 size = debuginator__vector2(500, 30);
+					debuginator->draw_rect(pos, size, debuginator->theme.colors[DEBUGINATOR_LineHighlight], debuginator->draw_user_data);
 				}
 
 				const char* value_title = item->leaf.value_titles[i];
 				bool value_hot = i == item->leaf.hot_index;
 				bool value_overridden = i == item->leaf.active_index;
 				unsigned value_color_index = value_hot ? DEBUGINATOR_ItemValueHot : (value_overridden ? DEBUGINATOR_ItemTitleOverridden : DEBUGINATOR_ItemValueDefault);
-				debuginator->draw_text(value_title, offset, debuginator->theme.colors[value_color_index], debuginator->theme.fonts[value_hot ? DEBUGINATOR_ItemTitle : DEBUGINATOR_ItemTitle], debuginator->draw_user_data);
+				debuginator->draw_text(value_title, &offset, &debuginator->theme.colors[value_color_index], &debuginator->theme.fonts[value_hot ? DEBUGINATOR_ItemTitle : DEBUGINATOR_ItemTitle], debuginator->draw_user_data);
 			}
 		}
 	}
