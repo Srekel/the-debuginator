@@ -77,8 +77,6 @@ typedef struct DebuginatorVector2 {
 } DebuginatorVector2;
 
 typedef struct DebuginatorColor {
-	DebuginatorColor() : r(0), g(0), b(0), a(0) {}
-	DebuginatorColor(unsigned char r, unsigned char g, unsigned char b, unsigned char a) : r(r), g(g), b(b), a(a) {}
 	unsigned char r;
 	unsigned char g;
 	unsigned char b;
@@ -91,6 +89,23 @@ typedef struct DebuginatorFont {
 	bool bold;
 	bool italic;
 } DebuginatorFont;
+
+DebuginatorVector2 debuginator__vector2(float x, float y) {
+	DebuginatorVector2 v; v.x = x; v.y = y;
+	return v;
+}
+
+DebuginatorColor debuginator__color(int r, int g, int b, int a) {
+	DEBUGINATOR_assert(0 <= r && r <= 255);
+	DEBUGINATOR_assert(0 <= g && g <= 255);
+	DEBUGINATOR_assert(0 <= b && b <= 255);
+	DEBUGINATOR_assert(0 <= a && a <= 255);
+	DebuginatorColor c; 
+	c.r = (unsigned char)r; c.g = (unsigned char)g; 
+	c.b = (unsigned char)b; c.a = (unsigned char)a;
+	return c;
+}
+
 
 typedef enum DebuginatorDrawTypes {
 	DEBUGINATOR_Background,
@@ -106,11 +121,6 @@ typedef enum DebuginatorDrawTypes {
 	DEBUGINATOR_ItemValueHot,
 	DEBUGINATOR_NumDrawTypes
 } DebuginatorDrawTypes;
-
-DebuginatorVector2 debuginator__vector2(float x, float y) {
-	DebuginatorVector2 v; v.x = x; v.y = y;
-	return v;
-}
 
 typedef struct DebuginatorTheme {
 	DebuginatorColor colors[DEBUGINATOR_NumDrawTypes];
@@ -169,6 +179,23 @@ typedef struct DebuginatorItem {
 	};
 } DebuginatorItem;
 
+typedef struct TheDebuginatorConfig {
+	size_t item_buffer_capacity;
+	DebuginatorItem* item_buffer;
+
+	DebuginatorTheme themes[DEBUGINATOR_max_themes];
+	
+	void* draw_user_data;
+	DebuginatorDrawTextCallback draw_text;
+	DebuginatorDrawRectCallback draw_rect;
+	DebuginatorWordWrapCallback word_wrap;
+
+	DebuginatorVector2 size;
+	DebuginatorVector2 root_position;
+	int open_direction;
+	float focus_height;
+} TheDebuginatorConfig;
+
 typedef struct TheDebuginator {
 	DebuginatorItem* root;
 	DebuginatorItem* hot_item;
@@ -183,7 +210,7 @@ typedef struct TheDebuginator {
 	bool is_open;
 	float openness_timer; // range [0,1]
 	float openness; // range [0,1]
-
+	
 	DebuginatorTheme themes[DEBUGINATOR_max_themes];
 	DebuginatorTheme theme; // current theme
 	int theme_index;
@@ -193,6 +220,11 @@ typedef struct TheDebuginator {
 	DebuginatorDrawRectCallback draw_rect;
 	DebuginatorWordWrapCallback word_wrap;
 
+	DebuginatorVector2 size;
+	DebuginatorVector2 root_position;
+	int open_direction;
+	float focus_height;
+	float current_height_offset;
 } TheDebuginator;
 
 DebuginatorItem* debuginator_get_free_item(TheDebuginator* debuginator) {
@@ -414,72 +446,88 @@ void debuginator_remove_item(TheDebuginator* debuginator, const char* path) {
 //██║██║ ╚████║██║   ██║
 //╚═╝╚═╝  ╚═══╝╚═╝   ╚═╝
 
-TheDebuginator debuginator_create(DebuginatorItem* item_buffer, size_t item_buffer_capacity,
-	DebuginatorDrawTextCallback draw_text, DebuginatorDrawRectCallback draw_rect, DebuginatorWordWrapCallback word_wrap,
-	void* draw_user_data) {
-	
-	TheDebuginator debuginator;
-	memset(&debuginator, 0, sizeof(debuginator));
-	debuginator.item_buffer_capacity = item_buffer_capacity;
-	debuginator.item_buffer = item_buffer;
-	memset(item_buffer, 0, sizeof(DebuginatorItem) * item_buffer_capacity);
-	DebuginatorItem* item = debuginator_new_folder_item(&debuginator, NULL, "Menu Root", 0);
-	debuginator.root = item;
-	
-	debuginator.draw_rect = draw_rect;
-	debuginator.draw_text = draw_text;
-	debuginator.word_wrap = word_wrap;
-	debuginator.draw_user_data = draw_user_data;
+void debuginator_get_default_config(TheDebuginatorConfig* config) {
+	memset(config, 0, sizeof(*config));
 
-	// Initialize default themes
-	DebuginatorTheme* themes = debuginator.themes;
+	config->open_direction = 1;
+	config->focus_height = 0.65f;
 	
+	// Initialize default themes
+	DebuginatorTheme* themes = config->themes;
+
 	// Classic theme
-	themes[0].colors[DEBUGINATOR_Background] = DebuginatorColor(25, 50, 25, 220);
-	themes[0].colors[DEBUGINATOR_FolderTitle] = DebuginatorColor(255, 255, 255, 255);
-	themes[0].colors[DEBUGINATOR_ItemTitle] = DebuginatorColor(120, 120, 0, 250);
-	themes[0].colors[DEBUGINATOR_ItemTitleOverridden] = DebuginatorColor(200, 200, 0, 255);
-	themes[0].colors[DEBUGINATOR_ItemTitleHot] = DebuginatorColor(230, 230, 200, 255);
-	themes[0].colors[DEBUGINATOR_ItemTitleActive] = DebuginatorColor(100, 255, 100, 255);
-	themes[0].colors[DEBUGINATOR_ItemDescription] = DebuginatorColor(150, 150, 150, 255);
-	themes[0].colors[DEBUGINATOR_ItemValueDefault] = DebuginatorColor(50, 150, 50, 200);
-	themes[0].colors[DEBUGINATOR_ItemValueOverridden] = DebuginatorColor(100, 255, 100, 200);
-	themes[0].colors[DEBUGINATOR_ItemValueHot] = DebuginatorColor(100, 255, 100, 200);
-	themes[0].colors[DEBUGINATOR_LineHighlight] = DebuginatorColor(100, 100, 50, 150);
-	//themes[0].fonts[DEBUGINATOR_FolderTitle].italic = true;
-	//themes[0].fonts[DEBUGINATOR_ItemTitle].italic = true;
+	themes[0].colors[DEBUGINATOR_Background] = debuginator__color(25, 50, 25, 220);
+	themes[0].colors[DEBUGINATOR_FolderTitle] = debuginator__color(255, 255, 255, 255);
+	themes[0].colors[DEBUGINATOR_ItemTitle] = debuginator__color(120, 120, 0, 250);
+	themes[0].colors[DEBUGINATOR_ItemTitleOverridden] = debuginator__color(200, 200, 0, 255);
+	themes[0].colors[DEBUGINATOR_ItemTitleHot] = debuginator__color(230, 230, 200, 255);
+	themes[0].colors[DEBUGINATOR_ItemTitleActive] = debuginator__color(100, 255, 100, 255);
+	themes[0].colors[DEBUGINATOR_ItemDescription] = debuginator__color(150, 150, 150, 255);
+	themes[0].colors[DEBUGINATOR_ItemValueDefault] = debuginator__color(50, 150, 50, 200);
+	themes[0].colors[DEBUGINATOR_ItemValueOverridden] = debuginator__color(100, 255, 100, 200);
+	themes[0].colors[DEBUGINATOR_ItemValueHot] = debuginator__color(100, 255, 100, 200);
+	themes[0].colors[DEBUGINATOR_LineHighlight] = debuginator__color(100, 100, 50, 150);
 	themes[0].fonts[DEBUGINATOR_ItemDescription].italic = true;
 
 	// Neon theme
-	themes[1].colors[DEBUGINATOR_Background] = DebuginatorColor(25, 25, 50, 220);
-	themes[1].colors[DEBUGINATOR_FolderTitle] = DebuginatorColor(255, 255, 255, 255);
-	themes[1].colors[DEBUGINATOR_ItemTitle] = DebuginatorColor(120, 120, 0, 250);
-	themes[1].colors[DEBUGINATOR_ItemTitleOverridden] = DebuginatorColor(200, 200, 0, 255);
-	themes[1].colors[DEBUGINATOR_ItemTitleHot] = DebuginatorColor(230, 230, 200, 255);
-	themes[1].colors[DEBUGINATOR_ItemTitleActive] = DebuginatorColor(100, 255, 100, 255);
-	themes[1].colors[DEBUGINATOR_ItemDescription] = DebuginatorColor(150, 150, 150, 255);
-	themes[1].colors[DEBUGINATOR_ItemValueDefault] = DebuginatorColor(50, 150, 50, 200);
-	themes[1].colors[DEBUGINATOR_ItemValueOverridden] = DebuginatorColor(100, 255, 100, 200);
-	themes[1].colors[DEBUGINATOR_ItemValueHot] = DebuginatorColor(100, 255, 100, 200);
-	themes[1].colors[DEBUGINATOR_LineHighlight] = DebuginatorColor(100, 100, 50, 150);
+	themes[1].colors[DEBUGINATOR_Background] = debuginator__color(15, 15, 30, 220);
+	themes[1].colors[DEBUGINATOR_FolderTitle] = debuginator__color(255, 255, 255, 255);
+	themes[1].colors[DEBUGINATOR_ItemTitle] = debuginator__color(80, 80, 120, 250);
+	themes[1].colors[DEBUGINATOR_ItemTitleOverridden] = debuginator__color(150, 150, 200, 255);
+	themes[1].colors[DEBUGINATOR_ItemTitleHot] = debuginator__color(200, 200, 230, 255);
+	themes[1].colors[DEBUGINATOR_ItemTitleActive] = debuginator__color(100, 100, 255, 255);
+	themes[1].colors[DEBUGINATOR_ItemDescription] = debuginator__color(150, 150, 150, 255);
+	themes[1].colors[DEBUGINATOR_ItemValueDefault] = debuginator__color(50, 50, 150, 200);
+	themes[1].colors[DEBUGINATOR_ItemValueOverridden] = debuginator__color(100, 100, 255, 200);
+	themes[1].colors[DEBUGINATOR_ItemValueHot] = debuginator__color(100, 100, 255, 200);
+	themes[1].colors[DEBUGINATOR_LineHighlight] = debuginator__color(50, 50, 100, 150);
 
 	// Black & White theme
-	themes[1].colors[DEBUGINATOR_Background] = DebuginatorColor(25, 25, 25, 220);
-	themes[1].colors[DEBUGINATOR_FolderTitle] = DebuginatorColor(255, 255, 255, 255);
-	themes[1].colors[DEBUGINATOR_ItemTitle] = DebuginatorColor(120, 120, 0, 250);
-	themes[1].colors[DEBUGINATOR_ItemTitleOverridden] = DebuginatorColor(200, 200, 0, 255);
-	themes[1].colors[DEBUGINATOR_ItemTitleHot] = DebuginatorColor(230, 230, 200, 255);
-	themes[1].colors[DEBUGINATOR_ItemTitleActive] = DebuginatorColor(100, 255, 100, 255);
-	themes[1].colors[DEBUGINATOR_ItemDescription] = DebuginatorColor(150, 150, 150, 255);
-	themes[1].colors[DEBUGINATOR_ItemValueDefault] = DebuginatorColor(50, 150, 50, 200);
-	themes[1].colors[DEBUGINATOR_ItemValueOverridden] = DebuginatorColor(100, 255, 100, 200);
-	themes[1].colors[DEBUGINATOR_ItemValueHot] = DebuginatorColor(100, 255, 100, 200);
-	themes[1].colors[DEBUGINATOR_LineHighlight] = DebuginatorColor(100, 100, 50, 150);
+	themes[2].colors[DEBUGINATOR_Background] = debuginator__color(25, 25, 25, 220);
+	themes[2].colors[DEBUGINATOR_FolderTitle] = debuginator__color(255, 255, 255, 255);
+	themes[2].colors[DEBUGINATOR_ItemTitle] = debuginator__color(120, 120, 0, 250);
+	themes[2].colors[DEBUGINATOR_ItemTitleOverridden] = debuginator__color(200, 200, 0, 255);
+	themes[2].colors[DEBUGINATOR_ItemTitleHot] = debuginator__color(230, 230, 200, 255);
+	themes[2].colors[DEBUGINATOR_ItemTitleActive] = debuginator__color(100, 255, 100, 255);
+	themes[2].colors[DEBUGINATOR_ItemDescription] = debuginator__color(150, 150, 150, 255);
+	themes[2].colors[DEBUGINATOR_ItemValueDefault] = debuginator__color(50, 150, 50, 200);
+	themes[2].colors[DEBUGINATOR_ItemValueOverridden] = debuginator__color(100, 255, 100, 200);
+	themes[2].colors[DEBUGINATOR_ItemValueHot] = debuginator__color(100, 255, 100, 200);
+	themes[2].colors[DEBUGINATOR_LineHighlight] = debuginator__color(100, 100, 50, 150);
+}
 
-	debuginator.theme_index = 0;
-	memcpy(&debuginator.theme, &themes[debuginator.theme_index], sizeof(debuginator.theme));
+void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginator) {
+	DEBUGINATOR_assert(config->draw_rect != NULL);
+	DEBUGINATOR_assert(config->draw_text != NULL);
+	//DEBUGINATOR_assert(config->draw_user_data);
+	DEBUGINATOR_assert(config->word_wrap != NULL);
+	DEBUGINATOR_assert(config->item_buffer != NULL);
+	DEBUGINATOR_assert(config->item_buffer_capacity > 0);
+	DEBUGINATOR_assert(config->open_direction == -1 || config->open_direction == 1);
+	DEBUGINATOR_assert(config->size.x > 0 && config->size.y > 0);
+
+	memset(debuginator, 0, sizeof(*debuginator));
+
+	debuginator->item_buffer_capacity = config->item_buffer_capacity;
+	debuginator->item_buffer = config->item_buffer;
+	memset(debuginator->item_buffer, 0, sizeof(DebuginatorItem) * debuginator->item_buffer_capacity);
 	
-	return debuginator;
+	debuginator->draw_rect = config->draw_rect;
+	debuginator->draw_text = config->draw_text;
+	debuginator->word_wrap = config->word_wrap;
+	debuginator->draw_user_data = config->draw_user_data;
+
+	debuginator->size = config->size;
+	debuginator->open_direction = config->open_direction;
+	debuginator->focus_height = config->focus_height;
+
+	*debuginator->themes = *config->themes;
+	debuginator->theme_index = 0;
+	debuginator->theme = debuginator->themes[0];
+
+	// Create root
+	DebuginatorItem* item = debuginator_new_folder_item(debuginator, NULL, "Menu Root", 0);
+	debuginator->root = item;
 }
 
 void debuginator_print(DebuginatorItem* item, int indentation) {
@@ -568,9 +616,34 @@ void debuginator_initialize(TheDebuginator* debuginator) {
 //╚██████╔╝██║     ██████╔╝██║  ██║   ██║   ███████╗
 //╚═════╝ ╚═╝     ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚══════╝
 
-float debuginator_ease_out(float t, float start_value, float change, float duration) {
+float debuginator__ease_out(float t, float start_value, float change, float duration) {
 	t /= duration;
 	return -change * t * (t - 2) + start_value;
+}
+
+float debuginator__lerp(float a, float b, float t) {
+	return a * (1 - t) + b * t;
+}
+
+bool debuginator__distance_to_hot_item(DebuginatorItem* item, DebuginatorItem* hot_item, float* distance) {
+	if (item == hot_item) {
+		return true;
+	}
+
+	*distance += 30;
+	if (item->is_folder) {
+		DebuginatorItem* child = item->folder.first_child;
+		while (child) {
+			bool found = debuginator__distance_to_hot_item(child, hot_item, distance);
+			if (found) {
+				return true;
+			}
+
+			child = child->next_sibling;
+		}
+	}
+
+	return false;
 }
 
 void debuginator_update(TheDebuginator* debuginator, float dt) {
@@ -580,7 +653,7 @@ void debuginator_update(TheDebuginator* debuginator, float dt) {
 			debuginator->openness_timer = 1;
 		}
 
-		debuginator->openness = debuginator_ease_out(debuginator->openness_timer, 0, 1, 1);
+		debuginator->openness = debuginator__ease_out(debuginator->openness_timer, 0, 1, 1);
 		//debuginator->openness = debuginator->openness_timer * debuginator->openness_timer;
 	}
 
@@ -590,9 +663,17 @@ void debuginator_update(TheDebuginator* debuginator, float dt) {
 			debuginator->openness_timer = 0;
 		}
 
-		debuginator->openness = debuginator_ease_out(debuginator->openness_timer, 0, 1, 1);
+		debuginator->openness = debuginator__ease_out(debuginator->openness_timer, 0, 1, 1);
 		//debuginator->openness = debuginator->openness_timer == 0 ? 0 : (1 / debuginator->openness_timer);
 	}
+
+
+	// Ensure hot item is smoothly placed at a nice position
+	float distance_from_root_to_hot_item;
+	debuginator__distance_to_hot_item(debuginator->root, debuginator->hot_item, &distance_from_root_to_hot_item);
+	float wanted_y = debuginator->size.y * debuginator->focus_height;
+	float distance_to_wanted_y = wanted_y - distance_from_root_to_hot_item;
+	debuginator->current_height_offset = debuginator__lerp(debuginator->current_height_offset, distance_to_wanted_y, 0.05f);
 }
 
 
@@ -603,18 +684,33 @@ void debuginator_update(TheDebuginator* debuginator, float dt) {
 //██████╔╝██║  ██║██║  ██║╚███╔███╔╝
 //╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝ ╚══╝╚══╝
 
+float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2 offset, bool hot);
+
+void debuginator_draw(TheDebuginator* debuginator) {
+	// update theme opacity
+	DebuginatorTheme* source_theme = &debuginator->themes[debuginator->theme_index];
+	for (size_t i = 0; i < DEBUGINATOR_NumDrawTypes; i++) {
+		debuginator->theme.colors[i].a = (unsigned char)(source_theme->colors[i].a * debuginator->openness);
+	}
+
+	DebuginatorVector2 offset;
+
+	// Draw all items
+	debuginator_draw_item(debuginator, debuginator->root, offset, true);
+}
+
 float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2 offset, bool hot) {
-	//draw_rect_filled(gui, offset, DebuginatorVector2(100, 30), DebuginatorColor(200, 100, 50, 200));
+	//draw_rect_filled(gui, offset, DebuginatorVector2(100, 30), debuginator__color(200, 100, 50, 200));
 	/*
 	if (!debuginator->hot_item->is_folder && debuginator->hot_item->leaf.is_active) {
 	if (debuginator->hot_item == item) {
 	for (size_t i = 0; i < item->leaf.num_values; i++) {
-	draw_rect_filled(gui, DebuginatorVector2(0, offset.y + (i+1) * 30), DebuginatorVector2(3, 20), DebuginatorColor(0, 255, 0, 255));
+	draw_rect_filled(gui, DebuginatorVector2(0, offset.y + (i+1) * 30), DebuginatorVector2(3, 20), debuginator__color(0, 255, 0, 255));
 	}
 	}
 	}
 	else if (debuginator->hot_item->parent == item->parent) {
-	draw_rect_filled(gui, DebuginatorVector2(0, offset.y), DebuginatorVector2(3, 20), DebuginatorColor(0, 255, 0, 255));
+	draw_rect_filled(gui, DebuginatorVector2(0, offset.y), DebuginatorVector2(3, 20), debuginator__color(0, 255, 0, 255));
 	}*/
 
 	if (item->is_folder) {

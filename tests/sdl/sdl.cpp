@@ -101,46 +101,6 @@ static bool theme_setup(GuiHandle gui) {
 	s_fonts[FONT_ItemTitle] = gui_register_font_template(gui, "LiberationMono-Regular.ttf", 18);
 	s_fonts[FONT_ItemDescription] = gui_register_font_template(gui, "LiberationSerif-Italic.ttf", 18);
 
-	s_themes[0][COLOR_Background]          = Color(25, 50, 25, 220);
-	s_themes[0][COLOR_FolderTitle]         = Color(255, 255, 255, 255);
-	s_themes[0][COLOR_ItemTitle]           = Color(120, 120, 0, 250);
-	s_themes[0][COLOR_ItemTitleOverridden] = Color(200, 200, 0, 255);
-	s_themes[0][COLOR_ItemTitleHot]        = Color(230, 230, 200, 255);
-	s_themes[0][COLOR_ItemTitleActive]     = Color(100, 255, 100, 255);
-	s_themes[0][COLOR_ItemDescription]     = Color(150, 150, 150, 255);
-	s_themes[0][COLOR_ItemValueDefault]    = Color(50,  150, 50,  200);
-	s_themes[0][COLOR_ItemValueOverridden] = Color(100, 255, 100, 200);
-	s_themes[0][COLOR_ItemValueHot]        = Color(100, 255, 100, 200);
-	s_themes[0][COLOR_LineHighlight]       = Color(100, 100, 50, 150);
-	
-	/*
-	background						   Color(offset_lerp*220,25,50,25)
-	white                            = Vector4Box(255, 255, 255, 250, ),
-	text_color                       = Vector4Box(120, 120, 0  , 250, ),
-	text_color_overridden            = Vector4Box(200, 200, 0  , 255, ),
-	text_color_hot                   = Vector4Box(230, 230, 200, 255, ),
-	text_color_active                = Vector4Box(100, 255, 100, 255, ),
-	text_color_description           = Vector4Box(150, 150, 150, 255, ),
-	text_color_option_default_value  = Vector4Box(50,  150, 50 , 255, ),
-	text_color_option_overridden     = Vector4Box(100, 255, 100, 255, ),
-	text_color_option_hot            = Vector4Box(200, 255, 200, 255, ),
-	row_highlight_color              = Vector4Box(100, 100, 50 , 150, ),
-	dotdotdot                        = Vector4Box(75,  75,  0  , 255, ),
-	*/
-
-	s_themes[1][COLOR_Background]      = Color(50, 50, 150, 200);
-	s_themes[1][COLOR_ItemTitle]       = Color(120, 120, 120, 255);
-	s_themes[1][COLOR_ItemTitleHot]    = Color(200, 200, 200, 255);
-	s_themes[1][COLOR_ItemTitleActive] = Color(200, 200, 255, 255);
-	
-	s_themes[2][COLOR_Background]      = Color(100, 100, 100, 200);
-	s_themes[2][COLOR_ItemTitle]       = Color(150, 150, 150, 255);
-	s_themes[2][COLOR_ItemTitleHot]    = Color(200, 200, 200, 255);
-	s_themes[2][COLOR_ItemTitleActive] = Color(255, 255, 220, 255);
-
-	s_theme_index = 0;
-	memcpy(s_theme, s_themes[s_theme_index], sizeof(s_theme));
-
 	for (size_t i = 0; i < FONT_count; i++) {
 		if (s_fonts[i] == 0) {
 			return false;
@@ -152,7 +112,6 @@ static bool theme_setup(GuiHandle gui) {
 
 void draw_text(const char* text, DebuginatorVector2* position, DebuginatorColor* color, DebuginatorFont* font, void* userdata) {
 	GuiHandle gui = (GuiHandle)userdata;
-	//gui_draw_text(gui, text, *(Vector2*)&position, (FontTemplateHandle)font.userdata, *(Color*)&color);
 	int color_index = font->italic ? (int)FONT_ItemDescription : (int)FONT_ItemTitle;
 	gui_draw_text(gui, text, *(Vector2*)position, s_fonts[color_index], *(Color*)color);
 }
@@ -229,88 +188,6 @@ struct QuickDrawDefaultData {
 	int color_index;
 };
 
-float draw_item(TheDebuginator* debuginator, DebuginatorItem* item, Vector2 offset, bool hot, GuiHandle gui) {
-	//draw_rect_filled(gui, offset, Vector2(100, 30), Color(200, 100, 50, 200));
-/*
-	if (!debuginator->hot_item->is_folder && debuginator->hot_item->leaf.is_active) {
-		if (debuginator->hot_item == item) {
-			for (size_t i = 0; i < item->leaf.num_values; i++) {
-				draw_rect_filled(gui, Vector2(0, offset.y + (i+1) * 30), Vector2(3, 20), Color(0, 255, 0, 255));
-			}
-		}
-	}
-	else if (debuginator->hot_item->parent == item->parent) {
-		draw_rect_filled(gui, Vector2(0, offset.y), Vector2(3, 20), Color(0, 255, 0, 255));
-	}*/
-
-	if (item->is_folder) {
-		if (debuginator->hot_item == item) {
-			gui_draw_rect_filled(gui, Vector2(0, offset.y - 5), Vector2(500, 30), s_theme[COLOR_LineHighlight]);
-		}
-
-		unsigned color_index = item == debuginator->hot_item ? COLOR_ItemTitleActive : (hot ? COLOR_ItemTitleHot : COLOR_FolderTitle);
-		gui_draw_text(gui, item->title, offset, s_fonts[FONT_ItemTitle], s_theme[color_index]);
-		offset.x += 20;
-		DebuginatorItem* child = item->folder.first_child;
-		while (child) {
-			offset.y += 30;
-			offset.y = draw_item(debuginator, child, offset, debuginator->hot_item == child, gui);
-			child = child->next_sibling;
-		}
-	}
-	else {
-		if (debuginator->hot_item == item && (!item->leaf.is_active || item->leaf.num_values == 0)) {
-			gui_draw_rect_filled(gui, Vector2(debuginator->openness * 500 - 500, offset.y - 5), Vector2(500, 30), s_theme[COLOR_LineHighlight]);
-		}
-
-		bool is_overriden = item->leaf.active_index != 0;
-		unsigned default_color_index = is_overriden ? COLOR_ItemTitleOverridden : COLOR_ItemTitle;
-		unsigned color_index = item == debuginator->hot_item && !item->leaf.is_active ? COLOR_ItemTitleActive : (hot ? COLOR_ItemTitleHot : default_color_index);
-		gui_draw_text(gui, item->title, offset, s_fonts[FONT_ItemTitle], s_theme[color_index]);
-
-		// Draw quick representation of value
-		if (item->leaf.quick_draw_callback) {
-			Vector2 value_offset = offset;
-			value_offset.x = 300 + debuginator->openness * 500 - 500;
-			//item->leaf.quick_draw_callback(item, &value_offset.x, default_color_index);
-		}
-		else if (item->leaf.num_values > 0) {
-			Vector2 value_offset = offset;
-			value_offset.x = 300 + debuginator->openness * 500 - 500;
-			gui_draw_text(gui, item->leaf.value_titles[item->leaf.active_index], value_offset, s_fonts[FONT_ItemTitle], s_theme[default_color_index]);
-		}
-		
-		if (item->leaf.is_active) {
-			offset.x += 20;
-
-			char description_line[64];
-			const char* description = item->leaf.description;
-			while (description) {
-				description = gui_word_wrap(gui, s_fonts[FONT_ItemDescription], description, 350 - offset.x, description_line, 64);
-
-				offset.y += 30;
-				gui_draw_text(gui, description_line, offset, s_fonts[FONT_ItemDescription], s_theme[COLOR_ItemDescription]);
-			}
-
-			for (size_t i = 0; i < item->leaf.num_values; i++) {
-				offset.y += 30;
-
-				if (debuginator->hot_item == item && item->leaf.hot_index == i) {
-					gui_draw_rect_filled(gui, Vector2(0, offset.y - 5), Vector2(500, 30), s_theme[COLOR_LineHighlight]);
-				}
-
-				const char* value_title = item->leaf.value_titles[i];
-				bool value_hot = i == item->leaf.hot_index;
-				bool value_overridden = i == item->leaf.active_index;
-				unsigned value_color_index = value_hot ? COLOR_ItemValueHot : (value_overridden ? COLOR_ItemTitleOverridden : COLOR_ItemValueDefault);
-				gui_draw_text(gui, value_title, offset, s_fonts[value_hot ? FONT_ItemTitle : FONT_ItemTitle], s_theme[value_color_index]);
-			}
-		}
-	}
-
-	return offset.y;
-}
-
 bool distance_to_hot_item(DebuginatorItem* item, DebuginatorItem* hot_item, float* distance) {
 	if (item == hot_item) {
 		return true;
@@ -332,10 +209,6 @@ bool distance_to_hot_item(DebuginatorItem* item, DebuginatorItem* hot_item, floa
 	return false;
 }
 
-float lerp(float a, float b, float t) {
-	return a * (1-t) + b * t;
-}
-
 int main(int argc, char **argv)
 {
 	(void)(argc, argv);
@@ -353,7 +226,21 @@ int main(int argc, char **argv)
 	}
 
 	DebuginatorItem item_buffer[256];
-	TheDebuginator debuginator = debuginator_create(item_buffer, 256, draw_text, draw_rect, word_wrap, (void*)gui);
+	TheDebuginatorConfig config;
+	debuginator_get_default_config(&config);
+	config.item_buffer = item_buffer;
+	config.item_buffer_capacity = sizeof(item_buffer) / sizeof(item_buffer[0]);
+	config.draw_rect = draw_rect;
+	config.draw_text = draw_text;
+	config.draw_user_data = (void*)gui;
+	config.word_wrap = word_wrap;
+
+	config.size.x = res_x;
+	config.size.y = res_y;
+	config.focus_height = 0.6f;
+
+	TheDebuginator debuginator;
+	debuginator_create(&config, &debuginator);
 
 	GameData data = { 0 };
 	debug_menu_setup(&debuginator, &data);
@@ -441,14 +328,13 @@ int main(int argc, char **argv)
 		gui_draw_rect_filled(gui, offset, Vector2(500, res_y), s_theme[COLOR_Background]);
 
 		// Ensure hot item is smoothly placed at a nice position
-		distance_to_hot_item(debuginator.root, debuginator.hot_item, &offset.y);
-		float wanted_y = res_y * 0.4f;
-		float distance_to_wanted_y = wanted_y - offset.y;
-		offset.y = lerp(current_y, distance_to_wanted_y, 0.05f);
-		current_y = offset.y;
+		//distance_to_hot_item(debuginator.root, debuginator.hot_item, &offset.y);
+		//float wanted_y = res_y * 0.4f;
+		//float distance_to_wanted_y = wanted_y - offset.y;
+		//offset.y = lerp(current_y, distance_to_wanted_y, 0.05f);
+		//current_y = offset.y;
 
 		// Draw all items
-		//draw_item(&debuginator, debuginator.root, offset, true, gui);
 		debuginator_draw_item(&debuginator, debuginator.root, *(DebuginatorVector2*)&offset, true);
 
 		gui_frame_end(gui);
