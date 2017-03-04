@@ -70,8 +70,6 @@
 
 // TODO C99-ify these
 typedef struct DebuginatorVector2 {
-	DebuginatorVector2() : x(0), y(0) {}
-	DebuginatorVector2(float x, float y) : x(x), y(y) {}
 	float x;
 	float y;
 } DebuginatorVector2;
@@ -669,11 +667,11 @@ void debuginator_update(TheDebuginator* debuginator, float dt) {
 
 
 	// Ensure hot item is smoothly placed at a nice position
-	float distance_from_root_to_hot_item;
+	float distance_from_root_to_hot_item = 0;
 	debuginator__distance_to_hot_item(debuginator->root, debuginator->hot_item, &distance_from_root_to_hot_item);
 	float wanted_y = debuginator->size.y * debuginator->focus_height;
 	float distance_to_wanted_y = wanted_y - distance_from_root_to_hot_item;
-	debuginator->current_height_offset = debuginator__lerp(debuginator->current_height_offset, distance_to_wanted_y, 0.05f);
+	debuginator->current_height_offset = debuginator__lerp(debuginator->current_height_offset, distance_to_wanted_y, 0.01f);
 }
 
 
@@ -693,29 +691,33 @@ void debuginator_draw(TheDebuginator* debuginator) {
 		debuginator->theme.colors[i].a = (unsigned char)(source_theme->colors[i].a * debuginator->openness);
 	}
 
-	DebuginatorVector2 offset;
+	// Background
+	DebuginatorVector2 offset = debuginator->root_position;
+	offset.x += debuginator__lerp(-debuginator->open_direction *debuginator->size.x, 0, debuginator->openness);
+	debuginator->draw_rect(offset, debuginator->size, debuginator->theme.colors[DEBUGINATOR_Background], debuginator->draw_user_data);
 
+	offset.y = debuginator->current_height_offset;
 	// Draw all items
 	debuginator_draw_item(debuginator, debuginator->root, offset, true);
 }
 
 float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2 offset, bool hot) {
-	//draw_rect_filled(gui, offset, DebuginatorVector2(100, 30), debuginator__color(200, 100, 50, 200));
+	//draw_rect_filled(gui, offset, debuginator__vector2(100, 30), debuginator__color(200, 100, 50, 200));
 	/*
 	if (!debuginator->hot_item->is_folder && debuginator->hot_item->leaf.is_active) {
 	if (debuginator->hot_item == item) {
 	for (size_t i = 0; i < item->leaf.num_values; i++) {
-	draw_rect_filled(gui, DebuginatorVector2(0, offset.y + (i+1) * 30), DebuginatorVector2(3, 20), debuginator__color(0, 255, 0, 255));
+	draw_rect_filled(gui, debuginator__vector2(0, offset.y + (i+1) * 30), debuginator__vector2(3, 20), debuginator__color(0, 255, 0, 255));
 	}
 	}
 	}
 	else if (debuginator->hot_item->parent == item->parent) {
-	draw_rect_filled(gui, DebuginatorVector2(0, offset.y), DebuginatorVector2(3, 20), debuginator__color(0, 255, 0, 255));
+	draw_rect_filled(gui, debuginator__vector2(0, offset.y), debuginator__vector2(3, 20), debuginator__color(0, 255, 0, 255));
 	}*/
 
 	if (item->is_folder) {
 		if (debuginator->hot_item == item) {
-			debuginator->draw_rect(DebuginatorVector2(0, offset.y - 5), DebuginatorVector2(500, 30), debuginator->theme.colors[DEBUGINATOR_LineHighlight], debuginator->draw_user_data);
+			debuginator->draw_rect(debuginator__vector2(0, offset.y - 5), debuginator__vector2(500, 30), debuginator->theme.colors[DEBUGINATOR_LineHighlight], debuginator->draw_user_data);
 		}
 
 		unsigned color_index = item == debuginator->hot_item ? DEBUGINATOR_ItemTitleActive : (hot ? DEBUGINATOR_ItemTitleHot : DEBUGINATOR_FolderTitle);
@@ -754,10 +756,10 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 		if (item->leaf.is_active) {
 			offset.x += 20;
 
-			char description_line[64];
+			char description_line[256];
 			const char* description = item->leaf.description;
 			while (description) {
-				description = debuginator->word_wrap(description, debuginator->theme.fonts[DEBUGINATOR_ItemDescription], 350 - offset.x, description_line, 64, debuginator->draw_user_data);
+				description = debuginator->word_wrap(description, debuginator->theme.fonts[DEBUGINATOR_ItemDescription], 350 - offset.x, description_line, sizeof(description_line), debuginator->draw_user_data);
 
 				offset.y += 30;
 				debuginator->draw_text(description_line, &offset, &debuginator->theme.colors[DEBUGINATOR_ItemDescription], &debuginator->theme.fonts[DEBUGINATOR_ItemDescription], debuginator->draw_user_data);

@@ -49,8 +49,8 @@ struct GameBox {
 		pos.x = pos.y = 0;
 		size.x = 50 + 100 * ((float)rand()) / RAND_MAX;
 		size.y = 50 + 100 * ((float)rand()) / RAND_MAX;
-		velocity.x = 10 + 10 * ((float)rand()) / RAND_MAX;
-		velocity.y = 10 + 10 * ((float)rand()) / RAND_MAX;
+		velocity.x = 5 + 50 * ((float)rand()) / RAND_MAX;
+		velocity.y = 5 + 50 * ((float)rand()) / RAND_MAX;
 		color.r = 50 + 100 * ((float)rand()) / RAND_MAX;
 		color.g = 50 + 100 * ((float)rand()) / RAND_MAX;
 		color.b = 50 + 100 * ((float)rand()) / RAND_MAX;
@@ -234,10 +234,9 @@ int main(int argc, char **argv)
 	config.draw_text = draw_text;
 	config.draw_user_data = (void*)gui;
 	config.word_wrap = word_wrap;
-
-	config.size.x = res_x;
+	config.size.x = 500;
 	config.size.y = res_y;
-	config.focus_height = 0.6f;
+	config.focus_height = 0.3f;
 
 	TheDebuginator debuginator;
 	debuginator_create(&config, &debuginator);
@@ -247,8 +246,17 @@ int main(int argc, char **argv)
 
 	float current_y = 0;
 
+	Uint64 NOW = SDL_GetPerformanceCounter();
+	Uint64 LAST = 0;
+	double dt = 0;
+
 	SDL_Event event;
 	for (size_t i = 0; i < 400000; i++) {
+		LAST = NOW;
+		NOW = SDL_GetPerformanceCounter();
+		Uint64 freq = SDL_GetPerformanceFrequency();
+		dt = (double)((NOW - LAST) * 1.0 / freq);
+
 		while (SDL_PollEvent(&event) != 0)
 		{
 			switch (event.type) {
@@ -291,9 +299,7 @@ int main(int argc, char **argv)
 			}
 		}
 
-		float fps = 10;
-		float dt = 1 / fps;
-		debuginator_update(&debuginator, dt * 0.5f);
+		debuginator_update(&debuginator, dt * 10);
 
 		// update theme opacity
 		for (size_t i = 0; i < COLOR_NumColors; i++) {
@@ -312,10 +318,10 @@ int main(int argc, char **argv)
 			GameBox* box = &data.boxes[i];
 			box->pos.x += box->velocity.x * dt;
 			box->pos.y += box->velocity.y * dt;
-			if (box->pos.x < 0 && box->velocity.x < 0 || box->pos.x > res_x && box->velocity.x > 0) {
+			if (box->pos.x < 0 && box->velocity.x < 0 || box->pos.x + box->size.x > res_x && box->velocity.x > 0) {
 				box->velocity.x *= -1;
 			}
-			if (box->pos.y < 0 && box->velocity.y < 0 || box->pos.y > res_x && box->velocity.y > 0) {
+			if (box->pos.y  - box->size.y < 0 && box->velocity.y < 0 || box->pos.y + box->size.y > res_x && box->velocity.y > 0) {
 				box->velocity.y *= -1;
 			}
 			gui_draw_rect_filled(gui, box->pos, box->size, box->color);
@@ -335,10 +341,24 @@ int main(int argc, char **argv)
 		//current_y = offset.y;
 
 		// Draw all items
-		debuginator_draw_item(&debuginator, debuginator.root, *(DebuginatorVector2*)&offset, true);
+		//debuginator_draw_item(&debuginator, debuginator.root, *(DebuginatorVector2*)&offset, true);
+		debuginator_draw(&debuginator);
+
+
+		// Sleep a bit for my battery!
+		float fps = 60;
+		float frame_time = 1 / fps;
+		if (frame_time > dt) {
+			SDL_Delay(1000 * (frame_time - dt));
+		}
+
+		if (dt > 0) {
+			char fpsstr[64] = { 0 };
+			sprintf_s(fpsstr, 64, "FPS: %.2lf / s: %.15lf", 1/dt, dt);
+			gui_draw_text(gui, fpsstr, Vector2(res_x / 2, 20), s_fonts[FONT_ItemDescription], Color(255, 255, 0, 255));
+		}
 
 		gui_frame_end(gui);
-		SDL_Delay(dt);
 	}
 
 	for (size_t i = 0; i < 16; i++) { // TODO unhardcode

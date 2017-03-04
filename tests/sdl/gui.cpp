@@ -45,7 +45,7 @@ GuiHandle gui_create_gui(int resx, int resy, const char* window_title) {
 		return (GuiHandle)nullptr;
 	}
 
-	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 	if (renderer == NULL) {
 		SDL_Quit();
 		return (GuiHandle)nullptr;
