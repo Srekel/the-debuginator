@@ -103,7 +103,6 @@ const char* word_wrap(const char* text, DebuginatorFont font, float max_width, c
 	return gui_word_wrap((GuiHandle)userdata, s_fonts[font.italic ? FONT_ItemDescription : FONT_ItemTitle], text, (int)max_width, buffer, buffer_size);
 }
 
-
 static void on_boxes_activated(DebuginatorItem* item, void* value, const char* value_title) {
 	GameData* data = (GameData*)item->user_data;
 	if (strcmp(value_title, "Add box") == 0 && data->boxes_n < 256) {
@@ -220,7 +219,7 @@ int main(int argc, char **argv)
 						if (debuginator.is_open && !debuginator.hot_item->leaf.is_active) {
 							debuginator_set_open(&debuginator, false);
 						}
-						else {
+						else if (!debuginator.hot_item->is_folder && debuginator.hot_item->leaf.is_active) {
 							debuginator_move_to_parent(&debuginator);
 						}
 					}
@@ -267,8 +266,9 @@ int main(int argc, char **argv)
 		debuginator_draw(&debuginator);
 
 
-		// Sleep a bit for my battery!
-		float fps = 60;
+		// Not a good way to enforce a framerate due to delay being inprecise but
+		// its purpose is to save some battery, not to get exactly X fps.
+		float fps = 30;
 		float frame_time = 1 / fps;
 		if (frame_time > dt) {
 			SDL_Delay(1000 * (frame_time - dt));
