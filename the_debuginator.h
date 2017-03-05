@@ -48,6 +48,11 @@
 #define DEBUGINATOR_memcpy memcpy
 #endif
 
+#ifndef DEBUGINATOR_fabs
+#include <math.h>
+#define DEBUGINATOR_fabs fabs
+#endif
+
 #ifndef __cplusplus
 #include <stdbool.h>
 #endif
@@ -178,6 +183,8 @@ typedef struct DebuginatorItem {
 } DebuginatorItem;
 
 typedef struct TheDebuginatorConfig {
+	bool create_default_debuginator_items;
+
 	size_t item_buffer_capacity;
 	DebuginatorItem* item_buffer;
 
@@ -239,6 +246,13 @@ DebuginatorItem* debuginator_get_free_item(TheDebuginator* debuginator) {
 
 	memset(item, 0, sizeof(*item));
 	return item;
+}
+
+static void on_change_theme(DebuginatorItem* item, void* value, const char* value_title) {
+	(void)value_title;
+	TheDebuginator* debuginator = (TheDebuginator*)item->user_data;
+	debuginator->theme_index = *(int*)value;
+	debuginator->theme = debuginator->themes[debuginator->theme_index];
 }
 
 void debuginator_set_title(DebuginatorItem* item, const char* title, size_t title_length) {
@@ -447,6 +461,7 @@ void debuginator_remove_item(TheDebuginator* debuginator, const char* path) {
 void debuginator_get_default_config(TheDebuginatorConfig* config) {
 	memset(config, 0, sizeof(*config));
 
+	config->create_default_debuginator_items = true;
 	config->open_direction = 1;
 	config->focus_height = 0.65f;
 	
@@ -470,28 +485,41 @@ void debuginator_get_default_config(TheDebuginatorConfig* config) {
 	// Neon theme
 	themes[1].colors[DEBUGINATOR_Background] = debuginator__color(15, 15, 30, 220);
 	themes[1].colors[DEBUGINATOR_FolderTitle] = debuginator__color(255, 255, 255, 255);
-	themes[1].colors[DEBUGINATOR_ItemTitle] = debuginator__color(80, 80, 120, 250);
+	themes[1].colors[DEBUGINATOR_ItemTitle] = debuginator__color(120, 120, 180, 250);
 	themes[1].colors[DEBUGINATOR_ItemTitleOverridden] = debuginator__color(150, 150, 200, 255);
-	themes[1].colors[DEBUGINATOR_ItemTitleHot] = debuginator__color(200, 200, 230, 255);
+	themes[1].colors[DEBUGINATOR_ItemTitleHot] = debuginator__color(220, 220, 250, 255);
 	themes[1].colors[DEBUGINATOR_ItemTitleActive] = debuginator__color(100, 100, 255, 255);
 	themes[1].colors[DEBUGINATOR_ItemDescription] = debuginator__color(150, 150, 150, 255);
 	themes[1].colors[DEBUGINATOR_ItemValueDefault] = debuginator__color(50, 50, 150, 200);
 	themes[1].colors[DEBUGINATOR_ItemValueOverridden] = debuginator__color(100, 100, 255, 200);
 	themes[1].colors[DEBUGINATOR_ItemValueHot] = debuginator__color(100, 100, 255, 200);
-	themes[1].colors[DEBUGINATOR_LineHighlight] = debuginator__color(50, 50, 100, 150);
+	themes[1].colors[DEBUGINATOR_LineHighlight] = debuginator__color(70, 70, 130, 150);
 
 	// Black & White theme
 	themes[2].colors[DEBUGINATOR_Background] = debuginator__color(25, 25, 25, 220);
 	themes[2].colors[DEBUGINATOR_FolderTitle] = debuginator__color(255, 255, 255, 255);
-	themes[2].colors[DEBUGINATOR_ItemTitle] = debuginator__color(120, 120, 0, 250);
-	themes[2].colors[DEBUGINATOR_ItemTitleOverridden] = debuginator__color(200, 200, 0, 255);
-	themes[2].colors[DEBUGINATOR_ItemTitleHot] = debuginator__color(230, 230, 200, 255);
-	themes[2].colors[DEBUGINATOR_ItemTitleActive] = debuginator__color(100, 255, 100, 255);
+	themes[2].colors[DEBUGINATOR_ItemTitle] = debuginator__color(120, 120, 120, 250);
+	themes[2].colors[DEBUGINATOR_ItemTitleOverridden] = debuginator__color(200, 200, 200, 255);
+	themes[2].colors[DEBUGINATOR_ItemTitleHot] = debuginator__color(230, 230, 230, 255);
+	themes[2].colors[DEBUGINATOR_ItemTitleActive] = debuginator__color(100, 100, 100, 255);
 	themes[2].colors[DEBUGINATOR_ItemDescription] = debuginator__color(150, 150, 150, 255);
-	themes[2].colors[DEBUGINATOR_ItemValueDefault] = debuginator__color(50, 150, 50, 200);
-	themes[2].colors[DEBUGINATOR_ItemValueOverridden] = debuginator__color(100, 255, 100, 200);
-	themes[2].colors[DEBUGINATOR_ItemValueHot] = debuginator__color(100, 255, 100, 200);
-	themes[2].colors[DEBUGINATOR_LineHighlight] = debuginator__color(100, 100, 50, 150);
+	themes[2].colors[DEBUGINATOR_ItemValueDefault] = debuginator__color(100, 100, 100, 200);
+	themes[2].colors[DEBUGINATOR_ItemValueOverridden] = debuginator__color(200, 200, 200, 200);
+	themes[2].colors[DEBUGINATOR_ItemValueHot] = debuginator__color(255, 255, 255, 200);
+	themes[2].colors[DEBUGINATOR_LineHighlight] = debuginator__color(100, 100, 100, 150);
+
+	// Beige
+	themes[3].colors[DEBUGINATOR_Background] = debuginator__color(255, 240, 220, 220);
+	themes[3].colors[DEBUGINATOR_FolderTitle] = debuginator__color(0, 0, 0, 255);
+	themes[3].colors[DEBUGINATOR_ItemTitle] = debuginator__color(120, 120, 120, 250);
+	themes[3].colors[DEBUGINATOR_ItemTitleOverridden] = debuginator__color(200, 200, 200, 255);
+	themes[3].colors[DEBUGINATOR_ItemTitleHot] = debuginator__color(230, 230, 230, 255);
+	themes[3].colors[DEBUGINATOR_ItemTitleActive] = debuginator__color(100, 100, 100, 255);
+	themes[3].colors[DEBUGINATOR_ItemDescription] = debuginator__color(150, 150, 150, 255);
+	themes[3].colors[DEBUGINATOR_ItemValueDefault] = debuginator__color(100, 100, 100, 200);
+	themes[3].colors[DEBUGINATOR_ItemValueOverridden] = debuginator__color(200, 200, 200, 200);
+	themes[3].colors[DEBUGINATOR_ItemValueHot] = debuginator__color(255, 255, 255, 200);
+	themes[3].colors[DEBUGINATOR_LineHighlight] = debuginator__color(100, 100, 100, 150);
 }
 
 void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginator) {
@@ -519,13 +547,28 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 	debuginator->open_direction = config->open_direction;
 	debuginator->focus_height = config->focus_height;
 
-	*debuginator->themes = *config->themes;
+	memcpy(debuginator->themes, config->themes, sizeof(debuginator->themes));
 	debuginator->theme_index = 0;
 	debuginator->theme = debuginator->themes[0];
 
 	// Create root
 	DebuginatorItem* item = debuginator_new_folder_item(debuginator, NULL, "Menu Root", 0);
 	debuginator->root = item;
+
+	if (config->create_default_debuginator_items) {
+		{
+			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help",
+				"The Debuginator is a debug menu. With a keyboard, you open it with Right Arrow and close it with Left Arrow. You use those keys, plus Up/Down arrows to navigate. Right Arrow is also used to change value on a menu item.", NULL, NULL,
+				NULL, NULL, 0, 0);
+		}
+		{
+			static int theme_indices[4] = { 0, 1, 2, 3 };
+			static const char* string_titles[4] = { "Classic", "Blue", "Black & White", "Beige" };
+			debuginator_create_array_item(debuginator, NULL, "Debuginator/Theme",
+				"Change color theme of The Debuginator.", on_change_theme, debuginator,
+				string_titles, (void*)theme_indices, 4, sizeof(theme_indices[0]));
+		}
+	}
 }
 
 void debuginator_print(DebuginatorItem* item, int indentation) {
@@ -652,7 +695,6 @@ void debuginator_update(TheDebuginator* debuginator, float dt) {
 		}
 
 		debuginator->openness = debuginator__ease_out(debuginator->openness_timer, 0, 1, 1);
-		//debuginator->openness = debuginator->openness_timer * debuginator->openness_timer;
 	}
 
 	else if (!debuginator->is_open && debuginator->openness > 0) {
@@ -662,7 +704,6 @@ void debuginator_update(TheDebuginator* debuginator, float dt) {
 		}
 
 		debuginator->openness = debuginator__ease_out(debuginator->openness_timer, 0, 1, 1);
-		//debuginator->openness = debuginator->openness_timer == 0 ? 0 : (1 / debuginator->openness_timer);
 	}
 
 
@@ -671,7 +712,10 @@ void debuginator_update(TheDebuginator* debuginator, float dt) {
 	debuginator__distance_to_hot_item(debuginator->root, debuginator->hot_item, &distance_from_root_to_hot_item);
 	float wanted_y = debuginator->size.y * debuginator->focus_height;
 	float distance_to_wanted_y = wanted_y - distance_from_root_to_hot_item;
-	debuginator->current_height_offset = debuginator__lerp(debuginator->current_height_offset, distance_to_wanted_y, 0.01f);
+	debuginator->current_height_offset = debuginator__lerp(debuginator->current_height_offset, distance_to_wanted_y, dt);
+	if (DEBUGINATOR_fabs(debuginator->current_height_offset - distance_to_wanted_y) < 0.1f) {
+		debuginator->current_height_offset = distance_to_wanted_y;
+	}
 }
 
 
@@ -685,6 +729,8 @@ void debuginator_update(TheDebuginator* debuginator, float dt) {
 float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2 offset, bool hot);
 
 void debuginator_draw(TheDebuginator* debuginator) {
+	// TODO return if fully closed
+
 	// update theme opacity
 	DebuginatorTheme* source_theme = &debuginator->themes[debuginator->theme_index];
 	for (size_t i = 0; i < DEBUGINATOR_NumDrawTypes; i++) {

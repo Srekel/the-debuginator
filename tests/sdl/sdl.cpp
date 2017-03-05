@@ -24,9 +24,6 @@ static void unittest_debuginator_assert(bool test) {
 
 struct DebuginatorItem;
 
-struct DrawData {
-	int color;
-};
 //
 //void debuginator__default_quick_draw(DebuginatorItem* item, void* data) {
 //	if (item->leaf.num_values > 0) {
@@ -78,24 +75,6 @@ enum FontTemplates {
 	FONT_count
 };
 
-static int s_theme_index = 0;
-static Color s_theme[16];
-static Color s_themes[3][16];
-enum ColorTemplates {
-	COLOR_Background,
-	COLOR_FolderTitle,
-	COLOR_ItemTitle,
-	COLOR_ItemTitleOverridden,
-	COLOR_ItemTitleHot,
-	COLOR_ItemTitleActive,
-	COLOR_ItemDescription,
-	COLOR_LineHighlight,
-	COLOR_ItemValueDefault,
-	COLOR_ItemValueOverridden,
-	COLOR_ItemValueHot,
-	COLOR_NumColors
-};
-
 static bool theme_setup(GuiHandle gui) {
 	memset(s_fonts, 0, sizeof(*s_fonts));
 	s_fonts[FONT_ItemTitle] = gui_register_font_template(gui, "LiberationMono-Regular.ttf", 18);
@@ -125,11 +104,6 @@ const char* word_wrap(const char* text, DebuginatorFont font, float max_width, c
 }
 
 
-static void on_change_theme(DebuginatorItem* item, void* value, const char* value_title) {
-	s_theme_index = *(int*)value;
-	memcpy(s_theme, s_themes[s_theme_index], sizeof(s_theme));
-}
-
 static void on_boxes_activated(DebuginatorItem* item, void* value, const char* value_title) {
 	GameData* data = (GameData*)item->user_data;
 	if (strcmp(value_title, "Add box") == 0 && data->boxes_n < 256) {
@@ -144,24 +118,13 @@ static void on_boxes_activated(DebuginatorItem* item, void* value, const char* v
 }
 
 static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
-
-	{
-		static int theme_indices[3] = { 0, 1, 2 };
-		static const char* string_titles[3] = { "Classic", "Blue", "Gray" };
-		debuginator_create_array_item(debuginator, NULL, "Debuginator/Help",
-			"The Debuginator is a debug menu. With a keyboard, you open it with Right Arrow and close it with Left Arrow. You use those keys, plus Up/Down arrows to navigate. Right Arrow is also used to change value on a menu item.", NULL, NULL,
-			NULL, NULL, 0, 0);
-		debuginator_create_array_item(debuginator, NULL, "Debuginator/Theme",
-			"Change color theme of The Debuginator.", on_change_theme, NULL,
-			string_titles, (void*)theme_indices, 3, sizeof(theme_indices[0]));
-	}
 	{
 		static const char* string_titles[5] = { "String A", "String B", "String C", "String D", "String E" };
 		debuginator_create_array_item(debuginator, NULL, "Debuginator/Help",
 			"The Debuginator is a debug menu. With a keyboard, you open it with Right Arrow and close it with Left Arrow. You use those keys, plus Up/Down arrows to navigate. Right Arrow is also used to change value on a menu item.", NULL, NULL,
 			NULL, NULL, 0, 0);
 		debuginator_create_array_item(debuginator, NULL, "Debuginator/String Test",
-			"Change color theme of The Debuginator.", NULL, NULL,
+			"Multiple strings.", NULL, NULL,
 			string_titles, NULL, 5, 0);
 	}
 	debuginator_create_bool_item(debuginator, "SDL Demo/Draw boxes", "Whether to draw the animated boxes or not.", &data->draw_boxes);
@@ -187,27 +150,6 @@ struct QuickDrawDefaultData {
 	int font_index;
 	int color_index;
 };
-
-bool distance_to_hot_item(DebuginatorItem* item, DebuginatorItem* hot_item, float* distance) {
-	if (item == hot_item) {
-		return true;
-	}
-
-	*distance += 30;
-	if (item->is_folder) {
-		DebuginatorItem* child = item->folder.first_child;
-		while (child) {
-			bool found = distance_to_hot_item(child, hot_item, distance);
-			if (found) {
-				return true;
-			}
-
-			child = child->next_sibling;
-		}
-	}
-
-	return false;
-}
 
 int main(int argc, char **argv)
 {
@@ -260,51 +202,46 @@ int main(int argc, char **argv)
 		while (SDL_PollEvent(&event) != 0)
 		{
 			switch (event.type) {
-			case SDL_QUIT:
-			{
-				i = 10000000;
-				break;
-			}
-			case SDL_KEYDOWN:
-			{
-				if (event.key.keysym.sym == SDLK_UP) {
-					debuginator_move_to_prev_leaf(&debuginator);
-				}
-				else if (event.key.keysym.sym == SDLK_DOWN) {
-					debuginator_move_to_next_leaf(&debuginator);
-					//debuginator_move_to_next(&debuginator);
-				}
-				else if (event.key.keysym.sym == SDLK_LEFT) {
-					if (debuginator.is_open && !debuginator.hot_item->leaf.is_active) {
-						debuginator_set_open(&debuginator, false);
-					}
-					else {
-						debuginator_move_to_parent(&debuginator);
-					}
-				}
-				else if (event.key.keysym.sym == SDLK_RIGHT) {
-					if (!debuginator.is_open) {
-						debuginator_set_open(&debuginator, true);
-					}
-					else {
-						debuginator_move_to_child(&debuginator);
-					}
-				}
-				else if (event.key.keysym.sym == SDLK_ESCAPE) {
+				case SDL_QUIT:
+				{
 					i = 10000000;
+					break;
 				}
-			}
-			//default:
-				//break;
+				case SDL_KEYDOWN:
+				{
+					if (event.key.keysym.sym == SDLK_UP) {
+						debuginator_move_to_prev_leaf(&debuginator);
+					}
+					else if (event.key.keysym.sym == SDLK_DOWN) {
+						debuginator_move_to_next_leaf(&debuginator);
+						//debuginator_move_to_next(&debuginator);
+					}
+					else if (event.key.keysym.sym == SDLK_LEFT) {
+						if (debuginator.is_open && !debuginator.hot_item->leaf.is_active) {
+							debuginator_set_open(&debuginator, false);
+						}
+						else {
+							debuginator_move_to_parent(&debuginator);
+						}
+					}
+					else if (event.key.keysym.sym == SDLK_RIGHT) {
+						if (!debuginator.is_open) {
+							debuginator_set_open(&debuginator, true);
+						}
+						else {
+							debuginator_move_to_child(&debuginator);
+						}
+					}
+					else if (event.key.keysym.sym == SDLK_ESCAPE) {
+						i = 10000000;
+					}
+
+					break;
+				}
 			}
 		}
 
 		debuginator_update(&debuginator, dt * 10);
-
-		// update theme opacity
-		for (size_t i = 0; i < COLOR_NumColors; i++) {
-			s_theme[i].a = s_themes[s_theme_index][i].a * debuginator.openness;
-		}
 
 		gui_frame_begin(gui, i);
 
@@ -327,21 +264,6 @@ int main(int argc, char **argv)
 			gui_draw_rect_filled(gui, box->pos, box->size, box->color);
 		}
 
-		float width = 400;
-		Vector2 offset(-width * (1 - debuginator.openness), 0);
-
-		// Background
-		gui_draw_rect_filled(gui, offset, Vector2(500, res_y), s_theme[COLOR_Background]);
-
-		// Ensure hot item is smoothly placed at a nice position
-		//distance_to_hot_item(debuginator.root, debuginator.hot_item, &offset.y);
-		//float wanted_y = res_y * 0.4f;
-		//float distance_to_wanted_y = wanted_y - offset.y;
-		//offset.y = lerp(current_y, distance_to_wanted_y, 0.05f);
-		//current_y = offset.y;
-
-		// Draw all items
-		//debuginator_draw_item(&debuginator, debuginator.root, *(DebuginatorVector2*)&offset, true);
 		debuginator_draw(&debuginator);
 
 
