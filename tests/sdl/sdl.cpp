@@ -48,10 +48,10 @@ struct GameBox {
 		size.y = 50 + 100 * ((float)rand()) / RAND_MAX;
 		velocity.x = 5 + 50 * ((float)rand()) / RAND_MAX;
 		velocity.y = 5 + 50 * ((float)rand()) / RAND_MAX;
-		color.r = 50 + 100 * ((float)rand()) / RAND_MAX;
-		color.g = 50 + 100 * ((float)rand()) / RAND_MAX;
-		color.b = 50 + 100 * ((float)rand()) / RAND_MAX;
-		color.a = 150 + 100 * ((float)rand()) / RAND_MAX;
+		color.r = (unsigned char)(50 + 100 * ((float)rand()) / RAND_MAX);
+		color.g = (unsigned char)(50 + 100 * ((float)rand()) / RAND_MAX);
+		color.b = (unsigned char)(50 + 100 * ((float)rand()) / RAND_MAX);
+		color.a = (unsigned char)(150 + 100 * ((float)rand()) / RAND_MAX);
 	}
 	Vector2 pos;
 	Vector2 size;
@@ -104,6 +104,7 @@ const char* word_wrap(const char* text, DebuginatorFont font, float max_width, c
 }
 
 static void on_boxes_activated(DebuginatorItem* item, void* value, const char* value_title) {
+	(void)value;
 	GameData* data = (GameData*)item->user_data;
 	if (strcmp(value_title, "Add box") == 0 && data->boxes_n < 256) {
 		GameBox* box = &data->boxes[data->boxes_n++];
@@ -176,16 +177,16 @@ int main(int argc, char **argv)
 	config.draw_user_data = (void*)gui;
 	config.word_wrap = word_wrap;
 	config.size.x = 500;
-	config.size.y = res_y;
+	config.size.y = (float)res_y;
 	config.focus_height = 0.3f;
+	config.open_direction = 1;
+	config.root_position.x = 0;
 
 	TheDebuginator debuginator;
 	debuginator_create(&config, &debuginator);
 
 	GameData data = { 0 };
 	debug_menu_setup(&debuginator, &data);
-
-	float current_y = 0;
 
 	Uint64 NOW = SDL_GetPerformanceCounter();
 	Uint64 LAST = 0;
@@ -240,27 +241,24 @@ int main(int argc, char **argv)
 			}
 		}
 
-		debuginator_update(&debuginator, dt * 10);
+		debuginator_update(&debuginator, (float)dt * 10);
 
-		gui_frame_begin(gui, i);
+		gui_frame_begin(gui);
 
 		// bouncing boxes
 		if (data.draw_boxes) {
-			gui_draw_rect_filled(gui, Vector2(i % 500, i % 500), Vector2(300, 300), Color(255, 255, 255, 255));
-			gui_draw_rect_filled(gui, Vector2((i / 2) % 350, i % 700), Vector2(200, 200), Color(0, 0, 0, 255));
-		}
-
-		for (size_t i = 0; i < data.boxes_n; i++) {
-			GameBox* box = &data.boxes[i];
-			box->pos.x += box->velocity.x * dt;
-			box->pos.y += box->velocity.y * dt;
-			if (box->pos.x < 0 && box->velocity.x < 0 || box->pos.x + box->size.x > res_x && box->velocity.x > 0) {
-				box->velocity.x *= -1;
+			for (size_t box_i = 0; box_i < data.boxes_n; box_i++) {
+				GameBox* box = &data.boxes[box_i];
+				box->pos.x += box->velocity.x * (float)dt;
+				box->pos.y += box->velocity.y * (float)dt;
+				if (box->pos.x < 0 && box->velocity.x < 0 || box->pos.x + box->size.x > res_x && box->velocity.x > 0) {
+					box->velocity.x *= -1;
+				}
+				if (box->pos.y  - box->size.y < 0 && box->velocity.y < 0 || box->pos.y + box->size.y > res_x && box->velocity.y > 0) {
+					box->velocity.y *= -1;
+				}
+				gui_draw_rect_filled(gui, box->pos, box->size, box->color);
 			}
-			if (box->pos.y  - box->size.y < 0 && box->velocity.y < 0 || box->pos.y + box->size.y > res_x && box->velocity.y > 0) {
-				box->velocity.y *= -1;
-			}
-			gui_draw_rect_filled(gui, box->pos, box->size, box->color);
 		}
 
 		debuginator_draw(&debuginator);
@@ -271,13 +269,13 @@ int main(int argc, char **argv)
 		float fps = 30;
 		float frame_time = 1 / fps;
 		if (frame_time > dt) {
-			SDL_Delay(1000 * (frame_time - dt));
+			SDL_Delay((Uint32)(1000 * (frame_time - dt)));
 		}
 
 		if (dt > 0) {
 			char fpsstr[64] = { 0 };
 			sprintf_s(fpsstr, 64, "FPS: %.2lf / s: %.15lf", 1/dt, dt);
-			gui_draw_text(gui, fpsstr, Vector2(res_x / 2, 20), s_fonts[FONT_ItemDescription], Color(255, 255, 0, 255));
+			gui_draw_text(gui, fpsstr, Vector2(res_x * 0.5f, 20.f), s_fonts[FONT_ItemDescription], Color(255, 255, 0, 255));
 		}
 
 		gui_frame_end(gui);
