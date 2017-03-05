@@ -195,8 +195,9 @@ typedef struct TheDebuginatorConfig {
 	DebuginatorDrawRectCallback draw_rect;
 	DebuginatorWordWrapCallback word_wrap;
 
-	DebuginatorVector2 size;
-	DebuginatorVector2 root_position;
+	DebuginatorVector2 size; // Might not be needed in the future
+	DebuginatorVector2 screen_resolution;
+	bool left_aligned;
 	int open_direction;
 	float focus_height;
 } TheDebuginatorConfig;
@@ -227,6 +228,8 @@ typedef struct TheDebuginator {
 
 	DebuginatorVector2 size;
 	DebuginatorVector2 root_position;
+	DebuginatorVector2 screen_resolution;
+	bool left_aligned;
 	int open_direction;
 	float focus_height;
 	float current_height_offset;
@@ -464,6 +467,7 @@ void debuginator_get_default_config(TheDebuginatorConfig* config) {
 	config->create_default_debuginator_items = true;
 	config->open_direction = 1;
 	config->focus_height = 0.65f;
+	config->left_aligned = true;
 	
 	// Initialize default themes
 	DebuginatorTheme* themes = config->themes;
@@ -529,8 +533,9 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 	DEBUGINATOR_assert(config->word_wrap != NULL);
 	DEBUGINATOR_assert(config->item_buffer != NULL);
 	DEBUGINATOR_assert(config->item_buffer_capacity > 0);
-	DEBUGINATOR_assert(config->open_direction == -1 || config->open_direction == 1);
+	//DEBUGINATOR_assert(config->open_direction == -1 || config->open_direction == 1);
 	DEBUGINATOR_assert(config->size.x > 0 && config->size.y > 0);
+	DEBUGINATOR_assert(config->screen_resolution.x > 0 && config->screen_resolution.y > 0);
 
 	memset(debuginator, 0, sizeof(*debuginator));
 
@@ -546,7 +551,17 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 	debuginator->size = config->size;
 	debuginator->open_direction = config->open_direction;
 	debuginator->focus_height = config->focus_height;
-	debuginator->root_position = config->root_position;
+	debuginator->screen_resolution = config->screen_resolution;
+	debuginator->left_aligned= config->left_aligned;
+	
+	if (debuginator->left_aligned) {
+		debuginator->open_direction = 1;
+		debuginator->root_position.x = -debuginator->size.x;
+	}
+	else {
+		debuginator->open_direction = -1;
+		debuginator->root_position.x = debuginator->screen_resolution.x;
+	}
 
 	memcpy(debuginator->themes, config->themes, sizeof(debuginator->themes));
 	debuginator->theme_index = 0;
@@ -740,11 +755,14 @@ void debuginator_draw(TheDebuginator* debuginator) {
 
 	// Background
 	DebuginatorVector2 offset = debuginator->root_position;
-	offset.x += debuginator__lerp(-debuginator->open_direction * debuginator->size.x, 0, debuginator->openness);
+	offset.x += debuginator__lerp(0, debuginator->open_direction * debuginator->size.x, debuginator->openness);
 	debuginator->draw_rect(offset, debuginator->size, debuginator->theme.colors[DEBUGINATOR_Background], debuginator->draw_user_data);
 
 	offset.y = debuginator->current_height_offset;
 	// Draw all items
+	if (!debuginator->left_aligned) {
+		//offset.x += debuginator->size.x;
+	}
 	debuginator_draw_item(debuginator, debuginator->root, offset, true);
 }
 
@@ -779,7 +797,11 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 	}
 	else {
 		if (debuginator->hot_item == item && (!item->leaf.is_active || item->leaf.num_values == 0)) {
-			debuginator->draw_rect(debuginator__vector2(debuginator->openness * 500 - 500, offset.y - 5), debuginator__vector2(500, 30), debuginator->theme.colors[DEBUGINATOR_LineHighlight], debuginator->draw_user_data);
+			DebuginatorVector2 line_pos = debuginator__vector2(debuginator->openness * 500 - 500, offset.y - 5);
+			if (!debuginator->left_aligned) {
+				line_pos.x = debuginator->screen_resolution.x - debuginator->openness * debuginator->size.x;
+			}
+			debuginator->draw_rect(line_pos, debuginator__vector2(500, 30), debuginator->theme.colors[DEBUGINATOR_LineHighlight], debuginator->draw_user_data);
 		}
 
 		bool is_overriden = item->leaf.active_index != 0;
@@ -796,7 +818,12 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 		}
 		else if (item->leaf.num_values > 0) {
 			DebuginatorVector2 value_offset = offset;
-			value_offset.x = 300 + debuginator->openness * 500 - 500;
+			if (debuginator->left_aligned) {
+				value_offset.x = debuginator->openness * debuginator->size.x - 200;
+			}
+			else {
+				value_offset.x = debuginator->screen_resolution.x + debuginator->size.x * (1-debuginator->openness) - 200;
+			}
 			debuginator->draw_text(item->leaf.value_titles[item->leaf.active_index], &value_offset, &debuginator->theme.colors[default_color_index], &debuginator->theme.fonts[DEBUGINATOR_ItemTitle], debuginator->draw_user_data);
 		}
 
@@ -805,8 +832,13 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 
 			char description_line[256];
 			const char* description = item->leaf.description;
+			float description_width = debuginator->size.x - 150 - offset.x;
+			if (!debuginator->left_aligned) {
+				description_width = debuginator->screen_resolution.x - offset.x;
+			}
+
 			while (description) {
-				description = debuginator->word_wrap(description, debuginator->theme.fonts[DEBUGINATOR_ItemDescription], 350 - offset.x, description_line, sizeof(description_line), debuginator->draw_user_data);
+				description = debuginator->word_wrap(description, debuginator->theme.fonts[DEBUGINATOR_ItemDescription], description_width, description_line, sizeof(description_line), debuginator->draw_user_data);
 
 				offset.y += 30;
 				debuginator->draw_text(description_line, &offset, &debuginator->theme.colors[DEBUGINATOR_ItemDescription], &debuginator->theme.fonts[DEBUGINATOR_ItemDescription], debuginator->draw_user_data);
@@ -818,6 +850,9 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 				if (debuginator->hot_item == item && item->leaf.hot_index == i) {
 					DebuginatorVector2 pos = debuginator__vector2(0, offset.y - 5);
 					DebuginatorVector2 size = debuginator__vector2(500, 30);
+					if (!debuginator->left_aligned) {
+						pos.x = debuginator->screen_resolution.x - debuginator->openness * debuginator->size.x;
+					}
 					debuginator->draw_rect(pos, size, debuginator->theme.colors[DEBUGINATOR_LineHighlight], debuginator->draw_user_data);
 				}
 

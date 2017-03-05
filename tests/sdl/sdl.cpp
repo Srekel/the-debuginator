@@ -178,9 +178,10 @@ int main(int argc, char **argv)
 	config.word_wrap = word_wrap;
 	config.size.x = 500;
 	config.size.y = (float)res_y;
+	config.screen_resolution.x = (float)res_x;
+	config.screen_resolution.y = (float)res_y;
 	config.focus_height = 0.3f;
-	config.open_direction = 1;
-	config.root_position.x = 0;
+	config.left_aligned = true;
 
 	TheDebuginator debuginator;
 	debuginator_create(&config, &debuginator);
@@ -241,7 +242,7 @@ int main(int argc, char **argv)
 			}
 		}
 
-		debuginator_update(&debuginator, (float)dt * 10);
+		debuginator_update(&debuginator, (float)dt * 5);
 
 		gui_frame_begin(gui);
 
