@@ -546,6 +546,7 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 	debuginator->size = config->size;
 	debuginator->open_direction = config->open_direction;
 	debuginator->focus_height = config->focus_height;
+	debuginator->root_position = config->root_position;
 
 	memcpy(debuginator->themes, config->themes, sizeof(debuginator->themes));
 	debuginator->theme_index = 0;
@@ -739,7 +740,7 @@ void debuginator_draw(TheDebuginator* debuginator) {
 
 	// Background
 	DebuginatorVector2 offset = debuginator->root_position;
-	offset.x += debuginator__lerp(-debuginator->open_direction *debuginator->size.x, 0, debuginator->openness);
+	offset.x += debuginator__lerp(-debuginator->open_direction * debuginator->size.x, 0, debuginator->openness);
 	debuginator->draw_rect(offset, debuginator->size, debuginator->theme.colors[DEBUGINATOR_Background], debuginator->draw_user_data);
 
 	offset.y = debuginator->current_height_offset;
