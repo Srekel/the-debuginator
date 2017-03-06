@@ -19,7 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="sdl.cpp" />
+    <ClCompile Include="main.cpp" />
     <ClCompile Include="gui.cpp" />
   </ItemGroup>
   <ItemGroup>
