@@ -400,8 +400,8 @@ DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 		item->leaf.hot_index = num_values - 1;
 	}
 
-	if (debuginator->root->folder.first_child == NULL) {
-		debuginator->root->folder.first_child = item;
+	if (debuginator->hot_item == NULL && !item->is_folder) {
+		item->parent->folder.hot_child = item;
 		debuginator->hot_item = item;
 	}
 
