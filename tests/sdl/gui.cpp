@@ -38,8 +38,8 @@ GuiHandle gui_create_gui(int resx, int resy, const char* window_title) {
 		return (GuiHandle)nullptr;
 	}
 
-	SDL_Window* window = SDL_CreateWindow("Debuginator SDL example",
-		SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_OPENGL);
+	SDL_Window* window = SDL_CreateWindow(window_title,
+		SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, resx, resy, SDL_WINDOW_OPENGL);
 	if (window == NULL) {
 		SDL_Quit();
 		return (GuiHandle)nullptr;
@@ -93,6 +93,7 @@ FontTemplateHandle gui_register_font_template(GuiHandle gui_handle, const char* 
 }
 
 void gui_unregister_font_template(GuiHandle gui_handle, FontTemplateHandle font_handle) {
+	(void)gui_handle;
 	FontTemplate* font_template = (FontTemplate*)font_handle;
 	TTF_CloseFont(font_template->font);
 	font_template->font = 0;
@@ -117,8 +118,8 @@ void gui_draw_text(GuiHandle gui_handle, const char* text, Vector2 position, Fon
 	SDL_FreeSurface(text_surface);
 
 	SDL_Rect rectangle;
-	rectangle.x = position.x;
-	rectangle.y = position.y;
+	rectangle.x = (int)position.x;
+	rectangle.y = (int)position.y;
 	TTF_SizeText(font_template->font, text, &rectangle.w, &rectangle.h);
 	
 	SDL_SetRenderDrawColor(gui->renderer, 255, 255, 255, 255);
@@ -130,16 +131,17 @@ void gui_draw_text(GuiHandle gui_handle, const char* text, Vector2 position, Fon
 void gui_draw_rect_filled(GuiHandle gui_handle, Vector2 position, Vector2 size, Color color) {
 	Gui* gui = (Gui*)gui_handle;
 	SDL_Rect rect;
-	rect.x = position.x;
-	rect.y = position.y;
-	rect.w = size.x;
-	rect.h = size.y;
+	rect.x = (int)position.x;
+	rect.y = (int)position.y;
+	rect.w = (int)size.x;
+	rect.h = (int)size.y;
 
 	SDL_SetRenderDrawColor(gui->renderer, color.r, color.g, color.b, color.a);
 	SDL_RenderFillRect(gui->renderer, &rect);
 }
 
 const char* gui_word_wrap(GuiHandle gui_handle, FontTemplateHandle font_handle, const char* text, int max_width, char* buffer, int buffer_size) {
+	(void)gui_handle;
 
 	// This is really stupid but it works for now.
 	// TODO: Fix dropping words bug.
