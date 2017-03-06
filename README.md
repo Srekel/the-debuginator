@@ -13,13 +13,17 @@ Gifs will be added once project is slightly more complete.
   - 53 "tests", all passes.
 - Beginning of reference implementation in SDL.
 - Working implementation with all core features.
-- Lacks proper single-header-library structure so is unusable in a larger project.
+- Lacks proper single-header-library structure so **currently** is unusable in a larger project.
 
 ## Features
 
 These are subject to change and in various level of implementedness (including currently not at all).
 
-### Easy to use
+- :heavy_check_mark: Done.
+- :factory: Work in progress
+- :red_circle: Not started.
+
+### :factory: Easy to use
 
 ```C
     bool player_godmode = false;
@@ -34,103 +38,83 @@ See wiki for documentation on how to initialize the debuginator and for more adv
 
     20% done.
 
-### C99 compatible
+### :factory: C99 compatible
 
 So it's easy to add to any project.
 
     90% done.
 
-### Built using maximum warning levels and warnings as errors, tested with Cppcheck
+### :heavy_check_mark: Built using maximum warning levels and warnings as errors, tested with Cppcheck
 
 Because that's just polite to anyone who wants to use it.
 
 I do occasionally use pragma to ignore silly warnings.
 
-    90% done.
-
-### Allocates nothing
+### :heavy_check_mark: Allocates nothing
 
 Only the memory buffer passed in at creation.
 
     Done.
 
-### No dependencies
+### :heavy_check_mark: No dependencies
 
 For the demo and unit test projects I have a dependency and may add more in the future if it seems like a good idea. I'm less concerned about keeping those "clean" as they aren't a part of the library itself.
 
     Done.
 
-### STB-style single header library
+### :factory: STB-style single header library
 
 Though tests and examples are in separate files/folders/projects.
 
-    50% done.
-
-### Scrollable
+### :heavy_check_mark: Scrollable
 
 Can handle any number of items, the "hot" one will be centered (ish) smoothly.
 
-    Done.
-
-### Hierarchical
+### :small_blue_diamond: Hierarchical
 
 Put things in folders in folders. Support for expanding and collapsing folders.
 
-    50% done.
-
-### Accordiony
+### :red_circle: Accordiony
 
 No matter how far down or deep you scroll, you can always see the folders above the current item.
 
-    5% done.
-
-### Good look & feel
+### :factory: Good look & feel
 
 Nice default color scheme, smooth animations, juicy feedback.
 
 Yes, it's important.
 
-    20% done.
-
-### Filter
+### :red_circle: Filter
 
 Quickly and easily filter the items to find the one you want.
 
-    0% done.
-
-### Presets
+### :red_circle: Presets
 
 Activate one item to activate a number of other ones.
 
     0% done.
 
-### Favorites
+### :red_circle: Favorites
 
 Set your most used ones. They will show up in a special folder near the top.
 
-    0% done.
-
-### Hotkeys
+### :red_circle: Hotkeys
 
 Press a key when debug menu is active to assign the current item/value. Press it again when menu is closed to toggle/set the value.
 
-    0% done.
-
-### Input
+### :small_blue_diamond: Input
 
 Agnostic regarding Keyboard/Gamepad. It's handled at application layer, though guidelines for how to bind keys exist.
 
 Mouse input coming later.
 
-    25% done.
-
-### Reference implementation
+### :factory: Reference implementation
 
 Written in C++ and SDL, roughly based on Stingray's Gui interface.
 
     25% done.
 
-### Save/Load of settings
+### :factory: Save/Load of settings
 
 So you start up with the settings you had when you exited.
 
