@@ -21,6 +21,7 @@ These are subject to change and in various level of implementedness (including c
 
 - :heavy_check_mark: Done.
 - :factory: Work in progress
+- :small_blue_diamond: Some parts done, other parts on hold.
 - :red_circle: Not started.
 
 ### :factory: Easy to use
@@ -42,8 +43,6 @@ See wiki for documentation on how to initialize the debuginator and for more adv
 
 So it's easy to add to any project.
 
-    90% done.
-
 ### :heavy_check_mark: Built using maximum warning levels and warnings as errors, tested with Cppcheck
 
 Because that's just polite to anyone who wants to use it.
@@ -54,13 +53,9 @@ I do occasionally use pragma to ignore silly warnings.
 
 Only the memory buffer passed in at creation.
 
-    Done.
-
 ### :heavy_check_mark: No dependencies
 
 For the demo and unit test projects I have a dependency and may add more in the future if it seems like a good idea. I'm less concerned about keeping those "clean" as they aren't a part of the library itself.
-
-    Done.
 
 ### :factory: STB-style single header library
 
@@ -92,8 +87,6 @@ Quickly and easily filter the items to find the one you want.
 
 Activate one item to activate a number of other ones.
 
-    0% done.
-
 ### :red_circle: Favorites
 
 Set your most used ones. They will show up in a special folder near the top.
@@ -112,13 +105,9 @@ Mouse input coming later.
 
 Written in C++ and SDL, roughly based on Stingray's Gui interface.
 
-    25% done.
-
-### :factory: Save/Load of settings
+### :small_blue_diamond: Save/Load of settings
 
 So you start up with the settings you had when you exited.
-
-    20% done.
 
 ## Can I help?
 
