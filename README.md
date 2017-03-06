@@ -35,9 +35,7 @@ These are subject to change and in various level of implementedness (including c
       &player_godmode);
 ```
 
-See wiki for documentation on how to initialize the debuginator and for more advanced uses.
-
-    20% done.
+See SDL demo for information on how to initialize the debuginator and for more advanced uses. (Proper documentation to be written)
 
 ### :factory: C99 compatible
 
