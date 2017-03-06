@@ -99,7 +99,6 @@ static void unittest_debug_menu_run() {
 	TheDebuginator debuginator;
 	debuginator_create(&config, &debuginator);
 	unittest_debug_menu_setup(&debuginator);
-	debuginator_initialize(&debuginator);
 
 	printf("\n");
 	printf("Setup errors found: %u/%u\n", 

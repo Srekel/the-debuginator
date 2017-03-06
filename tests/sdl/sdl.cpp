@@ -141,8 +141,6 @@ static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
 	debuginator_create_bool_item(debuginator, "Folder/Subfolder/SimpleBool 4 with a really long long title", "Change a bool.", &data->mybool);
 
 	debuginator_new_folder_item(debuginator, NULL, "Folder 2", 0);
-
-	debuginator_initialize(debuginator);
 }
 
 struct QuickDrawDefaultData {
@@ -150,6 +148,46 @@ struct QuickDrawDefaultData {
 	int font_index;
 	int color_index;
 };
+
+bool handle_debuginator_input(SDL_Event* event, TheDebuginator* debuginator) {
+	switch (event->type) {
+		case SDL_KEYDOWN:
+		{
+			if (event->key.keysym.sym == SDLK_UP) {
+				debuginator_move_to_prev_leaf(debuginator);
+				return true;
+			}
+			else if (event->key.keysym.sym == SDLK_DOWN) {
+				debuginator_move_to_next_leaf(debuginator);
+				return true;
+			}
+			else if (event->key.keysym.sym == SDLK_LEFT || event->key.keysym.sym == SDLK_ESCAPE) {
+				if (debuginator->is_open && !debuginator->hot_item->leaf.is_active) {
+					debuginator_set_open(debuginator, false);
+					return true;
+				}
+				else if (!debuginator->hot_item->is_folder && debuginator->hot_item->leaf.is_active) {
+					debuginator_move_to_parent(debuginator);
+					return true;
+				}
+			}
+			else if (event->key.keysym.sym == SDLK_RIGHT) {
+				if (!debuginator->is_open) {
+					debuginator_set_open(debuginator, true);
+					return true;
+				}
+				else {
+					debuginator_move_to_child(debuginator);
+					return true;
+				}
+			}
+
+			break;
+		}
+	}
+
+	return false;
+}
 
 int main(int argc, char **argv)
 {
@@ -194,7 +232,8 @@ int main(int argc, char **argv)
 	double dt = 0;
 
 	SDL_Event event;
-	for (size_t i = 0; i < 400000; i++) {
+	bool quit = false;
+	while (!quit) {
 		LAST = NOW;
 		NOW = SDL_GetPerformanceCounter();
 		Uint64 freq = SDL_GetPerformanceFrequency();
@@ -202,41 +241,21 @@ int main(int argc, char **argv)
 
 		while (SDL_PollEvent(&event) != 0)
 		{
+			if (handle_debuginator_input(&event, &debuginator)) {
+				continue;
+			}
+
 			switch (event.type) {
-				case SDL_QUIT:
-				{
-					i = 10000000;
-					break;
-				}
 				case SDL_KEYDOWN:
 				{
-					if (event.key.keysym.sym == SDLK_UP) {
-						debuginator_move_to_prev_leaf(&debuginator);
+					if (event.key.keysym.sym == SDLK_ESCAPE) {
+						quit = true;
 					}
-					else if (event.key.keysym.sym == SDLK_DOWN) {
-						debuginator_move_to_next_leaf(&debuginator);
-						//debuginator_move_to_next(&debuginator);
-					}
-					else if (event.key.keysym.sym == SDLK_LEFT) {
-						if (debuginator.is_open && !debuginator.hot_item->leaf.is_active) {
-							debuginator_set_open(&debuginator, false);
-						}
-						else if (!debuginator.hot_item->is_folder && debuginator.hot_item->leaf.is_active) {
-							debuginator_move_to_parent(&debuginator);
-						}
-					}
-					else if (event.key.keysym.sym == SDLK_RIGHT) {
-						if (!debuginator.is_open) {
-							debuginator_set_open(&debuginator, true);
-						}
-						else {
-							debuginator_move_to_child(&debuginator);
-						}
-					}
-					else if (event.key.keysym.sym == SDLK_ESCAPE) {
-						i = 10000000;
-					}
-
+					break;
+				}
+				case SDL_QUIT:
+				{
+					quit = true;
 					break;
 				}
 			}
@@ -264,7 +283,6 @@ int main(int argc, char **argv)
 
 		debuginator_draw(&debuginator);
 
-
 		// Not a good way to enforce a framerate due to delay being inprecise but
 		// its purpose is to save some battery, not to get exactly X fps.
 		float fps = 30;
@@ -275,7 +293,7 @@ int main(int argc, char **argv)
 
 		if (dt > 0) {
 			char fpsstr[64] = { 0 };
-			sprintf_s(fpsstr, 64, "FPS: %.2lf / s: %.15lf", 1/dt, dt);
+			sprintf_s(fpsstr, 64, "FPS: %.2lf / ms: %.15lf", 1/dt, dt * 1000);
 			gui_draw_text(gui, fpsstr, Vector2(res_x * 0.5f, 20.f), s_fonts[FONT_ItemDescription], Color(255, 255, 0, 255));
 		}
 

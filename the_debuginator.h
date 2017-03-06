@@ -400,6 +400,11 @@ DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 		item->leaf.hot_index = num_values - 1;
 	}
 
+	if (debuginator->root->folder.first_child == NULL) {
+		debuginator->root->folder.first_child = item;
+		debuginator->hot_item = item;
+	}
+
 	//TODO preserve hot item
 	return item;
 }
@@ -655,15 +660,6 @@ DebuginatorItem* debuginator__find_last_leaf(DebuginatorItem* item) {
 	}
 
 	return NULL;
-}
-
-
-void debuginator_initialize(TheDebuginator* debuginator) {
-	DebuginatorItem* hot_item = debuginator__find_first_leaf(debuginator->root);
-	debuginator->hot_item = hot_item;
-
-	debuginator->root->folder.hot_child = hot_item;
-	//debuginator_print(debuginator->root, 0);
 }
 
 //██╗   ██╗██████╗ ██████╗  █████╗ ████████╗███████╗
