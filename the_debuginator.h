@@ -38,28 +38,17 @@
 	// http://patorjk.com/software/taag/#p=display&f=ANSI%20Shadow&t=update
 */
 
-#ifndef DEBUGINATOR_assert
-#include <assert.h>
-#define DEBUGINATOR_assert assert;
+#ifdef __cplusplus
+extern "C" {
 #endif
 
-#ifndef DEBUGINATOR_memcpy
-#include <string.h>
-#define DEBUGINATOR_memcpy memcpy
-#endif
+typedef struct DebuginatorItem DebuginatorItem;
+typedef struct LOLTHING LOLTHING;
 
-#ifndef DEBUGINATOR_fabs
-#include <math.h>
-#define DEBUGINATOR_fabs fabs
-#endif
+typedef struct LOLTHING {
+	void LOLOL() {};
+} LOLTHING;
 
-#ifndef __cplusplus
-#include <stdbool.h>
-#endif
-
-#ifndef DEBUGINATOR_FREE_LIST_CAPACITY
-#define DEBUGINATOR_FREE_LIST_CAPACITY 256
-#endif
 
 #ifndef DEBUGINATOR_max_title_length
 #define DEBUGINATOR_max_title_length 20
@@ -69,9 +58,6 @@
 #define DEBUGINATOR_max_themes 16
 #endif
 
-#ifndef DEBUGINATOR_debug_print
-#define DEBUGINATOR_debug_print 
-#endif
 
 // TODO C99-ify these
 typedef struct DebuginatorVector2 {
@@ -92,23 +78,6 @@ typedef struct DebuginatorFont {
 	bool bold;
 	bool italic;
 } DebuginatorFont;
-
-DebuginatorVector2 debuginator__vector2(float x, float y) {
-	DebuginatorVector2 v; v.x = x; v.y = y;
-	return v;
-}
-
-DebuginatorColor debuginator__color(int r, int g, int b, int a) {
-	DEBUGINATOR_assert(0 <= r && r <= 255);
-	DEBUGINATOR_assert(0 <= g && g <= 255);
-	DEBUGINATOR_assert(0 <= b && b <= 255);
-	DEBUGINATOR_assert(0 <= a && a <= 255);
-	DebuginatorColor c; 
-	c.r = (unsigned char)r; c.g = (unsigned char)g; 
-	c.b = (unsigned char)b; c.a = (unsigned char)a;
-	return c;
-}
-
 
 typedef enum DebuginatorDrawTypes {
 	DEBUGINATOR_Background,
@@ -137,15 +106,15 @@ typedef struct DebuginatorFolderData {
 
 typedef struct DebuginatorItem DebuginatorItem;
 
-typedef void (*DebuginatorDrawTextCallback)
+typedef void(*DebuginatorDrawTextCallback)
 	(const char* text, DebuginatorVector2* position, DebuginatorColor* color, DebuginatorFont* font, void* userdata);
-typedef void (*DebuginatorDrawRectCallback)
+typedef void(*DebuginatorDrawRectCallback)
 	(DebuginatorVector2 position, DebuginatorVector2 size, DebuginatorColor color, void* userdata);
 typedef const char* (*DebuginatorWordWrapCallback)
 	(const char* text, DebuginatorFont font, float max_width, char* buffer, int buffer_size, void* userdata);
 
-typedef void (*DebuginatorItemQuickDrawCallback)(DebuginatorItem* item, void* data);
-typedef void (*DebuginatorOnItemChangedCallback)(DebuginatorItem* item, void* value, const char* value_title);
+typedef void(*DebuginatorItemQuickDrawCallback)(DebuginatorItem* item, void* data);
+typedef void(*DebuginatorOnItemChangedCallback)(DebuginatorItem* item, void* value, const char* value_title);
 
 typedef struct DebuginatorLeafData {
 	const char* description;
@@ -167,7 +136,7 @@ typedef struct DebuginatorLeafData {
 } DebuginatorLeafData;
 
 typedef struct DebuginatorItem {
-	char title[DEBUGINATOR_max_title_length];
+	char title[20];
 	bool is_folder;
 	void* user_data;
 
@@ -178,7 +147,7 @@ typedef struct DebuginatorItem {
 	union {
 		DebuginatorLeafData leaf;
 		DebuginatorFolderData folder;
-#pragma warning(suppress: 4201) // Unnamed union
+		#pragma warning(suppress: 4201) // Unnamed union
 	};
 } DebuginatorItem;
 
@@ -188,8 +157,8 @@ typedef struct TheDebuginatorConfig {
 	size_t item_buffer_capacity;
 	DebuginatorItem* item_buffer;
 
-	DebuginatorTheme themes[DEBUGINATOR_max_themes];
-	
+	DebuginatorTheme themes[16];
+
 	void* draw_user_data;
 	DebuginatorDrawTextCallback draw_text;
 	DebuginatorDrawRectCallback draw_rect;
@@ -211,13 +180,13 @@ typedef struct TheDebuginator {
 	DebuginatorItem* item_buffer;
 
 	size_t free_list_size;
-	size_t free_list[DEBUGINATOR_FREE_LIST_CAPACITY];
+	size_t free_list[256];
 
 	bool is_open;
 	float openness_timer; // range [0,1]
 	float openness; // range [0,1]
-	
-	DebuginatorTheme themes[DEBUGINATOR_max_themes];
+
+	DebuginatorTheme themes[16];
 	DebuginatorTheme theme; // current theme
 	int theme_index;
 
@@ -234,6 +203,75 @@ typedef struct TheDebuginator {
 	float focus_height;
 	float current_height_offset;
 } TheDebuginator;
+
+
+extern DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
+	DebuginatorItem* parent, const char* path, const char* description,
+	DebuginatorOnItemChangedCallback on_item_changed_callback, void* user_data,
+	const char** value_titles, void* values, int num_values, size_t value_size);
+
+extern void debuginator_create_bool_item(TheDebuginator* debuginator, const char* path, const char* description, void* user_data);
+
+extern DebuginatorItem* debuginator_new_folder_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* title, size_t title_length);
+extern DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* path, bool create_if_not_exist);
+extern void debuginator_set_hot_item(TheDebuginator* debuginator, const char* path);
+extern void debuginator_remove_item(TheDebuginator* debuginator, const char* path);
+#ifdef __cplusplus
+}
+#endif
+
+#ifdef DEBUGINATOR_IMPLEMENTATION
+
+#ifndef DEBUGINATOR_assert
+#include <assert.h>
+#define DEBUGINATOR_assert assert;
+#endif
+
+#ifndef DEBUGINATOR_memcpy
+#include <string.h>
+#define DEBUGINATOR_memcpy memcpy
+#endif
+
+#ifndef DEBUGINATOR_fabs
+#include <math.h>
+#define DEBUGINATOR_fabs fabs
+#endif
+
+#ifndef __cplusplus
+#include <stdbool.h>
+#endif
+//
+//#ifndef DEBUGINATOR_FREE_LIST_CAPACITY
+//#define DEBUGINATOR_FREE_LIST_CAPACITY 256
+//#endif
+//
+//#ifndef DEBUGINATOR_max_title_length
+//#define DEBUGINATOR_max_title_length 20
+//#endif
+//
+//#ifndef DEBUGINATOR_max_themes
+//#define DEBUGINATOR_max_themes 16
+//#endif
+
+#ifndef DEBUGINATOR_debug_print
+#define DEBUGINATOR_debug_print
+#endif
+
+DebuginatorVector2 debuginator__vector2(float x, float y) {
+	DebuginatorVector2 v; v.x = x; v.y = y;
+	return v;
+}
+
+DebuginatorColor debuginator__color(int r, int g, int b, int a) {
+	DEBUGINATOR_assert(0 <= r && r <= 255);
+	DEBUGINATOR_assert(0 <= g && g <= 255);
+	DEBUGINATOR_assert(0 <= b && b <= 255);
+	DEBUGINATOR_assert(0 <= a && a <= 255);
+	DebuginatorColor c;
+	c.r = (unsigned char)r; c.g = (unsigned char)g;
+	c.b = (unsigned char)b; c.a = (unsigned char)a;
+	return c;
+}
 
 DebuginatorItem* debuginator_get_free_item(TheDebuginator* debuginator) {
 	DebuginatorItem* item;
@@ -334,8 +372,8 @@ DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, DebuginatorIt
 		while (parent_child) {
 			const char* item_title = parent_child->title;
 			size_t title_length = strlen(item_title); // strlen :(
-			if (path_part_length >= DEBUGINATOR_max_title_length 
-				&& title_length == DEBUGINATOR_max_title_length - 1 
+			if (path_part_length >= DEBUGINATOR_max_title_length
+				&& title_length == DEBUGINATOR_max_title_length - 1
 				&& item_title[DEBUGINATOR_max_title_length - 2] == '.'
 				&& item_title[DEBUGINATOR_max_title_length - 3] == '.') {
 				path_part_length = title_length = DEBUGINATOR_max_title_length - 3;
@@ -361,7 +399,7 @@ DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, DebuginatorIt
 				debuginator_set_title(current_item, temp_path, 0);
 				debuginator_set_parent(current_item, parent);
 			}
-			
+
 			return current_item;
 		}
 		else {
@@ -431,7 +469,7 @@ void debuginator_remove_item(TheDebuginator* debuginator, const char* path) {
 	if (item->next_sibling) {
 		item->next_sibling->prev_sibling = item->prev_sibling;
 	}
-	
+
 	DebuginatorItem* parent = item->parent;
 	if (parent->folder.hot_child == item) {
 		if (item->next_sibling != NULL) {
@@ -473,7 +511,7 @@ void debuginator_get_default_config(TheDebuginatorConfig* config) {
 	config->open_direction = 1;
 	config->focus_height = 0.65f;
 	config->left_aligned = true;
-	
+
 	// Initialize default themes
 	DebuginatorTheme* themes = config->themes;
 
@@ -547,7 +585,7 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 	debuginator->item_buffer_capacity = config->item_buffer_capacity;
 	debuginator->item_buffer = config->item_buffer;
 	memset(debuginator->item_buffer, 0, sizeof(DebuginatorItem) * debuginator->item_buffer_capacity);
-	
+
 	debuginator->draw_rect = config->draw_rect;
 	debuginator->draw_text = config->draw_text;
 	debuginator->word_wrap = config->word_wrap;
@@ -558,7 +596,7 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 	debuginator->focus_height = config->focus_height;
 	debuginator->screen_resolution = config->screen_resolution;
 	debuginator->left_aligned= config->left_aligned;
-	
+
 	if (debuginator->left_aligned) {
 		debuginator->open_direction = 1;
 		debuginator->root_position.x = -debuginator->size.x;
@@ -884,7 +922,7 @@ static void debuginator_activate(DebuginatorItem* item) {
 	}
 
 	item->leaf.active_index = item->leaf.hot_index;
-	
+
 	if (item->leaf.on_item_changed_callback == NULL) {
 		return;
 	}
@@ -1164,7 +1202,7 @@ void debug_menu_handle_input(TheDebuginator* debuginator, DebuginatorInput* inpu
 	}
 
 	if (input->move_to_parent) {
-		debuginator_move_to_parent(debuginator);		
+		debuginator_move_to_parent(debuginator);
 	}
 
 	// HACK
@@ -1173,7 +1211,7 @@ void debug_menu_handle_input(TheDebuginator* debuginator, DebuginatorInput* inpu
 	//}
 
 	//if (input->activate && hot_item->!is_folder) {
-	//	debuginator_activate(debuginator->hot_item);		
+	//	debuginator_activate(debuginator->hot_item);
 	//}
 }
 
@@ -1190,7 +1228,7 @@ void debuginator_copy_1byte(DebuginatorItem* item, void* value, const char* valu
 }
 
 void debuginator_create_bool_item(TheDebuginator* debuginator, const char* path, const char* description, void* user_data) {
-	static bool bool_values[2] = { false, true }; 
+	static bool bool_values[2] = { false, true };
 	static const char* bool_titles[2] = { "False", "True" };
 	DEBUGINATOR_assert(sizeof(bool_values[0]) == 1);
 	debuginator_create_array_item(debuginator, NULL, path,
@@ -1198,4 +1236,5 @@ void debuginator_create_bool_item(TheDebuginator* debuginator, const char* path,
 		bool_titles, bool_values, 2, sizeof(bool_values[0]));
 }
 
+#endif // DEBUGINATOR_IMPLEMENTATION
 #endif // INCLUDE_THE_DEBUGINATOR_H

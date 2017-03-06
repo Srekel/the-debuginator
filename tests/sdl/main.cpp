@@ -2,13 +2,9 @@
 #include <assert.h>
 #include <string.h>
 
-#include <time.h>
-#include <stdlib.h>
-
 #include <SDL.h>
 #include <SDL_ttf.h>
 
-#include "gui.h"
 
 static const int WIDTH = 500;
 
@@ -21,9 +17,11 @@ static void unittest_debuginator_assert(bool test) {
 
 #define DEBUGINATOR_assert unittest_debuginator_assert
 #define ASSERT unittest_debuginator_assert
+#define DEBUGINATOR_IMPLEMENTATION
+#include "../../the_debuginator.h"
 
-struct DebuginatorItem;
-
+#include "gui.h"
+#include "game.h"
 //
 //void debuginator__default_quick_draw(DebuginatorItem* item, void* data) {
 //	if (item->leaf.num_values > 0) {
@@ -34,39 +32,8 @@ struct DebuginatorItem;
 //}
 
 
-#include "../../the_debuginator.h"
-//typedef DebuginatorVector2 Vector2;
 
 
-struct GameBox {
-	GameBox() {
-	}
-	void randomize() {
-		pos.x = pos.y = 0;
-		pos.x = pos.y = 0;
-		size.x = 50 + 100 * ((float)rand()) / RAND_MAX;
-		size.y = 50 + 100 * ((float)rand()) / RAND_MAX;
-		velocity.x = 5 + 50 * ((float)rand()) / RAND_MAX;
-		velocity.y = 5 + 50 * ((float)rand()) / RAND_MAX;
-		color.r = (unsigned char)(50 + 100 * ((float)rand()) / RAND_MAX);
-		color.g = (unsigned char)(50 + 100 * ((float)rand()) / RAND_MAX);
-		color.b = (unsigned char)(50 + 100 * ((float)rand()) / RAND_MAX);
-		color.a = (unsigned char)(150 + 100 * ((float)rand()) / RAND_MAX);
-	}
-	Vector2 pos;
-	Vector2 size;
-	Vector2 velocity;
-	Color color;
-};
-
-struct GameData {
-	bool mybool;
-	bool draw_boxes;
-	char mystring[256];
-	GameBox boxes[256];
-	int boxes_n;
-	char box_string[32];
-};
 
 static FontTemplateHandle s_fonts[16];
 enum FontTemplates {
@@ -103,51 +70,11 @@ const char* word_wrap(const char* text, DebuginatorFont font, float max_width, c
 	return gui_word_wrap((GuiHandle)userdata, s_fonts[font.italic ? FONT_ItemDescription : FONT_ItemTitle], text, (int)max_width, buffer, buffer_size);
 }
 
-static void on_boxes_activated(DebuginatorItem* item, void* value, const char* value_title) {
-	(void)value;
-	GameData* data = (GameData*)item->user_data;
-	if (strcmp(value_title, "Add box") == 0 && data->boxes_n < 256) {
-		GameBox* box = &data->boxes[data->boxes_n++];
-		box->randomize();
-	}
-	else if (strcmp(value_title, "Clear all boxes") == 0 && data->boxes_n < 256) {
-		data->boxes_n = 0;
-	}
-
-	sprintf_s(data->box_string, "Box count: %d", data->boxes_n);
-}
-
-static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
-	{
-		static const char* string_titles[5] = { "String A", "String B", "String C", "String D", "String E" };
-		debuginator_create_array_item(debuginator, NULL, "Debuginator/Help",
-			"The Debuginator is a debug menu. With a keyboard, you open it with Right Arrow and close it with Left Arrow. You use those keys, plus Up/Down arrows to navigate. Right Arrow is also used to change value on a menu item.", NULL, NULL,
-			NULL, NULL, 0, 0);
-		debuginator_create_array_item(debuginator, NULL, "Debuginator/String Test",
-			"Multiple strings.", NULL, NULL,
-			string_titles, NULL, 5, 0);
-	}
-	debuginator_create_bool_item(debuginator, "SDL Demo/Draw boxes", "Whether to draw the animated boxes or not.", &data->draw_boxes);
-
-	{
-		static const char* string_titles[3] = { "Clear all boxes", "Add box", data->box_string };
-		debuginator_create_array_item(debuginator, NULL, "SDL Demo/Boxes",
-			"Box things", on_boxes_activated, data,
-			string_titles, NULL, 3, 0);	}
-
-	debuginator_create_bool_item(debuginator, "SimpleBool 1", "Change a bool.", &data->mybool);
-	debuginator_create_bool_item(debuginator, "Folder/SimpleBool 2", "Change a bool.", &data->mybool);
-	debuginator_create_bool_item(debuginator, "Folder/SimpleBool 3", "Change a bool.", &data->mybool);
-	debuginator_create_bool_item(debuginator, "Folder/Subfolder/SimpleBool 4 with a really long long title", "Change a bool.", &data->mybool);
-
-	debuginator_new_folder_item(debuginator, NULL, "Folder 2", 0);
-}
-
-struct QuickDrawDefaultData {
-	QuickDrawDefaultData(int font, int color) : font_index(font), color_index(color) {}
-	int font_index;
-	int color_index;
-};
+//struct QuickDrawDefaultData {
+//	QuickDrawDefaultData(int font, int color) : font_index(font), color_index(color) {}
+//	int font_index;
+//	int color_index;
+//};
 
 bool handle_debuginator_input(SDL_Event* event, TheDebuginator* debuginator) {
 	switch (event->type) {
@@ -193,6 +120,8 @@ int main(int argc, char **argv)
 {
 	(void)(argc, argv);
 
+	LOLTHING* a = 0;
+	a->LOLOL();
 	int res_x = 800;
 	int res_y = 600;
 	GuiHandle gui = gui_create_gui(res_x, res_y, "Debuginator SDL demo");
@@ -224,8 +153,7 @@ int main(int argc, char **argv)
 	TheDebuginator debuginator;
 	debuginator_create(&config, &debuginator);
 
-	GameData data = { 0 };
-	debug_menu_setup(&debuginator, &data);
+	GameData* gamedata = game_init(gui, &debuginator);
 
 	Uint64 NOW = SDL_GetPerformanceCounter();
 	Uint64 LAST = 0;
@@ -265,22 +193,7 @@ int main(int argc, char **argv)
 
 		gui_frame_begin(gui);
 
-		// bouncing boxes
-		if (data.draw_boxes) {
-			for (size_t box_i = 0; box_i < data.boxes_n; box_i++) {
-				GameBox* box = &data.boxes[box_i];
-				box->pos.x += box->velocity.x * (float)dt;
-				box->pos.y += box->velocity.y * (float)dt;
-				if (box->pos.x < 0 && box->velocity.x < 0 || box->pos.x + box->size.x > res_x && box->velocity.x > 0) {
-					box->velocity.x *= -1;
-				}
-				if (box->pos.y  - box->size.y < 0 && box->velocity.y < 0 || box->pos.y + box->size.y > res_x && box->velocity.y > 0) {
-					box->velocity.y *= -1;
-				}
-				gui_draw_rect_filled(gui, box->pos, box->size, box->color);
-			}
-		}
-
+		game_update(gamedata, (float)dt);
 		debuginator_draw(&debuginator);
 
 		// Not a good way to enforce a framerate due to delay being inprecise but

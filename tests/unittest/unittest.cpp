@@ -34,6 +34,7 @@ static void unittest_debuginator_assert(bool test) {
 #define ASSERT unittest_debuginator_assert
 
 #define DEBUGINATOR_debug_print printf
+#define DEBUGINATOR_IMPLEMENTATION
 
 #include "../../the_debuginator.h"
 

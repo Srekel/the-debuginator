@@ -19,11 +19,13 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="game.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="gui.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\the_debuginator.h" />
+    <ClInclude Include="game.h" />
     <ClInclude Include="gui.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
