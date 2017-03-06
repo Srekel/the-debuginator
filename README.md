@@ -2,7 +2,7 @@
 
 A super sweet hierarchical scrollable accordion debug menu intended for games.
 
-It's conceptually based on the debug menu I wrote at Fatshark for **Warhammer: End Times – Vermintide**, where it was used extensively by everyone. Quote by one of the game designers during the Christmas party: *"The debug menu saved man-years for us"*. He was drunk. But not wrong.
+It's conceptually based on the debug menu I wrote at Fatshark for **Warhammer: End Times – Vermintide**, where it was - and still is! - used extensively by everyone. Quote by one of the game designers during the Christmas party: *"The debug menu saved man-years for us"*. He was drunk. But not wrong.
 
 Gifs will be added once project is slightly more complete.
 
@@ -13,7 +13,6 @@ Gifs will be added once project is slightly more complete.
   - 53 "tests", all passes.
 - Beginning of reference implementation in SDL.
 - Working implementation with all core features.
-- Lacks proper single-header-library structure so **currently** is unusable in a larger project.
 
 ## Features
 
@@ -37,7 +36,7 @@ These are subject to change and in various level of implementedness (including c
 
 See SDL demo for information on how to initialize the debuginator and for more advanced uses. (Proper documentation to be written)
 
-### :factory: C99 compatible
+### :heavy_check_mark: C99 compatible
 
 So it's easy to add to any project.
 
@@ -55,7 +54,7 @@ Only the memory buffer passed in at creation.
 
 For the demo and unit test projects I have a dependency and may add more in the future if it seems like a good idea. I'm less concerned about keeping those "clean" as they aren't a part of the library itself.
 
-### :factory: STB-style single header library
+### :heavy_check_mark: STB-style single header library
 
 Though tests and examples are in separate files/folders/projects.
 
