@@ -2,7 +2,7 @@
 
 A super sweet hierarchical scrollable accordion debug menu intended for games.
 
-It's conceptually based on the debug menu I wrote at Fatshark for **Warhammer: End Times – Vermintide**, where it was used extensively by everyone. Quote by one of the game designers during the Christmas party: "The debug menu saved man-years for us". He was drunk. But not wrong.
+It's conceptually based on the debug menu I wrote at Fatshark for **Warhammer: End Times – Vermintide**, where it was used extensively by everyone. Quote by one of the game designers during the Christmas party: *"The debug menu saved man-years for us"*. He was drunk. But not wrong.
 
 Gifs will be added once project is slightly more complete.
 
@@ -23,8 +23,13 @@ These are subject to change and in various level of implementedness (including c
 
 ```C
     bool player_godmode = false;
-    debuginator_create_bool_item(&debuginator, "Player Mechanics/God Mode", "Player is invincible if enabled", &player_godmode);
+    debuginator_create_bool_item(
+      &debuginator,
+      "Player Mechanics/God Mode",
+      "Player is invincible if enabled",
+      &player_godmode);
 ```
+
 See wiki for documentation on how to initialize the debuginator and for more advanced uses.
 
     20% done.
