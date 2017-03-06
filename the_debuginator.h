@@ -1,54 +1,51 @@
-#ifndef INCLUDE_THE_DEBUGINATOR_H
-#define INCLUDE_THE_DEBUGINATOR_H
 
 /*
+the_debuginator.h - v0.01 - public domain - Anders Elfgren @srekel, 2017
+
 # THE DEBUGINATOR
 
+A super sweet hierarchical scrollable accordion debug menu intended for games.
+
+See github for latest version: https://github.com/Srekel/the-debuginator
+
 ## Usage
-	// Create
-	static void on_debuginator_save(DebuginatorItemDefinition* item, void* value, const char* value_title) {
-		game_save_debug_setting(item->path, value_title);
-	}
 
-	DebuginatorItemDefinition item_buffer[256];
-	TheDebuginator debuginator = debuginator_create(item_buffer, 256, on_debuginator_save);
+In *ONE* source file, put:
 
-	// Load settings at startup
-	void parse_command_line(int argc, char** argv) {
-		if (argc > 2 && strcmp(argv[1], "--do_the_bool") == 0) {
-			debuginator_pre_load_setting(debuginator, "Test/Bool with function callback", "True");
-		}
-	}
+```C
+#define DEBUGINATOR_IMPLEMENTATION
 
-	// Add debug menu item for reals
-	// (can happen later, and multiple times if you want to override something)
-	static void on_item_changed(DebuginatorItemDefinition* item, void* value, const char* value_title) {
-		bool new_value = *(bool*)value;
-		printf("Item %s changed value to (%d) %s", item->title, value, value_title);
-	}
+// Define any of these if you wish to override them.
+// #define DEBUGINATOR_assert
+// #define DEBUGINATOR_memcpy
+// #define DEBUGINATOR_fabs
 
-	DEBUGINATOR_create_bool_item(debuginator, "Test/Bool with function callback",
-	"Calls on_item_changed when user changes the value in the menu.",
-		on_item_changed, NULL);
+#include "the_debuginator.h"
+```
 
-	// Validate configuration
-	// debuginator_validate(&debuginator);
+Other source files should just include the_debuginator.h
 
-	// ASCII banners generated using
-	// http://patorjk.com/software/taag/#p=display&f=ANSI%20Shadow&t=update
+## Notes
+
+See the accompanying SDL demo and unit test projects for references on how to use it.
+
+ASCII banners generated using
+http://patorjk.com/software/taag/#p=display&f=ANSI%20Shadow&t=update
+
+## License
+
+See end of file for license information.
+
 */
+
+#ifndef INCLUDE_THE_DEBUGINATOR_H
+#define INCLUDE_THE_DEBUGINATOR_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 typedef struct DebuginatorItem DebuginatorItem;
-typedef struct LOLTHING LOLTHING;
-
-typedef struct LOLTHING {
-	void LOLOL() {};
-} LOLTHING;
-
 
 #ifndef DEBUGINATOR_max_title_length
 #define DEBUGINATOR_max_title_length 20
@@ -1238,3 +1235,46 @@ void debuginator_create_bool_item(TheDebuginator* debuginator, const char* path,
 
 #endif // DEBUGINATOR_IMPLEMENTATION
 #endif // INCLUDE_THE_DEBUGINATOR_H
+
+
+/*
+------------------------------------------------------------------------------
+This software is available under 2 licenses -- choose whichever you prefer.
+------------------------------------------------------------------------------
+ALTERNATIVE A - MIT License
+Copyright (c) 2017 Sean Barrett
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
+so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+------------------------------------------------------------------------------
+ALTERNATIVE B - Public Domain (www.unlicense.org)
+This is free and unencumbered software released into the public domain.
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this
+software, either in source code form or as a compiled binary, for any purpose,
+commercial or non-commercial, and by any means.
+In jurisdictions that recognize copyright laws, the author or authors of this
+software dedicate any and all copyright interest in the software to the public
+domain. We make this dedication for the benefit of the public at large and to
+the detriment of our heirs and successors. We intend this dedication to be an
+overt act of relinquishment in perpetuity of all present and future rights to
+this software under copyright law.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+------------------------------------------------------------------------------
+*/

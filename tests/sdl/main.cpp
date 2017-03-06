@@ -120,8 +120,6 @@ int main(int argc, char **argv)
 {
 	(void)(argc, argv);
 
-	LOLTHING* a = 0;
-	a->LOLOL();
 	int res_x = 800;
 	int res_y = 600;
 	GuiHandle gui = gui_create_gui(res_x, res_y, "Debuginator SDL demo");

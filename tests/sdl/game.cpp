@@ -9,8 +9,6 @@
 
 static void on_boxes_activated(DebuginatorItem* item, void* value, const char* value_title) {
 	(void)value;
-	LOLTHING* a = 0;
-	a->LOLOL();
 	GameData* data = (GameData*)item->user_data;
 	if (strcmp(value_title, "Add box") == 0 && data->boxes_n < 256) {
 		GameBox* box = &data->boxes[data->boxes_n++];
