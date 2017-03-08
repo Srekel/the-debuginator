@@ -9,10 +9,10 @@ Gifs will be added once project is slightly more complete.
 ## Current status
 
 - Highly work in progress.
-- Simple unit testing.
-  - 53 "tests", all passes.
+- Simple unit testing. Currently a bunch of them fails due to heavy refactoring.
 - Beginning of reference implementation in SDL.
 - Working implementation with all core features.
+- Unoptimized.
 
 ## Features
 
@@ -70,7 +70,7 @@ Put things in folders in folders. Support for expanding and collapsing folders.
 
 No matter how far down or deep you scroll, you can always see the folders above the current item.
 
-### :factory: Good look & feel
+### :factory: Nice look & feel
 
 Nice default color scheme, smooth animations, juicy feedback.
 
