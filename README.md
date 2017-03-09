@@ -1,6 +1,6 @@
 # The Debuginator
 
-A super sweet hierarchical scrollable accordion debug menu intended for games.
+A juicy hierarchical scrollable accordion debug menu intended for games.
 
 It's conceptually based on the debug menu I wrote at Fatshark for **Warhammer: End Times – Vermintide**, where it was - and still is! - used extensively by everyone. Quote by one of the game designers during the Christmas party: *"The debug menu saved man-years for us"*. He was drunk. But not wrong.
 
@@ -12,7 +12,8 @@ Gifs will be added once project is slightly more complete.
 - Simple unit testing. Currently a bunch of them fails due to heavy refactoring.
 - Beginning of reference implementation in SDL.
 - Working implementation with all core features.
-- Unoptimized.
+- Basic animation support.
+- Not performance tested, but trivially optimized (only draws what's on screen).
 
 ## Features
 

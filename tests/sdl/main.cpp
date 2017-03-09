@@ -192,7 +192,7 @@ int main(int argc, char **argv)
 		gui_frame_begin(gui);
 
 		game_update(gamedata, (float)dt);
-		debuginator_draw(&debuginator);
+		debuginator_draw(&debuginator, (float)dt * 1.f);
 
 		// Not a good way to enforce a framerate due to delay being inprecise but
 		// its purpose is to save some battery, not to get exactly X fps.
