@@ -45,6 +45,15 @@ static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
 	debuginator_create_bool_item(debuginator, "Folder/Subfolder/SimpleBool 4 with a really long long title", "Change a bool.", &data->mybool);
 
 	debuginator_new_folder_item(debuginator, NULL, "Folder 2", 0);
+
+	char folder[64] = { 0 };
+	char item[64] = { 0 };
+	for (int i = 0; i < 5; i++) {
+		for (int j = 0; j < 5; j++) {
+			sprintf_s(folder, 64, "Game/Test%02d/GameBool%02d", i, j);
+			debuginator_create_bool_item(debuginator, folder, "Change a bool.", &data->mybool);
+		}
+	}
 }
 
 static GameData s_game_data;
