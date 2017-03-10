@@ -85,6 +85,7 @@
     <IncludePath>$(IncludePath)</IncludePath>
     <OutDir>$(SolutionDir)\Build\$(Platform)_$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\Build\_$(ProjectName)\$(Platform)_$(Configuration)\</IntDir>
+    <TargetName>TheDebuginator_SDLDemo</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
