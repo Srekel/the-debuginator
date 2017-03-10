@@ -122,7 +122,8 @@ int main(int argc, char **argv)
 
 	int res_x = 800;
 	int res_y = 600;
-	GuiHandle gui = gui_create_gui(res_x, res_y, "Debuginator SDL demo");
+	bool vsync_on = true;
+	GuiHandle gui = gui_create_gui(res_x, res_y, "Debuginator SDL demo", vsync_on);
 	if (gui == 0) {
 		return 1;
 	}

@@ -27,7 +27,7 @@ struct Color {
 	unsigned char a;
 };
 
-GuiHandle gui_create_gui(int resx, int resy, const char* window_title);
+GuiHandle gui_create_gui(int resx, int resy, const char* window_title, bool vsync_on);
 void gui_destroy_gui(GuiHandle gui_handle);
 
 void gui_frame_begin(GuiHandle gui_hande);

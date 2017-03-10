@@ -23,7 +23,7 @@ static Gui guis[1];
 static int gui_count = 0;
 
 
-GuiHandle gui_create_gui(int resx, int resy, const char* window_title) {
+GuiHandle gui_create_gui(int resx, int resy, const char* window_title, bool vsync_on) {
 	if (gui_count > 0) {
 		return (GuiHandle)nullptr;
 	}
@@ -45,7 +45,7 @@ GuiHandle gui_create_gui(int resx, int resy, const char* window_title) {
 		return (GuiHandle)nullptr;
 	}
 
-	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | (SDL_RENDERER_PRESENTVSYNC & (vsync_on ? 0xFFFFFFFF : 0)));
 	if (renderer == NULL) {
 		SDL_Quit();
 		return (GuiHandle)nullptr;
