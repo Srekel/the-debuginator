@@ -997,12 +997,17 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 				description_width = debuginator->screen_resolution.x - offset.x;
 			}
 
+			float description_height = 0;
 			while (description) {
 				description = debuginator->word_wrap(description, debuginator->theme.fonts[DEBUGINATOR_ItemDescription], description_width, description_line, sizeof(description_line), debuginator->draw_user_data);
 
 				offset.y += 30;
+				description_height += 30;
 				debuginator->draw_text(description_line, &offset, &debuginator->theme.colors[DEBUGINATOR_ItemDescription], &debuginator->theme.fonts[DEBUGINATOR_ItemDescription], debuginator->draw_user_data);
 			}
+
+			// Feels kinda ugly to do this here but... works for now.
+			debuginator__set_total_height(item, 30 + description_height + 30 * (item->leaf.num_values));
 
 			for (size_t i = 0; i < item->leaf.num_values; i++) {
 				offset.y += 30;
@@ -1056,13 +1061,13 @@ void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item) {
 		animation->data.item_activate.value_index = item->leaf.hot_index;
 		animation->duration = 0.5f;
 
-		DebuginatorItem* parent = item;
+		DebuginatorItem* parent = item->parent;
 		while (parent) {
 			animation->data.item_activate.start_pos.x += 20;
 			parent = parent->parent;
 		}
 
-		float y_dist_to_root = 30;
+		float y_dist_to_root = 0;
 		debuginator__distance_to_hot_item(debuginator->root, item, &y_dist_to_root);
 		animation->data.item_activate.start_pos.y = y_dist_to_root + debuginator->current_height_offset;
 	}
