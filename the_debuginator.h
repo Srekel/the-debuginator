@@ -947,6 +947,10 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 		DebuginatorItem* child = item->folder.first_child;
 		while (child) {
 			offset.y += 30;
+			if (offset.y > debuginator->size.y) {
+				break;
+			}
+
 			offset.y = debuginator_draw_item(debuginator, child, offset, debuginator->hot_item == child);
 			child = child->next_sibling;
 		}
