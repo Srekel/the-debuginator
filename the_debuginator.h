@@ -781,7 +781,7 @@ float debuginator__lerp(float a, float b, float t) {
 
 bool debuginator__distance_to_hot_item(DebuginatorItem* item, DebuginatorItem* hot_item, float* distance) {
 	if (item == hot_item) {
-		if (!item->is_folder) {
+		if (!item->is_folder && item->leaf.is_active) {
 			*distance += 30 * (item->leaf.hot_index + 1);
 		}
 		return true;
@@ -874,7 +874,7 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 	//debuginator_draw_item(debuginator, debuginator->root, offset, true);
 
 	DebuginatorItem* item_to_draw = debuginator->root->folder.first_child;
-	while (offset.y < -30) {
+	while (item_to_draw && offset.y < -30) {
 		// We'll start to draw off-screen which we don't want.
 		if (offset.y + item_to_draw->total_height < 0) {
 			// Whole item is off-screen, skip to sibling
