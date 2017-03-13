@@ -90,7 +90,7 @@ static void unittest_debug_menu_run() {
 	config.item_buffer_capacity = sizeof(item_buffer) / sizeof(item_buffer[0]);
 	config.draw_rect = draw_rect;
 	config.draw_text = draw_text;
-	config.draw_user_data = NULL;
+	config.app_user_data = NULL;
 	config.word_wrap = word_wrap;
 
 	config.size.x = 500;

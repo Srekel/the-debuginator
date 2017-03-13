@@ -99,6 +99,11 @@ bool handle_debuginator_input(SDL_Event* event, TheDebuginator* debuginator) {
 				}
 			}
 			else if (event->key.keysym.sym == SDLK_RIGHT) {
+				if (event->key.keysym.mod == SDLK_LCTRL) {
+					if (debuginator) {
+
+					}
+				}
 				if (!debuginator->is_open) {
 					debuginator_set_open(debuginator, true);
 					return true;
@@ -140,7 +145,7 @@ int main(int argc, char **argv)
 	config.item_buffer_capacity = sizeof(item_buffer) / sizeof(item_buffer[0]);
 	config.draw_rect = draw_rect;
 	config.draw_text = draw_text;
-	config.draw_user_data = (void*)gui;
+	config.app_user_data = (void*)gui;
 	config.word_wrap = word_wrap;
 	config.size.x = 500;
 	config.size.y = (float)res_y;

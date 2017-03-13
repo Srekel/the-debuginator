@@ -55,8 +55,6 @@ typedef struct DebuginatorItem DebuginatorItem;
 #define DEBUGINATOR_max_themes 16
 #endif
 
-
-// TODO C99-ify these
 typedef struct DebuginatorVector2 {
 	float x;
 	float y;
@@ -98,13 +96,14 @@ typedef struct DebuginatorTheme {
 	DebuginatorFont fonts[DEBUGINATOR_NumDrawTypes];
 } DebuginatorTheme;
 
-typedef struct DebuginatorFolderData {
-	struct DebuginatorItem* first_child;
-	struct DebuginatorItem* hot_child;
-} DebuginatorFolderData;
-
 typedef struct DebuginatorItem DebuginatorItem;
 typedef struct TheDebuginator TheDebuginator;
+
+typedef struct DebuginatorFolderData {
+	DebuginatorItem* first_child;
+	DebuginatorItem* hot_child;
+	bool has_visible_children;
+} DebuginatorFolderData;
 
 typedef void(*DebuginatorDrawTextCallback)
 	(const char* text, DebuginatorVector2* position, DebuginatorColor* color, DebuginatorFont* font, void* userdata);
@@ -196,7 +195,7 @@ typedef struct TheDebuginatorConfig {
 
 	DebuginatorItemEditorData edit_types[DEBUGINATOR_EditTypeCount];
 
-	void* draw_user_data;
+	void* app_user_data;
 	DebuginatorDrawTextCallback draw_text;
 	DebuginatorDrawRectCallback draw_rect;
 	DebuginatorWordWrapCallback word_wrap;
@@ -206,6 +205,8 @@ typedef struct TheDebuginatorConfig {
 	bool left_aligned;
 	int open_direction;
 	float focus_height;
+
+	void(*on_save_item)(DebuginatorItem* item, void* app_user_data);
 } TheDebuginatorConfig;
 
 typedef struct TheDebuginator {
@@ -231,7 +232,7 @@ typedef struct TheDebuginator {
 
 	float dt;
 	float draw_timer;
-	void* draw_user_data;
+	void* app_user_data;
 	DebuginatorDrawTextCallback draw_text;
 	DebuginatorDrawRectCallback draw_rect;
 	DebuginatorWordWrapCallback word_wrap;
@@ -246,6 +247,8 @@ typedef struct TheDebuginator {
 
 	DebuginatorAnimation animations[8];
 	int animation_count;
+
+	void(*on_save_item)(DebuginatorItem* item, void* app_user_data);
 } TheDebuginator;
 
 
@@ -260,6 +263,9 @@ extern DebuginatorItem* debuginator_new_folder_item(TheDebuginator* debuginator,
 extern DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* path, bool create_if_not_exist);
 extern void debuginator_set_hot_item(TheDebuginator* debuginator, const char* path);
 extern void debuginator_remove_item(TheDebuginator* debuginator, const char* path);
+void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item);
+void debuginator_load_item(TheDebuginator* debuginator, const char* path, const char* value_title);
+
 #ifdef __cplusplus
 }
 #endif
@@ -343,10 +349,9 @@ void debuginator__quick_draw_default(TheDebuginator* debuginator, DebuginatorIte
 
 		bool is_overriden = item->leaf.active_index != 0;
 		unsigned default_color_index = is_overriden ? DEBUGINATOR_ItemTitleOverridden : DEBUGINATOR_ItemTitle;
-		debuginator->draw_text(item->leaf.value_titles[item->leaf.active_index], &value_offset, &debuginator->theme.colors[default_color_index], &debuginator->theme.fonts[DEBUGINATOR_ItemTitle], debuginator->draw_user_data);
+		debuginator->draw_text(item->leaf.value_titles[item->leaf.active_index], &value_offset, &debuginator->theme.colors[default_color_index], &debuginator->theme.fonts[DEBUGINATOR_ItemTitle], debuginator->app_user_data);
 	}
 }
-
 
 void debuginator__expanded_draw_default(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
 	for (size_t i = 0; i < item->leaf.num_values; i++) {
@@ -358,14 +363,14 @@ void debuginator__expanded_draw_default(TheDebuginator* debuginator, Debuginator
 			if (!debuginator->left_aligned) {
 				pos.x = debuginator->screen_resolution.x - debuginator->openness * debuginator->size.x;
 			}
-			debuginator->draw_rect(pos, size, debuginator->theme.colors[DEBUGINATOR_LineHighlight], debuginator->draw_user_data);
+			debuginator->draw_rect(pos, size, debuginator->theme.colors[DEBUGINATOR_LineHighlight], debuginator->app_user_data);
 		}
 
 		const char* value_title = item->leaf.value_titles[i];
 		bool value_hot = i == item->leaf.hot_index;
 		bool value_overridden = i == item->leaf.active_index;
 		unsigned value_color_index = value_hot ? DEBUGINATOR_ItemValueHot : (value_overridden ? DEBUGINATOR_ItemTitleOverridden : DEBUGINATOR_ItemValueDefault);
-		debuginator->draw_text(value_title, position, &debuginator->theme.colors[value_color_index], &debuginator->theme.fonts[value_hot ? DEBUGINATOR_ItemTitle : DEBUGINATOR_ItemTitle], debuginator->draw_user_data);
+		debuginator->draw_text(value_title, position, &debuginator->theme.colors[value_color_index], &debuginator->theme.fonts[value_hot ? DEBUGINATOR_ItemTitle : DEBUGINATOR_ItemTitle], debuginator->app_user_data);
 	}
 }
 
@@ -373,7 +378,7 @@ void debuginator__quick_draw_boolean(TheDebuginator* debuginator, DebuginatorIte
 	DebuginatorVector2 pos = debuginator__vector2(debuginator->size.x * debuginator->openness - 200, position->y);
 	DebuginatorVector2 size = debuginator__vector2(50, 20);
 	DebuginatorColor background = debuginator__color(0, 0, 0, 100);
-	debuginator->draw_rect(pos, size, background, debuginator->draw_user_data);
+	debuginator->draw_rect(pos, size, background, debuginator->app_user_data);
 
 	item->leaf.draw_t += debuginator->dt;
 	if (item->leaf.draw_t > 1) {
@@ -395,7 +400,7 @@ void debuginator__quick_draw_boolean(TheDebuginator* debuginator, DebuginatorIte
 	size.y = 16;
 	DebuginatorColor slider = item->leaf.active_index == 0 ? debuginator__color(200, 100, 100, 200) : debuginator__color(100, 200, 100, 200);
 
-	debuginator->draw_rect(slider_pos, size, slider, debuginator->draw_user_data);
+	debuginator->draw_rect(slider_pos, size, slider, debuginator->app_user_data);
 }
 
 void debuginator__expanded_draw_boolean(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
@@ -408,14 +413,14 @@ void debuginator__expanded_draw_boolean(TheDebuginator* debuginator, Debuginator
 			if (!debuginator->left_aligned) {
 				pos.x = debuginator->screen_resolution.x - debuginator->openness * debuginator->size.x;
 			}
-			debuginator->draw_rect(pos, size, debuginator->theme.colors[DEBUGINATOR_LineHighlight], debuginator->draw_user_data);
+			debuginator->draw_rect(pos, size, debuginator->theme.colors[DEBUGINATOR_LineHighlight], debuginator->app_user_data);
 		}
 
 		const char* value_title = item->leaf.value_titles[i];
 		bool value_hot = i == item->leaf.hot_index;
 		bool value_overridden = i == item->leaf.active_index;
 		unsigned value_color_index = value_hot ? DEBUGINATOR_ItemValueHot : (value_overridden ? DEBUGINATOR_ItemTitleOverridden : DEBUGINATOR_ItemValueDefault);
-		debuginator->draw_text(value_title, position, &debuginator->theme.colors[value_color_index], &debuginator->theme.fonts[value_hot ? DEBUGINATOR_ItemTitle : DEBUGINATOR_ItemTitle], debuginator->draw_user_data);
+		debuginator->draw_text(value_title, position, &debuginator->theme.colors[value_color_index], &debuginator->theme.fonts[value_hot ? DEBUGINATOR_ItemTitle : DEBUGINATOR_ItemTitle], debuginator->app_user_data);
 	}
 }
 
@@ -482,6 +487,63 @@ void debuginator_set_title(DebuginatorItem* item, const char* title, size_t titl
 	}
 }
 
+
+DebuginatorItem* debuginator__next_visible_sibling(DebuginatorItem* item) {
+	DebuginatorItem* sibling = item->next_sibling;
+	while (sibling) {
+		if (sibling->is_folder) {
+			if (sibling->folder.has_visible_children) {
+				return sibling;
+			}
+		}
+		else if (sibling->leaf.hot_index != -2) {
+			return sibling;
+		}
+
+		sibling = sibling->next_sibling;
+	}
+
+	return NULL;
+}
+
+DebuginatorItem* debuginator__prev_visible_sibling(DebuginatorItem* item) {
+	DebuginatorItem* sibling = item->prev_sibling;
+	while (sibling) {
+		if (sibling->is_folder) {
+			if (sibling->folder.has_visible_children) {
+				return sibling;
+			}
+		}
+		else if (sibling->leaf.hot_index != -2) {
+			return sibling;
+		}
+
+		sibling = sibling->prev_sibling;
+	}
+
+	return NULL;
+}
+
+DebuginatorItem* debuginator__first_visible_child(DebuginatorItem* item) {
+	if (item->folder.first_child == NULL) {
+		return NULL;
+	}
+
+	if (item->folder.first_child->is_folder) {
+		if (item->folder.first_child->folder.has_visible_children) {
+			return item->folder.first_child;
+		}
+
+		return NULL;
+	}
+
+	if (item->folder.first_child->leaf.hot_index != -2) {
+		return item->folder.first_child;
+	}
+
+	return debuginator__next_visible_sibling(item->folder.first_child);
+}
+
 void debuginator_set_parent(DebuginatorItem* item, DebuginatorItem* parent) {
 	if (parent == NULL)
 		return;
@@ -525,6 +587,7 @@ DebuginatorItem* debuginator_new_folder_item(TheDebuginator* debuginator, Debugi
 	}
 
 	folder_item->is_folder = true;
+	folder_item->folder.has_visible_children = true;
 	debuginator_set_title(folder_item, title, title_length);
 	debuginator_set_parent(folder_item, parent);
 	debuginator__set_total_height(folder_item, 30);
@@ -603,7 +666,6 @@ DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 	item->leaf.value_titles = value_titles;
 	item->leaf.on_item_changed_callback = on_item_changed_callback;
 	item->user_data = user_data;
-	item->leaf.description = description;
 	debuginator__set_total_height(item, 30);
 
 	if (item->leaf.hot_index >= num_values) {
@@ -615,8 +677,28 @@ DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 		debuginator->hot_item = item;
 	}
 
+	// In case the item existed previously from a load.
+	if (item->leaf.description != NULL) {
+		const char* loaded_value_title = item->leaf.description;
+		for (int i = 0; i < item->leaf.num_values; i++) {
+			if (strcmp(item->leaf.value_titles[i], loaded_value_title) == 0) {
+				item->leaf.hot_index = i;
+				debuginator_activate(debuginator, item);
+				break;
+			}
+		}
+	}
+	item->leaf.description = description;
+
 	//TODO preserve hot item
 	return item;
+}
+
+void debuginator_load_item(TheDebuginator* debuginator, const char* path, const char* value_title) {
+	DebuginatorItem* item = debuginator_create_array_item(debuginator, NULL, path, NULL, NULL, NULL, NULL, NULL, 0, 0);
+	item->leaf.description = value_title; // Some might call this a hack... :D
+	item->leaf.hot_index = -2;
+	debuginator__set_total_height(item, 0);
 }
 
 void debuginator_set_hot_item(TheDebuginator* debuginator, const char* path) {
@@ -668,7 +750,7 @@ void debuginator_remove_item(TheDebuginator* debuginator, const char* path) {
 		}
 	}
 
-	debuginator__set_total_height(item->parent, item->parent->total_height - 30);
+	debuginator__set_total_height(item->parent, item->parent->total_height - item->total_height);
 }
 
 //██╗███╗   ██╗██╗████████╗
@@ -759,7 +841,7 @@ void debuginator_get_default_config(TheDebuginatorConfig* config) {
 void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginator) {
 	DEBUGINATOR_assert(config->draw_rect != NULL);
 	DEBUGINATOR_assert(config->draw_text != NULL);
-	//DEBUGINATOR_assert(config->draw_user_data);
+	//DEBUGINATOR_assert(config->app_user_data);
 	DEBUGINATOR_assert(config->word_wrap != NULL);
 	DEBUGINATOR_assert(config->item_buffer != NULL);
 	DEBUGINATOR_assert(config->item_buffer_capacity > 0);
@@ -776,7 +858,7 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 	debuginator->draw_rect = config->draw_rect;
 	debuginator->draw_text = config->draw_text;
 	debuginator->word_wrap = config->word_wrap;
-	debuginator->draw_user_data = config->draw_user_data;
+	debuginator->app_user_data = config->app_user_data;
 
 	debuginator->size = config->size;
 	debuginator->open_direction = config->open_direction;
@@ -821,10 +903,10 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 void debuginator_print(DebuginatorItem* item, int indentation) {
 	DEBUGINATOR_debug_print("%*s%s\n", indentation, "", item->title);
 	if (item->is_folder) {
-		item = item->folder.first_child;
+		item = debuginator__first_visible_child(item);
 		while (item) {
 			debuginator_print(item, indentation + 4);
-			item = item->next_sibling;
+			item = debuginator__next_visible_sibling(item);
 		}
 	}
 	else {
@@ -839,8 +921,8 @@ DebuginatorItem* debuginator__find_first_leaf(DebuginatorItem* item) {
 		return item;
 	}
 
-	if (item->is_folder && item->folder.first_child != NULL) {
-		DebuginatorItem* child = item->folder.first_child;
+	if (item->is_folder && debuginator__first_visible_child(item) != NULL) {
+		DebuginatorItem* child = debuginator__first_visible_child(item);
 		while (child) {
 			if (child->is_folder) {
 				DebuginatorItem* leaf_item = debuginator__find_first_leaf(child);
@@ -848,7 +930,7 @@ DebuginatorItem* debuginator__find_first_leaf(DebuginatorItem* item) {
 					return leaf_item;
 				}
 
-				child = child->next_sibling;
+				child = debuginator__next_visible_sibling(child);
 			}
 			else {
 				return child;
@@ -864,8 +946,8 @@ DebuginatorItem* debuginator__find_last_leaf(DebuginatorItem* item) {
 		return item;
 	}
 
-	if (item->is_folder && item->folder.first_child != NULL) {
-		DebuginatorItem* child = item->folder.first_child;
+	if (item->is_folder && debuginator__first_visible_child(item) != NULL) {
+		DebuginatorItem* child = debuginator__first_visible_child(item);
 		while (child->next_sibling) {
 			child = child->next_sibling;
 		}
@@ -877,7 +959,7 @@ DebuginatorItem* debuginator__find_last_leaf(DebuginatorItem* item) {
 					return leaf_item;
 				}
 
-				child = child->prev_sibling;
+				child = debuginator__prev_visible_sibling(child);
 			}
 			else {
 				return child;
@@ -905,14 +987,14 @@ bool debuginator__distance_to_hot_item(DebuginatorItem* item, DebuginatorItem* h
 
 	*distance += 30;
 	if (item->is_folder) {
-		DebuginatorItem* child = item->folder.first_child;
+		DebuginatorItem* child = debuginator__first_visible_child(item);
 		while (child) {
 			bool found = debuginator__distance_to_hot_item(child, hot_item, distance);
 			if (found) {
 				return true;
 			}
 
-			child = child->next_sibling;
+			child = debuginator__next_visible_sibling(child);
 		}
 	}
 
@@ -981,7 +1063,7 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 	// Background
 	DebuginatorVector2 offset = debuginator->root_position;
 	offset.x += debuginator__lerp(0, debuginator->open_direction * debuginator->size.x, debuginator->openness);
-	debuginator->draw_rect(offset, debuginator->size, debuginator->theme.colors[DEBUGINATOR_Background], debuginator->draw_user_data);
+	debuginator->draw_rect(offset, debuginator->size, debuginator->theme.colors[DEBUGINATOR_Background], debuginator->app_user_data);
 
 	offset.y = debuginator->current_height_offset;
 	// Draw all items
@@ -990,19 +1072,19 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 	}
 	//debuginator_draw_item(debuginator, debuginator->root, offset, true);
 
-	DebuginatorItem* item_to_draw = debuginator->root->folder.first_child;
+	DebuginatorItem* item_to_draw = debuginator__first_visible_child(debuginator->root);
 	while (item_to_draw && offset.y < -30) {
 		// We'll start to draw off-screen which we don't want.
 		if (offset.y + item_to_draw->total_height < 0) {
 			// Whole item is off-screen, skip to sibling
 			offset.y += item_to_draw->total_height;
-			item_to_draw = item_to_draw->next_sibling;
+			item_to_draw = debuginator__next_visible_sibling(item_to_draw);
 		}
 		else if (item_to_draw->is_folder) {
 			// Part of item is off-screen, find which child to draw
 			offset.x += 20;
 			offset.y += 30;
-			item_to_draw = item_to_draw->folder.first_child;
+			item_to_draw = debuginator__first_visible_child(item_to_draw);
 		}
 		else {
 			DEBUGINATOR_assert(false);
@@ -1012,7 +1094,7 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 	while (item_to_draw && offset.y < debuginator->size.y) {
 		debuginator_draw_item(debuginator, item_to_draw, offset, debuginator->hot_item == item_to_draw);
 		offset.y += item_to_draw->total_height;
-		while (item_to_draw && item_to_draw->next_sibling == NULL) {
+		while (item_to_draw && debuginator__next_visible_sibling(item_to_draw) == NULL) {
 			offset.x -= 20;
 			item_to_draw = item_to_draw->parent;
 		}
@@ -1021,7 +1103,7 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 			break;
 		}
 
-		item_to_draw = item_to_draw->next_sibling;
+		item_to_draw = debuginator__next_visible_sibling(item_to_draw);
 	}
 
 	// Update animations
@@ -1043,7 +1125,7 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 			
 			DebuginatorVector2 start_position = animation->data.item_activate.start_pos;
 			DebuginatorVector2 end_position;
-			end_position.x = 300;
+			end_position.x = debuginator->openness * 500 - 200;
 			end_position.y = distance_from_root_to_item + debuginator->current_height_offset - (animation->data.item_activate.item->leaf.hot_index + 1) * 30 - 30; // HACK! for description :(
 
 
@@ -1053,7 +1135,7 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 			//position.y = distance_from_root_to_item + debuginator->current_height_offset;
 			DebuginatorFont* font = &debuginator->theme.fonts[DEBUGINATOR_ItemTitle];
 			const char* text = animation->data.item_activate.item->leaf.value_titles[animation->data.item_activate.value_index];
-			debuginator->draw_text(text, &position, &debuginator->theme.colors[DEBUGINATOR_ItemTitleActive], font, debuginator->draw_user_data);
+			debuginator->draw_text(text, &position, &debuginator->theme.colors[DEBUGINATOR_ItemTitleActive], font, debuginator->app_user_data);
 
 		}
 	}
@@ -1079,13 +1161,13 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 
 	if (item->is_folder) {
 		if (debuginator->hot_item == item) {
-			debuginator->draw_rect(debuginator__vector2(0, offset.y - 5), debuginator__vector2(500, 30), debuginator->theme.colors[DEBUGINATOR_LineHighlight], debuginator->draw_user_data);
+			debuginator->draw_rect(debuginator__vector2(0, offset.y - 5), debuginator__vector2(500, 30), debuginator->theme.colors[DEBUGINATOR_LineHighlight], debuginator->app_user_data);
 		}
 
 		unsigned color_index = item == debuginator->hot_item ? DEBUGINATOR_ItemTitleActive : (hot ? DEBUGINATOR_ItemTitleHot : DEBUGINATOR_FolderTitle);
-		debuginator->draw_text(item->title, &offset, &debuginator->theme.colors[color_index], &debuginator->theme.fonts[DEBUGINATOR_ItemTitle], debuginator->draw_user_data);
+		debuginator->draw_text(item->title, &offset, &debuginator->theme.colors[color_index], &debuginator->theme.fonts[DEBUGINATOR_ItemTitle], debuginator->app_user_data);
 		offset.x += 20;
-		DebuginatorItem* child = item->folder.first_child;
+		DebuginatorItem* child = debuginator__first_visible_child(item);
 		while (child) {
 			offset.y += 30;
 			if (offset.y > debuginator->size.y) {
@@ -1093,7 +1175,7 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 			}
 
 			offset.y = debuginator_draw_item(debuginator, child, offset, debuginator->hot_item == child);
-			child = child->next_sibling;
+			child = debuginator__next_visible_sibling(child);
 		}
 	}
 	else {
@@ -1102,14 +1184,14 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 			if (!debuginator->left_aligned) {
 				line_pos.x = debuginator->screen_resolution.x - debuginator->openness * debuginator->size.x;
 			}
-			debuginator->draw_rect(line_pos, debuginator__vector2(500, 30), debuginator->theme.colors[DEBUGINATOR_LineHighlight], debuginator->draw_user_data);
+			debuginator->draw_rect(line_pos, debuginator__vector2(500, 30), debuginator->theme.colors[DEBUGINATOR_LineHighlight], debuginator->app_user_data);
 		}
 
 		bool is_overriden = item->leaf.active_index != 0;
 		unsigned default_color_index = is_overriden ? DEBUGINATOR_ItemTitleOverridden : DEBUGINATOR_ItemTitle;
 		unsigned color_index = item == debuginator->hot_item && !item->leaf.is_active ? DEBUGINATOR_ItemTitleActive : (hot ? DEBUGINATOR_ItemTitleHot : default_color_index);
 		DebuginatorFont* font = &debuginator->theme.fonts[DEBUGINATOR_ItemTitle];
-		debuginator->draw_text(item->title, &offset, &debuginator->theme.colors[color_index], font, debuginator->draw_user_data);
+		debuginator->draw_text(item->title, &offset, &debuginator->theme.colors[color_index], font, debuginator->app_user_data);
 
 		debuginator->edit_types[item->leaf.edit_type].quick_draw(debuginator, item, &offset);
 		
@@ -1125,11 +1207,11 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 
 			float description_height = 0;
 			while (description) {
-				description = debuginator->word_wrap(description, debuginator->theme.fonts[DEBUGINATOR_ItemDescription], description_width, description_line, sizeof(description_line), debuginator->draw_user_data);
+				description = debuginator->word_wrap(description, debuginator->theme.fonts[DEBUGINATOR_ItemDescription], description_width, description_line, sizeof(description_line), debuginator->app_user_data);
 
 				offset.y += 30;
 				description_height += 30;
-				debuginator->draw_text(description_line, &offset, &debuginator->theme.colors[DEBUGINATOR_ItemDescription], &debuginator->theme.fonts[DEBUGINATOR_ItemDescription], debuginator->draw_user_data);
+				debuginator->draw_text(description_line, &offset, &debuginator->theme.colors[DEBUGINATOR_ItemDescription], &debuginator->theme.fonts[DEBUGINATOR_ItemDescription], debuginator->app_user_data);
 			}
 
 			// Feels kinda ugly to do this here but... works for now.
@@ -1161,6 +1243,10 @@ void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item) {
 	item->leaf.draw_t = 0;
 	if (item->leaf.num_values == 0) {
 		return;
+	}
+
+	if (item->leaf.active_index != item->leaf.hot_index && debuginator->on_save_item != NULL) {
+		debuginator->on_save_item(item, debuginator->app_user_data);
 	}
 
 	item->leaf.active_index = item->leaf.hot_index;
@@ -1202,21 +1288,21 @@ void debuginator_move_sibling_previous(TheDebuginator* debuginator) {
 	}
 	else {
 		DebuginatorItem* hot_item_new = debuginator->hot_item;
-		DebuginatorItem* parent_child = hot_item_new->parent->folder.first_child;
+		DebuginatorItem* parent_child = debuginator__first_visible_child(hot_item_new->parent);
 		if (parent_child == hot_item_new) {
 			while (parent_child) {
 				hot_item_new = parent_child;
-				parent_child = parent_child->next_sibling;
+				parent_child = debuginator__next_visible_sibling(parent_child);
 			}
 		}
 		else {
 			while (parent_child) {
-				if (parent_child->next_sibling == hot_item_new) {
+				if (debuginator__next_visible_sibling(parent_child) == hot_item_new) {
 					hot_item_new = parent_child;
 					break;
 				}
 
-				parent_child = parent_child->next_sibling;
+				parent_child = debuginator__next_visible_sibling(parent_child);
 			}
 		}
 
@@ -1237,11 +1323,11 @@ void debuginator_move_sibling_next(TheDebuginator* debuginator) {
 	}
 	else {
 		DebuginatorItem* hot_item_new = debuginator->hot_item;
-		if (hot_item->next_sibling != NULL) {
-			hot_item_new = hot_item->next_sibling;
+		if (debuginator__next_visible_sibling(hot_item) != NULL) {
+			hot_item_new = debuginator__next_visible_sibling(hot_item);
 		}
 		else {
-			hot_item_new = hot_item->parent->folder.first_child;
+			hot_item_new = debuginator__first_visible_child(hot_item->parent);
 		}
 
 		if (hot_item != hot_item_new) {
@@ -1259,22 +1345,22 @@ void debuginator_move_to_next(TheDebuginator* debuginator) {
 			hot_item->leaf.hot_index = 0;
 		}
 	}
-	else if (hot_item->next_sibling) {
-		hot_item_new = hot_item->next_sibling;
+	else if (debuginator__next_visible_sibling(hot_item)) {
+		hot_item_new = debuginator__next_visible_sibling(hot_item);
 	}
 	else {
 		DebuginatorItem* parent = hot_item->parent;
 		while (parent != NULL) {
-			if (parent->next_sibling != NULL) {
-				hot_item_new = parent->next_sibling;
+			if (debuginator__next_visible_sibling(parent) != NULL) {
+				hot_item_new = debuginator__next_visible_sibling(parent);
 				break;
 			}
 
-			parent = parent->next_sibling;
+			parent = debuginator__next_visible_sibling(parent);
 		}
 
 		if (parent == NULL) {
-			hot_item_new = debuginator->root->folder.first_child;
+			hot_item_new = debuginator__first_visible_child(debuginator->root);
 		}
 	}
 
@@ -1305,7 +1391,7 @@ void debuginator_move_to_next_leaf(TheDebuginator* debuginator) {
 			B2
 		*/
 
-		DebuginatorItem* sibling = hot_item->next_sibling;
+		DebuginatorItem* sibling = debuginator__next_visible_sibling(hot_item);
 		DebuginatorItem* parent = hot_item->parent;
 		hot_item_new = NULL;
 		while (hot_item_new == NULL) {
@@ -1316,14 +1402,14 @@ void debuginator_move_to_next_leaf(TheDebuginator* debuginator) {
 					break;
 				}
 
-				sibling = sibling->next_sibling;
+				sibling = debuginator__next_visible_sibling(sibling);
 			}
 
 			if (hot_item_new != NULL) {
 				break;
 			}
 
-			while (parent->next_sibling == NULL) {
+			while (debuginator__next_visible_sibling(parent) == NULL) {
 				if (parent == debuginator->root) {
 					DebuginatorItem* leaf_item = debuginator__find_first_leaf(parent);
 					hot_item_new = leaf_item;
@@ -1333,7 +1419,7 @@ void debuginator_move_to_next_leaf(TheDebuginator* debuginator) {
 				parent = parent->parent;
 			}
 
-			sibling = parent->next_sibling;
+			sibling = debuginator__next_visible_sibling(parent);
 		}
 
 		hot_item_new->parent->folder.hot_child = hot_item_new;
@@ -1364,7 +1450,7 @@ void debuginator_move_to_prev_leaf(TheDebuginator* debuginator) {
 		*/
 
 
-		DebuginatorItem* sibling = hot_item->prev_sibling;
+		DebuginatorItem* sibling = debuginator__prev_visible_sibling(hot_item);
 		DebuginatorItem* parent = hot_item->parent;
 		hot_item_new = NULL;
 		while (hot_item_new == NULL) {
@@ -1375,14 +1461,14 @@ void debuginator_move_to_prev_leaf(TheDebuginator* debuginator) {
 					break;
 				}
 
-				sibling = sibling->prev_sibling;
+				sibling = debuginator__prev_visible_sibling(sibling);
 			}
 
 			if (hot_item_new != NULL) {
 				break;
 			}
 
-			while (parent->prev_sibling == NULL) {
+			while (debuginator__prev_visible_sibling(parent) == NULL) {
 				if (parent == debuginator->root) {
 					DebuginatorItem* leaf_item = debuginator__find_last_leaf(parent);
 					hot_item_new = leaf_item;
@@ -1392,7 +1478,7 @@ void debuginator_move_to_prev_leaf(TheDebuginator* debuginator) {
 				parent = parent->parent;
 			}
 
-			sibling = parent->prev_sibling;
+			sibling = debuginator__prev_visible_sibling(parent);
 		}
 
 		hot_item_new->parent->folder.hot_child = hot_item_new;
@@ -1417,8 +1503,8 @@ void debuginator_move_to_child(TheDebuginator* debuginator) {
 		if (hot_item->folder.hot_child != NULL) {
 			hot_item_new = hot_item->folder.hot_child;
 		}
-		else if (hot_item->folder.first_child != NULL) {
-			hot_item_new = hot_item->folder.first_child;
+		else if (debuginator__first_visible_child(hot_item) != NULL) {
+			hot_item_new = debuginator__first_visible_child(hot_item);
 			hot_item_new->parent->folder.hot_child = hot_item_new;
 		}
 

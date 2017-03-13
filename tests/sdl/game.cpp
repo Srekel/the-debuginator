@@ -22,6 +22,7 @@ static void on_boxes_activated(DebuginatorItem* item, void* value, const char* v
 }
 
 static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
+	debuginator_load_item(debuginator, "Debuginator/Load test", "True");
 	{
 		static const char* string_titles[5] = { "String A", "String B", "String C", "String D", "String E" };
 		debuginator_create_array_item(debuginator, NULL, "Debuginator/Help",
@@ -43,9 +44,11 @@ static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
 	debuginator_create_bool_item(debuginator, "Folder/SimpleBool 2", "Change a bool.", &data->mybool);
 	debuginator_create_bool_item(debuginator, "Folder/SimpleBool 3", "Change a bool.", &data->mybool);
 	debuginator_create_bool_item(debuginator, "Folder/Subfolder/SimpleBool 4 with a really long long title", "Change a bool.", &data->mybool);
+	debuginator_create_bool_item(debuginator, "Debuginator/Load test", "Change a bool.", &data->mybool);
+
 
 	debuginator_new_folder_item(debuginator, NULL, "Folder 2", 0);
-
+/*
 	char folder[64] = { 0 };
 	char item[64] = { 0 };
 	for (int i = 0; i < 5; i++) {
@@ -53,7 +56,7 @@ static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
 			sprintf_s(folder, 64, "Game/Test%02d/GameBool%02d", i, j);
 			debuginator_create_bool_item(debuginator, folder, "Change a bool.", &data->mybool);
 		}
-	}
+	}*/
 }
 
 static GameData s_game_data;
