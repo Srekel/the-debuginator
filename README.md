@@ -1,6 +1,6 @@
 # The Debuginator
 
-A juicy hierarchical scrollable accordion debug menu intended for games.
+A juicy feature-packed debug menu intended for games.
 
 It's conceptually based on the debug menu I wrote at Fatshark for **Warhammer: End Times – Vermintide**, where it was - and still is! - used extensively by everyone. Quote by one of the game designers during the Christmas party: *"The debug menu saved man-years for us"*. He was drunk. But not wrong.
 
@@ -8,12 +8,13 @@ Gifs will be added once project is slightly more complete.
 
 ## Current status
 
-- Highly work in progress.
+- **Highly work in progress.**
 - Simple unit testing. Currently a bunch of them fails due to heavy refactoring.
-- Beginning of reference implementation in SDL.
+- Reference implementation in SDL.
 - Working implementation with all core features.
 - Basic animation support.
 - Not performance tested, but trivially optimized (only draws what's on screen).
+- Only built and tested with VS2015.
 
 ## Features
 
@@ -67,15 +68,23 @@ Can handle any number of items, the "hot" one will be centered (ish) smoothly.
 
 Put things in folders in folders. Support for expanding and collapsing folders.
 
+### :small_blue_diamond: Save/Load of settings
+
+So you start up with the settings you had when you exited. Simple interface, application needs to do most of the work.
+
 ### :red_circle: Accordiony
 
 No matter how far down or deep you scroll, you can always see the folders above the current item.
 
 ### :factory: Nice look & feel
 
-Nice default color scheme, smooth animations, juicy feedback.
+Nice default color scheme, multiple themes to choose from, unique "editors" for different types of data, smooth animations, juicy feedback.
 
 Yes, it's important.
+
+### :factory: Custom Item Editors
+
+Different editors for different types of items, and support for users adding their own.
 
 ### :red_circle: Filter
 
@@ -99,13 +108,13 @@ Agnostic regarding Keyboard/Gamepad. It's handled at application layer, though g
 
 Mouse input coming later.
 
+### :small_blue_diamond: Performant
+
+Should handle thousands of items with little impact. Probably not there yet :)
+
 ### :factory: Reference implementation
 
-Written in C++ and SDL, roughly based on Stingray's Gui interface.
-
-### :small_blue_diamond: Save/Load of settings
-
-So you start up with the settings you had when you exited.
+Written in near-C C++ and SDL.
 
 ## Can I help?
 
