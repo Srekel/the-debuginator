@@ -282,6 +282,26 @@ void debuginator_load_item(TheDebuginator* debuginator, const char* path, const 
 #define DEBUGINATOR_memcpy memcpy
 #endif
 
+#ifndef DEBUGINATOR_memset
+#include <string.h>
+#define DEBUGINATOR_memset memset
+#endif
+
+#ifndef DEBUGINATOR_strchr
+#include <string.h>
+#define DEBUGINATOR_strchr strchr
+#endif
+
+#ifndef DEBUGINATOR_strlen
+#include <string.h>
+#define DEBUGINATOR_strlen strlen
+#endif
+
+#ifndef DEBUGINATOR_strncpy
+#include <string.h>
+#define DEBUGINATOR_strncpy strncpy
+#endif
+
 #ifndef DEBUGINATOR_fabs
 #include <math.h>
 #define DEBUGINATOR_fabs fabs
@@ -430,7 +450,7 @@ DebuginatorAnimation* debuginator__get_free_animation(TheDebuginator* debuginato
 	}
 
 	DebuginatorAnimation* animation = &debuginator->animations[debuginator->animation_count++];
-	memset(animation, 0, sizeof(*animation));
+	DEBUGINATOR_memset(animation, 0, sizeof(*animation));
 	return animation;
 }
 
@@ -446,7 +466,7 @@ DebuginatorItem* debuginator_get_free_item(TheDebuginator* debuginator) {
 		item = &debuginator->item_buffer[debuginator->item_buffer_size++];
 	}
 
-	memset(item, 0, sizeof(*item));
+	DEBUGINATOR_memset(item, 0, sizeof(*item));
 	return item;
 }
 
@@ -471,19 +491,19 @@ void debuginator__on_change_theme(DebuginatorItem* item, void* value, const char
 
 void debuginator_set_title(DebuginatorItem* item, const char* title, size_t title_length) {
 	if (title_length == 0) {
-		title_length = strlen(title);
+		title_length = DEBUGINATOR_strlen(title);
 	}
 
 	if (title_length >= DEBUGINATOR_max_title_length) {
 #pragma warning(suppress: 4996)
-		strncpy(item->title, title, DEBUGINATOR_max_title_length - 3);
+		DEBUGINATOR_strncpy(item->title, title, DEBUGINATOR_max_title_length - 3);
 		item->title[DEBUGINATOR_max_title_length - 3] = '.';
 		item->title[DEBUGINATOR_max_title_length - 2] = '.';
 		item->title[DEBUGINATOR_max_title_length - 1] = '\0';
 	}
 	else {
 #pragma warning(suppress: 4996)
-		strncpy(item->title, title, title_length);
+		DEBUGINATOR_strncpy(item->title, title, title_length);
 	}
 }
 
@@ -598,14 +618,14 @@ DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, DebuginatorIt
 	parent = parent == NULL ? debuginator->root : parent;
 	const char* temp_path = path;
 	while (true) {
-		const char* next_slash = strchr(temp_path, '/');
-		size_t path_part_length = next_slash ? next_slash - temp_path : strlen(temp_path);
+		const char* next_slash = DEBUGINATOR_strchr(temp_path, '/');
+		size_t path_part_length = next_slash ? next_slash - temp_path : DEBUGINATOR_strlen(temp_path);
 
 		DebuginatorItem* current_item = NULL;
 		DebuginatorItem* parent_child = parent->folder.first_child;
 		while (parent_child) {
 			const char* item_title = parent_child->title;
-			size_t title_length = strlen(item_title); // strlen :(
+			size_t title_length = DEBUGINATOR_strlen(item_title); // strlen :(
 			if (path_part_length >= DEBUGINATOR_max_title_length
 				&& title_length == DEBUGINATOR_max_title_length - 1
 				&& item_title[DEBUGINATOR_max_title_length - 2] == '.'
@@ -761,7 +781,7 @@ void debuginator_remove_item(TheDebuginator* debuginator, const char* path) {
 //╚═╝╚═╝  ╚═══╝╚═╝   ╚═╝
 
 void debuginator_get_default_config(TheDebuginatorConfig* config) {
-	memset(config, 0, sizeof(*config));
+	DEBUGINATOR_memset(config, 0, sizeof(*config));
 
 	config->create_default_debuginator_items = true;
 	config->open_direction = 1;
@@ -849,11 +869,11 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 	DEBUGINATOR_assert(config->size.x > 0 && config->size.y > 0);
 	DEBUGINATOR_assert(config->screen_resolution.x > 0 && config->screen_resolution.y > 0);
 
-	memset(debuginator, 0, sizeof(*debuginator));
+	DEBUGINATOR_memset(debuginator, 0, sizeof(*debuginator));
 
 	debuginator->item_buffer_capacity = config->item_buffer_capacity;
 	debuginator->item_buffer = config->item_buffer;
-	memset(debuginator->item_buffer, 0, sizeof(DebuginatorItem) * debuginator->item_buffer_capacity);
+	DEBUGINATOR_memset(debuginator->item_buffer, 0, sizeof(DebuginatorItem) * debuginator->item_buffer_capacity);
 
 	debuginator->draw_rect = config->draw_rect;
 	debuginator->draw_text = config->draw_text;
