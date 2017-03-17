@@ -173,3 +173,18 @@ const char* gui_word_wrap(GuiHandle gui_handle, FontTemplateHandle font_handle, 
 		next_word = strchr(next_word + 1, ' ');
 	}
 }
+
+Vector2 gui_text_size(GuiHandle gui_handle, const char* text, FontTemplateHandle font_handle) {
+	Gui* gui = (Gui*)gui_handle;
+	(void)gui;
+	FontTemplate* font_template = (FontTemplate*)font_handle;
+	
+	if (text[0] == '\0') {
+		return Vector2(0, 0);
+	}
+
+	int x, y;
+	TTF_SizeText(font_template->font, text, &x, &y);
+	Vector2 out_text_size((float)x, (float)y);
+	return out_text_size;
+}

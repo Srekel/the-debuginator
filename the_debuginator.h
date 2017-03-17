@@ -99,18 +99,14 @@ typedef struct DebuginatorTheme {
 typedef struct DebuginatorItem DebuginatorItem;
 typedef struct TheDebuginator TheDebuginator;
 
-typedef struct DebuginatorFolderData {
-	DebuginatorItem* first_child;
-	DebuginatorItem* hot_child;
-	bool has_visible_children;
-} DebuginatorFolderData;
-
 typedef void(*DebuginatorDrawTextCallback)
 	(const char* text, DebuginatorVector2* position, DebuginatorColor* color, DebuginatorFont* font, void* userdata);
 typedef void(*DebuginatorDrawRectCallback)
 	(DebuginatorVector2 position, DebuginatorVector2 size, DebuginatorColor color, void* userdata);
 typedef const char* (*DebuginatorWordWrapCallback)
 	(const char* text, DebuginatorFont font, float max_width, char* buffer, int buffer_size, void* userdata);
+typedef DebuginatorVector2 (*DebuginatorTextSizeCallback)
+	(const char* text, DebuginatorFont* font, void* userdata);
 
 typedef void(*DebuginatorItemQuickDrawCallback)(DebuginatorItem* item, void* data);
 typedef void(*DebuginatorOnItemChangedCallback)(DebuginatorItem* item, void* value, const char* value_title);
@@ -123,6 +119,12 @@ typedef enum DebuginatorItemEditorDataType {
 	DEBUGINATOR_EditTypeUserTypeN,*/
 	DEBUGINATOR_EditTypeCount = 16,
 } DebuginatorItemEditorDataType;
+
+typedef struct DebuginatorFolderData {
+	DebuginatorItem* first_child;
+	DebuginatorItem* hot_child;
+	int num_visible_children;
+} DebuginatorFolderData;
 
 typedef struct DebuginatorLeafData {
 	const char* description;
@@ -147,8 +149,10 @@ typedef struct DebuginatorLeafData {
 typedef struct DebuginatorItem {
 	char title[20];
 	bool is_folder;
+	bool is_filtered;
 	void* user_data;
 	float total_height; // Including self and children
+
 
 	DebuginatorItem* prev_sibling;
 	DebuginatorItem* next_sibling;
@@ -199,6 +203,7 @@ typedef struct TheDebuginatorConfig {
 	DebuginatorDrawTextCallback draw_text;
 	DebuginatorDrawRectCallback draw_rect;
 	DebuginatorWordWrapCallback word_wrap;
+	DebuginatorTextSizeCallback text_size;
 
 	DebuginatorVector2 size; // Might not be needed in the future
 	DebuginatorVector2 screen_resolution;
@@ -236,6 +241,7 @@ typedef struct TheDebuginator {
 	DebuginatorDrawTextCallback draw_text;
 	DebuginatorDrawRectCallback draw_rect;
 	DebuginatorWordWrapCallback word_wrap;
+	DebuginatorTextSizeCallback text_size;
 
 	DebuginatorVector2 size;
 	DebuginatorVector2 root_position;
@@ -249,6 +255,10 @@ typedef struct TheDebuginator {
 	int animation_count;
 
 	void(*on_save_item)(DebuginatorItem* item, void* app_user_data);
+
+	bool filter_enabled;
+	char filter[32];
+	int filter_length;
 } TheDebuginator;
 
 
@@ -295,6 +305,11 @@ void debuginator_load_item(TheDebuginator* debuginator, const char* path, const 
 #ifndef DEBUGINATOR_strlen
 #include <string.h>
 #define DEBUGINATOR_strlen strlen
+#endif
+
+#ifndef DEBUGINATOR_strstr
+#include <string.h>
+#define DEBUGINATOR_strstr strstr
 #endif
 
 #ifndef DEBUGINATOR_strncpy
@@ -471,6 +486,10 @@ DebuginatorItem* debuginator_get_free_item(TheDebuginator* debuginator) {
 }
 
 void debuginator__set_total_height(DebuginatorItem* item, float height) {
+	//if (height == 30 && item->is_folder) {
+	//	height = 0;
+	//}
+
 	if (item->total_height == height) {
 		return;
 	}
@@ -479,6 +498,18 @@ void debuginator__set_total_height(DebuginatorItem* item, float height) {
 	item->total_height = height;
 	if (item->parent) {
 		debuginator__set_total_height(item->parent, item->parent->total_height + diff);
+	}
+}
+
+void debuginator__set_num_visible_children(DebuginatorItem* item, int diff) {
+	DEBUGINATOR_assert(item->is_folder);
+	DEBUGINATOR_assert(diff != 0 && item->folder.num_visible_children + diff >= 0);
+	item->folder.num_visible_children += diff;
+	if (item->folder.num_visible_children == 0 && item->parent != NULL) {
+		debuginator__set_num_visible_children(item->parent, -1);
+	}
+	else if (item->folder.num_visible_children == diff && item->parent != NULL) {
+		debuginator__set_num_visible_children(item->parent, 1);
 	}
 }
 
@@ -507,16 +538,15 @@ void debuginator_set_title(DebuginatorItem* item, const char* title, size_t titl
 	}
 }
 
-
 DebuginatorItem* debuginator__next_visible_sibling(DebuginatorItem* item) {
 	DebuginatorItem* sibling = item->next_sibling;
 	while (sibling) {
 		if (sibling->is_folder) {
-			if (sibling->folder.has_visible_children) {
+			if (sibling->folder.num_visible_children > 0) {
 				return sibling;
 			}
 		}
-		else if (sibling->leaf.hot_index != -2) {
+		else if (sibling->leaf.hot_index != -2 && !sibling->is_filtered) {
 			return sibling;
 		}
 
@@ -530,11 +560,11 @@ DebuginatorItem* debuginator__prev_visible_sibling(DebuginatorItem* item) {
 	DebuginatorItem* sibling = item->prev_sibling;
 	while (sibling) {
 		if (sibling->is_folder) {
-			if (sibling->folder.has_visible_children) {
+			if (sibling->folder.num_visible_children > 0) {
 				return sibling;
 			}
 		}
-		else if (sibling->leaf.hot_index != -2) {
+		else if (sibling->leaf.hot_index != -2 && !sibling->is_filtered) {
 			return sibling;
 		}
 
@@ -550,18 +580,99 @@ DebuginatorItem* debuginator__first_visible_child(DebuginatorItem* item) {
 	}
 
 	if (item->folder.first_child->is_folder) {
-		if (item->folder.first_child->folder.has_visible_children) {
+		if (item->folder.first_child->folder.num_visible_children > 0) {
 			return item->folder.first_child;
 		}
 
-		return NULL;
+		//return NULL;
 	}
-
-	if (item->folder.first_child->leaf.hot_index != -2) {
+	else if (item->folder.first_child->leaf.hot_index != -2 && !item->folder.first_child->is_filtered) {
 		return item->folder.first_child;
 	}
 
 	return debuginator__next_visible_sibling(item->folder.first_child);
+}
+
+DebuginatorItem* debuginator__find_first_leaf(DebuginatorItem* item) {
+	if (!item->is_folder) {
+		if (item->leaf.hot_index != -2 && !item->is_filtered) {
+			return item;
+		}
+
+		DebuginatorItem* sibling = debuginator_next_visible_sibling(item);
+		while (sibling != NULL  ) {
+
+			sibling = debuginator_next_visible_sibling(item);
+		}
+	}
+
+	if (item->is_folder && debuginator__first_visible_child(item) != NULL) {
+		DebuginatorItem* child = debuginator__first_visible_child(item);
+		while (child) {
+			if (child->is_folder) {
+				DebuginatorItem* leaf_item = debuginator__find_first_leaf(child);
+				if (leaf_item != NULL) {
+					return leaf_item;
+				}
+
+				child = debuginator__next_visible_sibling(child);
+			}
+			else {
+				return child;
+			}
+		}
+	}
+
+	return NULL;
+}
+
+DebuginatorItem* debuginator__find_last_leaf(DebuginatorItem* item) {
+	if (!item->is_folder && item->folder.first_child->leaf.hot_index != -2 && !item->is_filtered) {
+		return item;
+	}
+
+	if (item->is_folder && debuginator__first_visible_child(item) != NULL) {
+		DebuginatorItem* child = debuginator__first_visible_child(item);
+		while (child->next_sibling) {
+			child = child->next_sibling;
+		}
+
+		while (child) {
+			if (child->is_folder) {
+				DebuginatorItem* leaf_item = debuginator__find_last_leaf(child);
+				if (leaf_item != NULL) {
+					return leaf_item;
+				}
+
+				child = debuginator__prev_visible_sibling(child);
+			}
+			else {
+				return child;
+			}
+		}
+	}
+
+	return NULL;
+}
+
+DebuginatorItem* debuginator_nearest_visible_item(DebuginatorItem* item) {
+	DebuginatorItem* found_item = debuginator__find_first_leaf(item);
+	if (found_item == NULL) {
+		found_item = debuginator__prev_visible_sibling(item);
+	}
+
+	if (found_item == NULL) {
+		found_item = item->parent;
+		while (found_item != NULL && debuginator__first_visible_child(found_item) == NULL) {
+			found_item = debuginator__first_visible_child(found_item);
+		}
+	}
+
+	//if (found_item == NULL || found_item->is_folder) {
+	//	found_item = debuginator__find_first_leaf(debuginator->root);
+	//}
+
+	return found_item;
 }
 
 void debuginator_set_parent(DebuginatorItem* item, DebuginatorItem* parent) {
@@ -607,7 +718,7 @@ DebuginatorItem* debuginator_new_folder_item(TheDebuginator* debuginator, Debugi
 	}
 
 	folder_item->is_folder = true;
-	folder_item->folder.has_visible_children = true;
+	folder_item->folder.num_visible_children = 0;
 	debuginator_set_title(folder_item, title, title_length);
 	debuginator_set_parent(folder_item, parent);
 	debuginator__set_total_height(folder_item, 30);
@@ -709,6 +820,7 @@ DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 		}
 	}
 	item->leaf.description = description;
+	debuginator__set_num_visible_children(item->parent, 1);
 
 	//TODO preserve hot item
 	return item;
@@ -719,6 +831,7 @@ void debuginator_load_item(TheDebuginator* debuginator, const char* path, const 
 	item->leaf.description = value_title; // Some might call this a hack... :D
 	item->leaf.hot_index = -2;
 	debuginator__set_total_height(item, 0);
+	debuginator__set_num_visible_children(item->parent, -1);
 }
 
 void debuginator_set_hot_item(TheDebuginator* debuginator, const char* path) {
@@ -731,6 +844,7 @@ void debuginator_set_hot_item(TheDebuginator* debuginator, const char* path) {
 	item->parent->folder.hot_child = item;
 }
 
+// Note: If you remove the last visible item, you must create a new one under the root.
 void debuginator_remove_item(TheDebuginator* debuginator, const char* path) {
 	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, false);
 	if (item == NULL) {
@@ -762,15 +876,63 @@ void debuginator_remove_item(TheDebuginator* debuginator, const char* path) {
 	}
 
 	if (debuginator->hot_item == item) {
-		if (parent->folder.hot_child == NULL) {
-			debuginator->hot_item = parent;
-		}
-		else {
-			debuginator->hot_item = parent->folder.hot_child;
-		}
+		debuginator->hot_item = debuginator_nearest_visible_item(item);
 	}
 
 	debuginator__set_total_height(item->parent, item->parent->total_height - item->total_height);
+	debuginator__set_num_visible_children(item->parent, -1);
+}
+
+void debuginator_update_filter(TheDebuginator* debuginator, const char* filter) {
+	if (DEBUGINATOR_strlen(filter) < DEBUGINATOR_strlen(debuginator->filter)) {
+		if (debuginator->hot_item->user_data == (void*)0x12345678) {
+			debuginator_remove_item(debuginator, debuginator->hot_item->title);
+		}
+	}
+
+	DebuginatorItem* item = debuginator->root->folder.first_child;
+	DebuginatorItem* valid_item = item;
+	while (item != NULL) {
+		while (item != NULL && item->is_folder) {
+			item = item->folder.first_child;
+			valid_item = item;
+		}
+
+		if (item != NULL) {
+			bool is_filtered = DEBUGINATOR_strstr(item->title, filter) == NULL;
+
+			if (is_filtered && !item->is_filtered) {
+				debuginator__set_total_height(item, 0);
+				debuginator__set_num_visible_children(item->parent, -1);
+			}
+			else if (!is_filtered && item->is_filtered) {
+				debuginator__set_total_height(item, 30); //Hacky
+				debuginator__set_num_visible_children(item->parent, 1);
+			}
+
+			item->is_filtered = is_filtered;
+			item = item->next_sibling;
+		}
+
+		if (item == NULL) {
+			item = valid_item->parent->next_sibling;
+		}
+	}
+
+	if (debuginator->hot_item == NULL) {
+		debuginator->hot_item = debuginator__find_first_leaf(debuginator->root);
+	}
+	else if (debuginator->hot_item->is_filtered) {
+		debuginator->hot_item = debuginator_nearest_visible_item(debuginator->hot_item);
+
+	}
+
+	if (debuginator->hot_item == NULL) {
+		debuginator_create_array_item(debuginator, NULL, "No items found", "Your search filter returned no results.", NULL, (void*)0x12345678, NULL, NULL, 0, 0);
+	}
+
+	#pragma warning(suppress: 4996) // todo remove
+	DEBUGINATOR_strncpy(debuginator->filter, filter, sizeof(debuginator->filter));
 }
 
 //██╗███╗   ██╗██╗████████╗
@@ -878,6 +1040,7 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 	debuginator->draw_rect = config->draw_rect;
 	debuginator->draw_text = config->draw_text;
 	debuginator->word_wrap = config->word_wrap;
+	debuginator->text_size = config->text_size;
 	debuginator->app_user_data = config->app_user_data;
 
 	debuginator->size = config->size;
@@ -936,60 +1099,6 @@ void debuginator_print(DebuginatorItem* item, int indentation) {
 	}
 }
 
-DebuginatorItem* debuginator__find_first_leaf(DebuginatorItem* item) {
-	if (!item->is_folder) {
-		return item;
-	}
-
-	if (item->is_folder && debuginator__first_visible_child(item) != NULL) {
-		DebuginatorItem* child = debuginator__first_visible_child(item);
-		while (child) {
-			if (child->is_folder) {
-				DebuginatorItem* leaf_item = debuginator__find_first_leaf(child);
-				if (leaf_item != NULL) {
-					return leaf_item;
-				}
-
-				child = debuginator__next_visible_sibling(child);
-			}
-			else {
-				return child;
-			}
-		}
-	}
-
-	return NULL;
-}
-
-DebuginatorItem* debuginator__find_last_leaf(DebuginatorItem* item) {
-	if (!item->is_folder) {
-		return item;
-	}
-
-	if (item->is_folder && debuginator__first_visible_child(item) != NULL) {
-		DebuginatorItem* child = debuginator__first_visible_child(item);
-		while (child->next_sibling) {
-			child = child->next_sibling;
-		}
-
-		while (child) {
-			if (child->is_folder) {
-				DebuginatorItem* leaf_item = debuginator__find_last_leaf(child);
-				if (leaf_item != NULL) {
-					return leaf_item;
-				}
-
-				child = debuginator__prev_visible_sibling(child);
-			}
-			else {
-				return child;
-			}
-		}
-	}
-
-	return NULL;
-}
-
 //██╗   ██╗██████╗ ██████╗  █████╗ ████████╗███████╗
 //██║   ██║██╔══██╗██╔══██╗██╔══██╗╚══██╔══╝██╔════╝
 //██║   ██║██████╔╝██║  ██║███████║   ██║   █████╗
@@ -1042,6 +1151,20 @@ void debuginator_update(TheDebuginator* debuginator, float dt) {
 		debuginator->openness = debuginator__ease_out(debuginator->openness_timer, 0, 1, 1);
 	}
 
+	//debuginator_update_filter(debuginator);
+	//if (debuginator->hot_item == NULL) {
+	//	debuginator_create_array_item(debuginator, NULL, "No items found", " ", NULL, (void*)0x12345678, NULL, NULL, 0, 0);
+	//}
+	//else if (debuginator->hot_item->user_data == (void*)0x12345678) {
+	//	if (debuginator__find_first_leaf(debuginator->hot_item->parent) != NU) {
+	//		debuginator_remove_item(debuginator, debuginator->hot_item->title);
+	//		debuginator->hot_item = debuginator__find_first_leaf(debuginator->hot_item->parent);
+	//	}
+	//	else if(debuginator__find_first_leaf(debuginator->root) != NULL) {
+	//		debuginator_remove_item(debuginator, debuginator->hot_item->title);
+	//		debuginator->hot_item = debuginator__find_first_leaf(debuginator->root);
+	//	}
+	//}
 
 	// Ensure hot item is smoothly placed at a nice position
 	float distance_from_root_to_hot_item = 0;
@@ -1162,6 +1285,32 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 
 	if (running_animations == 0) {
 		debuginator->animation_count = 0;
+	}
+
+	if (debuginator->filter_enabled) {
+		DebuginatorVector2 filter_pos = debuginator__vector2(debuginator->openness * debuginator->size.x - 450, 25);
+		DebuginatorVector2 filter_size = debuginator__vector2(400, 50);
+		DebuginatorColor filter_color = debuginator__color(50, 100, 50, 200);
+		debuginator->draw_rect(filter_pos, filter_size, filter_color, debuginator->app_user_data);
+
+		DebuginatorVector2 header_text_size = debuginator->text_size("Search: ", &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
+		filter_pos.x += 20;
+		filter_pos.y = filter_pos.y + filter_size.y / 2 - header_text_size.y / 2;
+		
+		debuginator->draw_text("Search: ", &filter_pos, &debuginator->theme.colors[DEBUGINATOR_ItemTitleActive], &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
+
+		filter_pos.x += header_text_size.x;
+		debuginator->draw_text(debuginator->filter, &filter_pos, &debuginator->theme.colors[DEBUGINATOR_ItemTitleActive], &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
+
+		DebuginatorVector2 filter_text_size = debuginator->text_size(debuginator->filter, &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
+
+		DebuginatorVector2 caret_size = debuginator__vector2(10, header_text_size.y);
+		DebuginatorVector2 caret_pos = debuginator__vector2(filter_pos.x + filter_text_size.x, filter_pos.y);
+		filter_color.r = 150;
+		filter_color.g = 250;
+		filter_color.b = 150;
+		filter_color.a = DEBUGINATOR_sin(debuginator->draw_timer * 2) < 0.5 ? 220 : 50;
+		debuginator->draw_rect(caret_pos, caret_size, filter_color, debuginator->app_user_data);
 	}
 }
 

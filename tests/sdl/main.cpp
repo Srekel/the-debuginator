@@ -70,6 +70,11 @@ const char* word_wrap(const char* text, DebuginatorFont font, float max_width, c
 	return gui_word_wrap((GuiHandle)userdata, s_fonts[font.italic ? FONT_ItemDescription : FONT_ItemTitle], text, (int)max_width, buffer, buffer_size);
 }
 
+DebuginatorVector2 text_size(const char* text, DebuginatorFont* font, void* userdata) {
+	Vector2 text_size = gui_text_size((GuiHandle)userdata, text, s_fonts[font->italic ? FONT_ItemDescription : FONT_ItemTitle]);
+	return *(DebuginatorVector2*)&text_size;
+}
+
 //struct QuickDrawDefaultData {
 //	QuickDrawDefaultData(int font, int color) : font_index(font), color_index(color) {}
 //	int font_index;
@@ -113,8 +118,34 @@ bool handle_debuginator_input(SDL_Event* event, TheDebuginator* debuginator) {
 					return true;
 				}
 			}
-
+			else if (event->key.keysym.sym == SDLK_BACKSPACE) {
+				if (debuginator->filter_length > 0) {
+					char filter[64] = { 0 };
+					strcpy_s(filter, 64, debuginator->filter);
+					filter[--debuginator->filter_length] = '\0';
+					debuginator_update_filter(debuginator, filter);
+					//debuginator->filter[--debuginator->filter_length] = '\0';
+				}
+				else if (debuginator->filter_enabled) {
+					debuginator->filter_enabled = false;
+					//SDL_StopTextInput();
+					//debuginator_set_filtering_enabled(true);
+				}
+				else {
+					debuginator->filter_enabled = true;
+					//SDL_StartTextInput();
+					//debuginator_set_filtering_enabled(true);
+				}
+			}
 			break;
+		}
+		case SDL_TEXTINPUT:
+		{
+			char filter[64] = { 0 };
+			strcpy_s(filter, 64, debuginator->filter);
+			strcat_s(filter, 64, event->text.text);
+			debuginator->filter_length = (int)strlen(filter);
+			debuginator_update_filter(debuginator, filter);
 		}
 	}
 
@@ -147,6 +178,7 @@ int main(int argc, char **argv)
 	config.draw_text = draw_text;
 	config.app_user_data = (void*)gui;
 	config.word_wrap = word_wrap;
+	config.text_size = text_size;
 	config.size.x = 500;
 	config.size.y = (float)res_y;
 	config.screen_resolution.x = (float)res_x;
