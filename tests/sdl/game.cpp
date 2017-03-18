@@ -7,33 +7,32 @@
 
 #include "../../the_debuginator.h"
 
-static void on_boxes_activated(DebuginatorItem* item, void* value, const char* value_title) {
-	(void)value;
-	GameData* data = (GameData*)item->user_data;
-	if (strcmp(value_title, "Add box") == 0 && data->boxes_n < 256) {
-		GameBox* box = &data->boxes[data->boxes_n++];
-		box->randomize();
-	}
-	else if (strcmp(value_title, "Clear all boxes") == 0 && data->boxes_n < 256) {
-		data->boxes_n = 0;
-	}
-
-	sprintf_s(data->box_string, "Box count: %d", data->boxes_n);
-}
+//static void on_boxes_activated(DebuginatorItem* item, void* value, const char* value_title) {
+//	(void)value;
+//	GameData* data = (GameData*)item->user_data;
+//	if (strcmp(value_title, "Add box") == 0 && data->boxes_n < 256) {
+//		GameBox* box = &data->boxes[data->boxes_n++];
+//		box->randomize();
+//	}
+//	else if (strcmp(value_title, "Clear all boxes") == 0 && data->boxes_n < 256) {
+//		data->boxes_n = 0;
+//	}
+//
+//	sprintf_s(data->box_string, "Box count: %d", data->boxes_n);
+//}
 
 static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
-	debuginator_load_item(debuginator, "Debuginator/Load test", "True");
+	(void)data;
+	debuginator_load_item(debuginator, "SDL Demo/Load test", "True");
 	{
 		static const char* string_titles[5] = { "String A", "String B", "String C", "String D", "String E" };
-		debuginator_create_array_item(debuginator, NULL, "Debuginator/Help",
-			"The Debuginator is a debug menu. With a keyboard, you open it with Right Arrow and close it with Left Arrow. You use those keys, plus Up/Down arrows to navigate. Right Arrow is also used to change value on a menu item.", NULL, NULL,
-			NULL, NULL, 0, 0);
-		debuginator_create_array_item(debuginator, NULL, "Debuginator/String Test",
+		debuginator_create_array_item(debuginator, NULL, "SDL Demo/String Test",
 			"Multiple strings.", NULL, NULL,
 			string_titles, NULL, 5, 0);
 	}
-	debuginator_create_bool_item(debuginator, "SDL Demo/Draw boxes", "Whether to draw the animated boxes or not.", &data->draw_boxes);
+	//debuginator_create_bool_item(debuginator, "SDL Demo/Draw boxes", "Whether to draw the animated boxes or not.", &data->draw_boxes);
 
+	/*
 	{
 		static const char* string_titles[3] = { "Clear all boxes", "Add box", data->box_string };
 		debuginator_create_array_item(debuginator, NULL, "SDL Demo/Boxes",
@@ -44,10 +43,11 @@ static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
 	debuginator_create_bool_item(debuginator, "Folder/SimpleBool 2", "Change a bool.", &data->mybool);
 	debuginator_create_bool_item(debuginator, "Folder/SimpleBool 3", "Change a bool.", &data->mybool);
 	debuginator_create_bool_item(debuginator, "Folder/Subfolder/SimpleBool 4 with a really long long title", "Change a bool.", &data->mybool);
-	debuginator_create_bool_item(debuginator, "Debuginator/Load test", "Change a bool.", &data->mybool);
+	debuginator_create_bool_item(debuginator, "SDL Demo/Load test", "Change a bool.", &data->mybool);
 
 
 	debuginator_new_folder_item(debuginator, NULL, "Folder 2", 0);
+	*/
 /*
 	char folder[64] = { 0 };
 	char item[64] = { 0 };
