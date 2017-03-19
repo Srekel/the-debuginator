@@ -7,6 +7,7 @@
 
 #include "game.h"
 
+#pragma warning(suppress: 4505) // unreferenced local function
 static void on_boxes_activated(DebuginatorItem* item, void* value, const char* value_title) {
 	(void)value;
 	GameData* data = (GameData*)item->user_data;
@@ -47,9 +48,7 @@ static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
 
 
 	debuginator_new_folder_item(debuginator, NULL, "Folder 2", 0);
-	
 	char folder[64] = { 0 };
-	char item[64] = { 0 };
 	for (int i = 0; i < 5; i++) {
 		for (int j = 0; j < 5; j++) {
 			sprintf_s(folder, 64, "Game/Test%02d/GameBool%02d", i, j);

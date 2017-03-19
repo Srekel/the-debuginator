@@ -11,7 +11,6 @@ struct GameBox {
 	}
 	void randomize() {
 		pos.x = pos.y = 0;
-		pos.x = pos.y = 0;
 		size.x = 50 + 100 * ((float)rand()) / RAND_MAX;
 		size.y = 50 + 100 * ((float)rand()) / RAND_MAX;
 		velocity.x = 5 + 50 * ((float)rand()) / RAND_MAX;
