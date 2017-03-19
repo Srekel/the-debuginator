@@ -318,6 +318,11 @@ void debuginator_load_item(TheDebuginator* debuginator, const char* path, const 
 #define DEBUGINATOR_strncpy strncpy
 #endif
 
+#ifndef DEBUGINATOR_tolower
+#include <ctype.h>
+#define DEBUGINATOR_tolower tolower
+#endif
+
 #ifndef DEBUGINATOR_fabs
 #include <math.h>
 #define DEBUGINATOR_fabs fabs
@@ -651,26 +656,6 @@ DebuginatorItem* debuginator__find_last_leaf(DebuginatorItem* item) {
 
 	return NULL;
 }
-//
-//DebuginatorItem* debuginator__next_item(DebuginatorItem* item) {
-//	DebuginatorItem* sibling = debuginator__next_visible_sibling(item);
-//	while (sibling) {
-//		DebuginatorItem* item_new = debuginator__find_first_leaf(sibling);
-//		if (item_new != NULL) {
-//			return item_new;
-//		}
-//
-//		DebuginatorItem* parent = item->parent;
-//		while (parent != NULL) {
-//			sibling = debuginator__next_visible_sibling(parent);
-//			if (sibling != NULL) {
-//				break;
-//			}
-//
-//			parent = parent->parent;
-//		}
-//	}
-//}
 
 DebuginatorItem* debuginator__next_item(DebuginatorItem* item) {
 	while (item != NULL) {
@@ -919,6 +904,30 @@ void debuginator_remove_item(TheDebuginator* debuginator, const char* path) {
 	// TODO: Release item...
 }
 
+bool debuginator__distance_to_hot_item(DebuginatorItem* item, DebuginatorItem* hot_item, float* distance) {
+	if (item == hot_item) {
+		if (!item->is_folder && item->leaf.is_active) {
+			*distance += 30 * (item->leaf.hot_index + 1);
+		}
+		return true;
+	}
+
+	*distance += 30;
+	if (item->is_folder) {
+		DebuginatorItem* child = debuginator__first_visible_child(item);
+		while (child) {
+			bool found = debuginator__distance_to_hot_item(child, hot_item, distance);
+			if (found) {
+				return true;
+			}
+
+			child = debuginator__next_visible_sibling(child);
+		}
+	}
+
+	return false;
+}
+
 void debuginator_update_filter(TheDebuginator* debuginator, const char* filter) {
 	if (DEBUGINATOR_strlen(filter) < DEBUGINATOR_strlen(debuginator->filter)) {
 		if (debuginator->hot_item->user_data == (void*)0x12345678) {
@@ -934,6 +943,13 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* filter) 
 		}
 	}
 
+
+	char lowercasefilter[20];
+	for (size_t i = 0; i < 20; i++) {
+		lowercasefilter[i] = (char)DEBUGINATOR_tolower(filter[i]);
+	}
+
+
 	DebuginatorItem* item = debuginator->root;
 	while (item != NULL) {
 		if (item->is_folder) {
@@ -943,7 +959,12 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* filter) 
 			}
 		}
 		else {
-			bool is_filtered = DEBUGINATOR_strstr(item->title, filter) == NULL;
+			char lowercasetitle[20];
+			for (size_t i = 0; i < 20; i++) {
+				lowercasetitle[i] = (char)DEBUGINATOR_tolower(item->title[i]);
+			}
+
+			bool is_filtered = DEBUGINATOR_strstr(lowercasetitle, lowercasefilter) == NULL;
 
 			if (is_filtered && !item->is_filtered) {
 				debuginator__set_total_height(item, 0);
@@ -985,6 +1006,13 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* filter) 
 	if (debuginator->hot_item == NULL) {
 		debuginator_create_array_item(debuginator, NULL, "No items found", "Your search filter returned no results.", NULL, (void*)0x12345678, NULL, NULL, 0, 0);
 	}
+
+
+	float distance_from_root_to_hot_item = 0;
+	debuginator__distance_to_hot_item(debuginator->root, debuginator->hot_item, &distance_from_root_to_hot_item);
+	float wanted_y = debuginator->size.y * debuginator->focus_height;
+	float distance_to_wanted_y = wanted_y - distance_from_root_to_hot_item;
+	debuginator->current_height_offset = distance_to_wanted_y;
 
 	#pragma warning(suppress: 4996) // todo remove
 	DEBUGINATOR_strncpy(debuginator->filter, filter, sizeof(debuginator->filter));
@@ -1161,29 +1189,6 @@ void debuginator_print(DebuginatorItem* item, int indentation) {
 //╚██████╔╝██║     ██████╔╝██║  ██║   ██║   ███████╗
 //╚═════╝ ╚═╝     ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚══════╝
 
-bool debuginator__distance_to_hot_item(DebuginatorItem* item, DebuginatorItem* hot_item, float* distance) {
-	if (item == hot_item) {
-		if (!item->is_folder && item->leaf.is_active) {
-			*distance += 30 * (item->leaf.hot_index + 1);
-		}
-		return true;
-	}
-
-	*distance += 30;
-	if (item->is_folder) {
-		DebuginatorItem* child = debuginator__first_visible_child(item);
-		while (child) {
-			bool found = debuginator__distance_to_hot_item(child, hot_item, distance);
-			if (found) {
-				return true;
-			}
-
-			child = debuginator__next_visible_sibling(child);
-		}
-	}
-
-	return false;
-}
 
 void debuginator_update(TheDebuginator* debuginator, float dt) {
 	debuginator->dt = dt;
