@@ -474,7 +474,7 @@ DebuginatorItem* debuginator_get_free_item(TheDebuginator* debuginator) {
 	DebuginatorItem* item;
 	if (debuginator->free_list_size > 0) {
 		size_t free_index = debuginator->free_list[--debuginator->free_list_size];
-		DEBUGINATOR_assert(0 <= free_index && free_index < debuginator->item_buffer_capacity);
+		DEBUGINATOR_assert(free_index < debuginator->item_buffer_capacity);
 		item = &debuginator->item_buffer[free_index];
 	}
 	else {
