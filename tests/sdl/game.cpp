@@ -1,11 +1,11 @@
 
+#include "../../the_debuginator.h"
+
 //#include <time.h>
 #include <stdio.h>
 #include <string.h>
 
 #include "game.h"
-
-#include "../../the_debuginator.h"
 
 //static void on_boxes_activated(DebuginatorItem* item, void* value, const char* value_title) {
 //	(void)value;
