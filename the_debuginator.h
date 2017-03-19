@@ -934,19 +934,15 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* filter) 
 		}
 	}
 
-	DebuginatorItem* item = debuginator->root->folder.first_child;
-	DebuginatorItem* valid_item = item;
+	DebuginatorItem* item = debuginator->root;
 	while (item != NULL) {
-		while (item != NULL && item->is_folder) {
-			item = item->folder.first_child;
-			valid_item = item;
+		if (item->is_folder) {
+			if (item->folder.first_child != NULL) {
+				item = item->folder.first_child;
+				continue;
+			}
 		}
-
-		while (item != NULL && !item->is_folder && item->leaf.hot_index == -2) {
-			item = item->next_sibling;
-		}
-
-		if (item != NULL) {
+		else {
 			bool is_filtered = DEBUGINATOR_strstr(item->title, filter) == NULL;
 
 			if (is_filtered && !item->is_filtered) {
@@ -960,14 +956,22 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* filter) 
 			}
 
 			item->is_filtered = is_filtered;
-			item = item->next_sibling;
-			while (item != NULL && !item->is_folder && item->leaf.hot_index == -2) {
-				item = item->next_sibling;
-			}
 		}
 
-		if (item == NULL) {
-			item = valid_item->parent->next_sibling;
+		if (item->next_sibling != NULL) {
+			item = item->next_sibling;
+		}
+		else {
+			while (item->parent != NULL && item->parent->next_sibling == NULL) {
+				item = item->parent;
+			}
+
+			if (item->parent == NULL) {
+				// Went all the way 'back' to the menu root.
+				break;
+			}
+
+			item = item->parent->next_sibling;
 		}
 	}
 
