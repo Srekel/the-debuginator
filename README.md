@@ -72,21 +72,17 @@ Put things in folders in folders. Support for expanding and collapsing folders.
 
 So you start up with the settings you had when you exited. Simple interface, application needs to do most of the work.
 
-### :red_circle: Accordiony
-
-No matter how far down or deep you scroll, you can always see the folders above the current item.
-
 ### :factory: Nice look & feel
 
 Nice default color scheme, multiple themes to choose from, unique "editors" for different types of data, smooth animations, juicy feedback.
 
 Yes, it's important.
 
-### :factory: Custom Item Editors
+### :factory: Custom item editors
 
 Different editors for different types of items, and support for users adding their own.
 
-### :red_circle: Filter
+### :small_blue_diamond: Filter
 
 Quickly and easily filter the items to find the one you want.
 
@@ -107,6 +103,10 @@ Press a key when debug menu is active to assign the current item/value. Press it
 Agnostic regarding Keyboard/Gamepad. It's handled at application layer, though guidelines for how to bind keys exist.
 
 Mouse input coming later.
+
+### :red_circle: Accordiony
+
+No matter how far down or deep you scroll, you can always see the folders above the current item.
 
 ### :small_blue_diamond: Performant
 
