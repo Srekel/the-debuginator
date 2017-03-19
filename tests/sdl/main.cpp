@@ -161,11 +161,12 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	DebuginatorItem item_buffer[256];
+	const int NUM_ITEMS = 1024 * 512;
+	DebuginatorItem* item_buffer = (DebuginatorItem*)malloc(sizeof(DebuginatorItem) * NUM_ITEMS);
 	TheDebuginatorConfig config;
 	debuginator_get_default_config(&config);
 	config.item_buffer = item_buffer;
-	config.item_buffer_capacity = sizeof(item_buffer) / sizeof(item_buffer[0]);
+	config.item_buffer_capacity = NUM_ITEMS;
 	config.draw_rect = draw_rect;
 	config.draw_text = draw_text;
 	config.app_user_data = (void*)gui;
@@ -185,7 +186,6 @@ int main(int argc, char **argv)
 
 	Uint64 NOW = SDL_GetPerformanceCounter();
 	Uint64 LAST = 0;
-	double dt = 0;
 
 	SDL_Event event;
 	bool quit = false;
@@ -193,7 +193,7 @@ int main(int argc, char **argv)
 		LAST = NOW;
 		NOW = SDL_GetPerformanceCounter();
 		Uint64 freq = SDL_GetPerformanceFrequency();
-		dt = (double)((NOW - LAST) * 1.0 / freq);
+		double dt = (double)((NOW - LAST) * 1.0 / freq);
 
 		while (SDL_PollEvent(&event) != 0)
 		{
