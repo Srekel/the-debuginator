@@ -7,19 +7,19 @@
 
 #include "game.h"
 
-//static void on_boxes_activated(DebuginatorItem* item, void* value, const char* value_title) {
-//	(void)value;
-//	GameData* data = (GameData*)item->user_data;
-//	if (strcmp(value_title, "Add box") == 0 && data->boxes_n < 256) {
-//		GameBox* box = &data->boxes[data->boxes_n++];
-//		box->randomize();
-//	}
-//	else if (strcmp(value_title, "Clear all boxes") == 0 && data->boxes_n < 256) {
-//		data->boxes_n = 0;
-//	}
-//
-//	sprintf_s(data->box_string, "Box count: %d", data->boxes_n);
-//}
+static void on_boxes_activated(DebuginatorItem* item, void* value, const char* value_title) {
+	(void)value;
+	GameData* data = (GameData*)item->user_data;
+	if (strcmp(value_title, "Add box") == 0 && data->boxes_n < 256) {
+		GameBox* box = &data->boxes[data->boxes_n++];
+		box->randomize();
+	}
+	else if (strcmp(value_title, "Clear all boxes") == 0 && data->boxes_n < 256) {
+		data->boxes_n = 0;
+	}
+
+	sprintf_s(data->box_string, "Box count: %d", data->boxes_n);
+}
 
 static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
 	(void)data;
@@ -30,9 +30,9 @@ static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
 			"Multiple strings.", NULL, NULL,
 			string_titles, NULL, 5, 0);
 	}
-	//debuginator_create_bool_item(debuginator, "SDL Demo/Draw boxes", "Whether to draw the animated boxes or not.", &data->draw_boxes);
+	
+	debuginator_create_bool_item(debuginator, "SDL Demo/Draw boxes", "Whether to draw the animated boxes or not.", &data->draw_boxes);
 
-	/*
 	{
 		static const char* string_titles[3] = { "Clear all boxes", "Add box", data->box_string };
 		debuginator_create_array_item(debuginator, NULL, "SDL Demo/Boxes",
@@ -47,8 +47,7 @@ static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
 
 
 	debuginator_new_folder_item(debuginator, NULL, "Folder 2", 0);
-	*/
-/*
+	
 	char folder[64] = { 0 };
 	char item[64] = { 0 };
 	for (int i = 0; i < 5; i++) {
@@ -56,7 +55,7 @@ static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
 			sprintf_s(folder, 64, "Game/Test%02d/GameBool%02d", i, j);
 			debuginator_create_bool_item(debuginator, folder, "Change a bool.", &data->mybool);
 		}
-	}*/
+	}
 }
 
 static GameData s_game_data;
