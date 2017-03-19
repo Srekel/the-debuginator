@@ -1,10 +1,5 @@
-#include <stdio.h>
+
 #include <assert.h>
-#include <string.h>
-
-#include <SDL.h>
-#include <SDL_ttf.h>
-
 
 static const int WIDTH = 500;
 
@@ -20,19 +15,13 @@ static void unittest_debuginator_assert(bool test) {
 #define DEBUGINATOR_IMPLEMENTATION
 #include "../../the_debuginator.h"
 
+#include <SDL.h>
+#include <SDL_ttf.h>
+#include <string.h>
+#include <stdio.h>
+
 #include "gui.h"
 #include "game.h"
-//
-//void debuginator__default_quick_draw(DebuginatorItem* item, void* data) {
-//	if (item->leaf.num_values > 0) {
-//		//Vector2 value_offset = *(Vector2*)position;
-//		//value_offset.x = 300 + debuginator->openness * 500 - 500;
-//		draw_text(gui, item->leaf.value_titles[item->leaf.active_index], *(Vector2*)position, s_fonts[FONT_ItemTitle], s_theme[color]);
-//	}
-//}
-
-
-
 
 
 static FontTemplateHandle s_fonts[16];
@@ -74,12 +63,6 @@ DebuginatorVector2 text_size(const char* text, DebuginatorFont* font, void* user
 	Vector2 text_size = gui_text_size((GuiHandle)userdata, text, s_fonts[font->italic ? FONT_ItemDescription : FONT_ItemTitle]);
 	return *(DebuginatorVector2*)&text_size;
 }
-
-//struct QuickDrawDefaultData {
-//	QuickDrawDefaultData(int font, int color) : font_index(font), color_index(color) {}
-//	int font_index;
-//	int color_index;
-//};
 
 bool handle_debuginator_input(SDL_Event* event, TheDebuginator* debuginator) {
 	switch (event->type) {
@@ -141,9 +124,18 @@ bool handle_debuginator_input(SDL_Event* event, TheDebuginator* debuginator) {
 		}
 		case SDL_TEXTINPUT:
 		{
+			if (!debuginator->filter_enabled) {
+				break;
+			}
+
+			int new_text_length = (int)strlen(event->text.text);
+			if (debuginator->filter_length + new_text_length >= sizeof(debuginator->filter)) {
+				break;
+			}
+
 			char filter[64] = { 0 };
-			strcpy_s(filter, 64, debuginator->filter);
-			strcat_s(filter, 64, event->text.text);
+			strcpy_s(filter, sizeof(debuginator->filter), debuginator->filter);
+			strcat_s(filter, sizeof(debuginator->filter), event->text.text);
 			debuginator->filter_length = (int)strlen(filter);
 			debuginator_update_filter(debuginator, filter);
 		}

@@ -237,6 +237,7 @@ typedef struct TheDebuginator {
 
 	float dt;
 	float draw_timer;
+	float filter_timer;
 	void* app_user_data;
 	DebuginatorDrawTextCallback draw_text;
 	DebuginatorDrawRectCallback draw_rect;
@@ -405,7 +406,7 @@ void debuginator__expanded_draw_default(TheDebuginator* debuginator, Debuginator
 		bool value_hot = i == item->leaf.hot_index;
 		bool value_overridden = i == item->leaf.active_index;
 		unsigned value_color_index = value_hot ? DEBUGINATOR_ItemValueHot : (value_overridden ? DEBUGINATOR_ItemTitleOverridden : DEBUGINATOR_ItemValueDefault);
-		debuginator->draw_text(value_title, position, &debuginator->theme.colors[value_color_index], &debuginator->theme.fonts[value_hot ? DEBUGINATOR_ItemTitle : DEBUGINATOR_ItemTitle], debuginator->app_user_data);
+		debuginator->draw_text(value_title, position, &debuginator->theme.colors[value_color_index], &debuginator->theme.fonts[value_hot ? DEBUGINATOR_ItemTitleHot : DEBUGINATOR_ItemTitle], debuginator->app_user_data);
 	}
 }
 
@@ -455,7 +456,7 @@ void debuginator__expanded_draw_boolean(TheDebuginator* debuginator, Debuginator
 		bool value_hot = i == item->leaf.hot_index;
 		bool value_overridden = i == item->leaf.active_index;
 		unsigned value_color_index = value_hot ? DEBUGINATOR_ItemValueHot : (value_overridden ? DEBUGINATOR_ItemTitleOverridden : DEBUGINATOR_ItemValueDefault);
-		debuginator->draw_text(value_title, position, &debuginator->theme.colors[value_color_index], &debuginator->theme.fonts[value_hot ? DEBUGINATOR_ItemTitle : DEBUGINATOR_ItemTitle], debuginator->app_user_data);
+		debuginator->draw_text(value_title, position, &debuginator->theme.colors[value_color_index], &debuginator->theme.fonts[value_hot ? DEBUGINATOR_ItemTitleHot : DEBUGINATOR_ItemTitle], debuginator->app_user_data);
 	}
 }
 
@@ -613,7 +614,7 @@ DebuginatorItem* debuginator__find_first_leaf(DebuginatorItem* item) {
 		if (item != NULL) {
 			return item;
 		}
-		sibling = debuginator__next_visible_sibling(item);
+		sibling = debuginator__next_visible_sibling(sibling);
 	}
 
 	return NULL;
@@ -951,6 +952,7 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* filter) 
 			if (is_filtered && !item->is_filtered) {
 				debuginator__set_total_height(item, 0);
 				debuginator__set_num_visible_children(item->parent, -1);
+				item->leaf.is_active = false;
 			}
 			else if (!is_filtered && item->is_filtered) {
 				debuginator__set_total_height(item, 30); //Hacky
@@ -1200,21 +1202,6 @@ void debuginator_update(TheDebuginator* debuginator, float dt) {
 		debuginator->openness = debuginator__ease_out(debuginator->openness_timer, 0, 1, 1);
 	}
 
-	//debuginator_update_filter(debuginator);
-	//if (debuginator->hot_item == NULL) {
-	//	debuginator_create_array_item(debuginator, NULL, "No items found", " ", NULL, (void*)0x12345678, NULL, NULL, 0, 0);
-	//}
-	//else if (debuginator->hot_item->user_data == (void*)0x12345678) {
-	//	if (debuginator__find_first_leaf(debuginator->hot_item->parent) != NU) {
-	//		debuginator_remove_item(debuginator, debuginator->hot_item->title);
-	//		debuginator->hot_item = debuginator__find_first_leaf(debuginator->hot_item->parent);
-	//	}
-	//	else if(debuginator__find_first_leaf(debuginator->root) != NULL) {
-	//		debuginator_remove_item(debuginator, debuginator->hot_item->title);
-	//		debuginator->hot_item = debuginator__find_first_leaf(debuginator->root);
-	//	}
-	//}
-
 	// Ensure hot item is smoothly placed at a nice position
 	float distance_from_root_to_hot_item = 0;
 	debuginator__distance_to_hot_item(debuginator->root, debuginator->hot_item, &distance_from_root_to_hot_item);
@@ -1250,20 +1237,14 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 	debuginator->theme.colors[DEBUGINATOR_ItemTitleActive].g = (unsigned char)debuginator__lerp((float)debuginator->theme.colors[DEBUGINATOR_ItemTitleActive1].g, (float)debuginator->theme.colors[DEBUGINATOR_ItemTitleActive2].g, lerp_t);
 	debuginator->theme.colors[DEBUGINATOR_ItemTitleActive].b = (unsigned char)debuginator__lerp((float)debuginator->theme.colors[DEBUGINATOR_ItemTitleActive1].b, (float)debuginator->theme.colors[DEBUGINATOR_ItemTitleActive2].b, lerp_t);
 
-
-
 	// Background
 	DebuginatorVector2 offset = debuginator->root_position;
 	offset.x += debuginator__lerp(0, debuginator->open_direction * debuginator->size.x, debuginator->openness);
 	debuginator->draw_rect(offset, debuginator->size, debuginator->theme.colors[DEBUGINATOR_Background], debuginator->app_user_data);
 
 	offset.y = debuginator->current_height_offset;
-	// Draw all items
-	if (!debuginator->left_aligned) {
-		//offset.x += debuginator->size.x;
-	}
-	//debuginator_draw_item(debuginator, debuginator->root, offset, true);
 
+	// Draw all items
 	DebuginatorItem* item_to_draw = debuginator__first_visible_child(debuginator->root);
 	while (item_to_draw && offset.y < -30) {
 		// We'll start to draw off-screen which we don't want.
@@ -1324,7 +1305,6 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 			DebuginatorVector2 position;
 			position.x = debuginator__ease_out(animation->time, start_position.x, end_position.x - start_position.x, animation->duration);
 			position.y = debuginator__ease_out(animation->time, start_position.y, end_position.y - start_position.y, animation->duration);
-			//position.y = distance_from_root_to_item + debuginator->current_height_offset;
 			DebuginatorFont* font = &debuginator->theme.fonts[DEBUGINATOR_ItemTitle];
 			const char* text = animation->data.item_activate.item->leaf.value_titles[animation->data.item_activate.value_index];
 			debuginator->draw_text(text, &position, &debuginator->theme.colors[DEBUGINATOR_ItemTitleActive], font, debuginator->app_user_data);
@@ -1337,9 +1317,22 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 	}
 
 	if (debuginator->filter_enabled) {
+		debuginator->filter_timer += dt * 5;
+		if (debuginator->filter_timer > 1) {
+			debuginator->filter_timer = 1;
+		}
+	}
+	else {
+		debuginator->filter_timer -= dt * 15;
+		if (debuginator->filter_timer < 0) {
+			debuginator->filter_timer = 0;
+		}
+	}
+
+	if (debuginator->filter_timer > 0) {
 		DebuginatorVector2 filter_pos = debuginator__vector2(debuginator->openness * debuginator->size.x - 450, 25);
-		DebuginatorVector2 filter_size = debuginator__vector2(400, 50);
-		DebuginatorColor filter_color = debuginator__color(50, 100, 50, 200);
+		DebuginatorVector2 filter_size = debuginator__vector2(100 + (debuginator->size.x - 200) * debuginator->filter_timer, 50);
+		DebuginatorColor filter_color = debuginator__color(50, 100, 50, (int)(200 * debuginator->filter_timer));
 		debuginator->draw_rect(filter_pos, filter_size, filter_color, debuginator->app_user_data);
 
 		DebuginatorVector2 header_text_size = debuginator->text_size("Search: ", &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
@@ -1358,7 +1351,7 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 		filter_color.r = 150;
 		filter_color.g = 250;
 		filter_color.b = 150;
-		filter_color.a = DEBUGINATOR_sin(debuginator->draw_timer * 2) < 0.5 ? 220 : 50;
+		filter_color.a = DEBUGINATOR_sin(debuginator->draw_timer) < 0.5 ? 220 : 50;
 		debuginator->draw_rect(caret_pos, caret_size, filter_color, debuginator->app_user_data);
 	}
 }
