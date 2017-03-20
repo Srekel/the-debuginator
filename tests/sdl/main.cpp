@@ -87,17 +87,13 @@ bool handle_debuginator_input(SDL_Event* event, TheDebuginator* debuginator) {
 				}
 			}
 			else if (event->key.keysym.sym == SDLK_RIGHT) {
-				if (event->key.keysym.mod == SDLK_LCTRL) {
-					if (debuginator) {
-
-					}
-				}
 				if (!debuginator->is_open) {
 					debuginator_set_open(debuginator, true);
 					return true;
 				}
 				else {
-					debuginator_move_to_child(debuginator);
+					bool direct_activate = (event->key.keysym.mod & SDLK_LCTRL) > 0;
+					debuginator_move_to_child(debuginator, direct_activate);
 					return true;
 				}
 			}

@@ -1308,7 +1308,10 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 			DebuginatorVector2 start_position = animation->data.item_activate.start_pos;
 			DebuginatorVector2 end_position;
 			end_position.x = debuginator->openness * 500 - 200;
-			end_position.y = distance_from_root_to_item + debuginator->current_height_offset - (animation->data.item_activate.item->leaf.hot_index + 1) * 30 - 30; // HACK! for description :(
+			end_position.y = distance_from_root_to_item + debuginator->current_height_offset - 30;
+			if (animation->data.item_activate.item->leaf.is_active) {
+				end_position.y -= (animation->data.item_activate.item->leaf.hot_index + 1) * 30; // HACK! for description :(
+			}
 
 
 			DebuginatorVector2 position;
@@ -1486,7 +1489,10 @@ void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item) {
 
 		float y_dist_to_root = 0;
 		debuginator__distance_to_hot_item(debuginator->root, item, &y_dist_to_root);
-		animation->data.item_activate.start_pos.y = y_dist_to_root + debuginator->current_height_offset;
+		animation->data.item_activate.start_pos.y = y_dist_to_root + debuginator->current_height_offset - 30; // whyyy
+		if (item->leaf.is_active) {
+			animation->data.item_activate.start_pos.y += 30;
+		}
 	}
 
 	if (item->leaf.on_item_changed_callback == NULL) {
@@ -1628,12 +1634,18 @@ void debuginator_move_to_prev_leaf(TheDebuginator* debuginator) {
 	debuginator->hot_item = hot_item_new;
 }
 
-void debuginator_move_to_child(TheDebuginator* debuginator) {
+void debuginator_move_to_child(TheDebuginator* debuginator, bool toggle_and_activate) {
 	DebuginatorItem* hot_item = debuginator->hot_item;
 	DebuginatorItem* hot_item_new = debuginator->hot_item;
 
 	if (!hot_item->is_folder) {
-		if (hot_item->leaf.is_active) {
+		if (toggle_and_activate) {
+			if (++hot_item->leaf.hot_index == hot_item->leaf.num_values) {
+				hot_item->leaf.hot_index = 0;
+			}
+			debuginator_activate(debuginator, debuginator->hot_item);
+		}
+		else if (hot_item->leaf.is_active) {
 			debuginator_activate(debuginator, debuginator->hot_item);
 		}
 		else {
@@ -1688,7 +1700,7 @@ void debug_menu_handle_input(TheDebuginator* debuginator, DebuginatorInput* inpu
 	}
 
 	if (input->move_to_child) {
-		debuginator_move_to_child(debuginator);
+		debuginator_move_to_child(debuginator, false);
 	}
 
 	if (input->move_to_parent) {
