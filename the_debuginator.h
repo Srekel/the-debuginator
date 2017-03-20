@@ -1595,10 +1595,16 @@ void debuginator_move_to_next(TheDebuginator* debuginator) {
 	}
 }
 
-void debuginator_move_to_next_leaf(TheDebuginator* debuginator) {
+void debuginator_move_to_next_leaf(TheDebuginator* debuginator, bool long_move) {
 	DebuginatorItem* hot_item = debuginator->hot_item;
 	if (!hot_item->is_folder && hot_item->leaf.is_active) {
-		if (++hot_item->leaf.hot_index == hot_item->leaf.num_values) {
+		int steps = 1;
+		if (long_move && hot_item->leaf.num_values > 5) {
+			steps = hot_item->leaf.num_values / 5;
+		}
+
+		hot_item->leaf.hot_index += steps;
+		if (hot_item->leaf.hot_index >= hot_item->leaf.num_values) {
 			hot_item->leaf.hot_index = 0;
 		}
 
@@ -1606,6 +1612,16 @@ void debuginator_move_to_next_leaf(TheDebuginator* debuginator) {
 	}
 
 	DebuginatorItem* hot_item_new = debuginator__next_item(hot_item);
+	if (long_move && hot_item_new != NULL) {
+		while (hot_item_new != NULL && hot_item_new->parent == hot_item->parent) {
+			hot_item_new = debuginator__next_item(hot_item_new);
+		}
+
+		if (hot_item_new == NULL) {
+			hot_item_new = debuginator__find_last_leaf(debuginator->root);
+		}
+	}
+
 	if (hot_item_new == NULL) {
 		hot_item_new = debuginator__find_first_leaf(debuginator->root);
 	}
@@ -1615,10 +1631,16 @@ void debuginator_move_to_next_leaf(TheDebuginator* debuginator) {
 }
 
 
-void debuginator_move_to_prev_leaf(TheDebuginator* debuginator) {
+void debuginator_move_to_prev_leaf(TheDebuginator* debuginator, bool long_move) {
 	DebuginatorItem* hot_item = debuginator->hot_item;
 	if (!hot_item->is_folder && hot_item->leaf.is_active) {
-		if (--hot_item->leaf.hot_index < 0) {
+		int steps = 1;
+		if (long_move && hot_item->leaf.num_values > 5) {
+			steps = hot_item->leaf.num_values / 5;
+		}
+
+		hot_item->leaf.hot_index -= steps;
+		if (hot_item->leaf.hot_index < 0) {
 			hot_item->leaf.hot_index = hot_item->leaf.num_values - 1;
 		}
 
@@ -1626,6 +1648,15 @@ void debuginator_move_to_prev_leaf(TheDebuginator* debuginator) {
 	}
 
 	DebuginatorItem* hot_item_new = debuginator__prev_item(hot_item);
+	if (long_move && hot_item_new != NULL) {
+		while (hot_item_new != NULL && hot_item_new->parent == hot_item->parent) {
+			hot_item_new = debuginator__prev_item(hot_item_new);
+		}
+
+		if (hot_item_new == NULL) {
+			hot_item_new = debuginator__find_first_leaf(debuginator->root);
+		}
+	}
 	if (hot_item_new == NULL) {
 		hot_item_new = debuginator__find_last_leaf(debuginator->root);
 	}

@@ -69,11 +69,13 @@ bool handle_debuginator_input(SDL_Event* event, TheDebuginator* debuginator) {
 		case SDL_KEYDOWN:
 		{
 			if (event->key.keysym.sym == SDLK_UP) {
-				debuginator_move_to_prev_leaf(debuginator);
+				bool long_move = (event->key.keysym.mod & SDLK_LCTRL) > 0;
+				debuginator_move_to_prev_leaf(debuginator, long_move);
 				return true;
 			}
 			else if (event->key.keysym.sym == SDLK_DOWN) {
-				debuginator_move_to_next_leaf(debuginator);
+				bool long_move = (event->key.keysym.mod & SDLK_LCTRL) > 0;
+				debuginator_move_to_next_leaf(debuginator, long_move);
 				return true;
 			}
 			else if (event->key.keysym.sym == SDLK_LEFT || event->key.keysym.sym == SDLK_ESCAPE) {
