@@ -933,26 +933,36 @@ bool debuginator__distance_to_hot_item(DebuginatorItem* item, DebuginatorItem* h
 	return false;
 }
 
-void debuginator_update_filter(TheDebuginator* debuginator, const char* filter) {
-	if (DEBUGINATOR_strlen(filter) < DEBUGINATOR_strlen(debuginator->filter)) {
+void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_filter) {
+	const int filter_length = (int)DEBUGINATOR_strlen(wanted_filter);
+	if (filter_length < DEBUGINATOR_strlen(debuginator->filter)) {
 		if (debuginator->hot_item->user_data == (void*)0x12345678) {
 			debuginator_remove_item(debuginator, debuginator->hot_item->title);
 		}
 	}
-	else if (DEBUGINATOR_strlen(filter) > DEBUGINATOR_strlen(debuginator->filter)) {
+	else if (filter_length > DEBUGINATOR_strlen(debuginator->filter)) {
 		// TODO do memcmp here to check for completely new filter.
 		if (debuginator->hot_item->user_data == (void*)0x12345678) {
 			#pragma warning(suppress: 4996) // todo remove
-			DEBUGINATOR_strcpy_s(debuginator->filter, sizeof(debuginator->filter), filter);
+			DEBUGINATOR_strcpy_s(debuginator->filter, sizeof(debuginator->filter), wanted_filter);
 			return;
 		}
 	}
 
-
-	char lowercasefilter[20];
-	for (size_t i = 0; i < 20; i++) {
-		lowercasefilter[i] = (char)DEBUGINATOR_tolower(filter[i]);
+	bool exact_search = false;
+	for (size_t i = 0; i < DEBUGINATOR_strlen(wanted_filter); i++) {
+		if (wanted_filter[i] == ' ') {
+			exact_search = true;
+			break;
+		}
 	}
+
+	char filter[32] = { 0 };
+	//if (!exact_search) {
+		for (size_t i = 0; i < 20; i++) {
+			filter[i] = (char)DEBUGINATOR_tolower(wanted_filter[i]);
+		}
+	//}
 
 	char current_full_path[128] = { 0 };
 	int path_indices[8] = { 0 };
@@ -965,9 +975,11 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* filter) 
 				DEBUGINATOR_strcpy_s(current_full_path + path_indices[current_path_index], 20, item->title);
 				path_indices[current_path_index+1] = path_indices[current_path_index] + (int)DEBUGINATOR_strlen(item->title);
 
-				for (int i = path_indices[current_path_index]; i < path_indices[current_path_index + 1]; i++) {
-					current_full_path[i] = (char)DEBUGINATOR_tolower(current_full_path[i]);
-				}
+				//if (!exact_search) {
+					for (int i = path_indices[current_path_index]; i < path_indices[current_path_index + 1]; i++) {
+						current_full_path[i] = (char)DEBUGINATOR_tolower(current_full_path[i]);
+					}
+				//}
 
 				++current_path_index;
 				item = item->folder.first_child;
@@ -978,24 +990,63 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* filter) 
 			char taken_chars[128] = { 0 };
 			DEBUGINATOR_strcpy_s(current_full_path + path_indices[current_path_index], 20, item->title);
 			path_indices[current_path_index + 1] = path_indices[current_path_index] + (int)DEBUGINATOR_strlen(item->title);
-			for (size_t i = path_indices[current_path_index]; i < path_indices[current_path_index + 1]; i++) {
-				current_full_path[i] = (char)DEBUGINATOR_tolower(current_full_path[i]);
-			}
+
+			//if (!exact_search) {
+				for (size_t i = path_indices[current_path_index]; i < path_indices[current_path_index + 1]; i++) {
+					current_full_path[i] = (char)DEBUGINATOR_tolower(current_full_path[i]);
+				}
+			//}
 
 			bool is_filtered = false;
-			for (int filter_i = 0; filter_i < DEBUGINATOR_strlen(filter); filter_i++) {
-				bool filter_char_found = false;
-				for (int path_i = 0; path_i < path_indices[current_path_index + 1]; path_i++) {
-					if (filter[filter_i] == current_full_path[path_i] && !taken_chars[path_i]) {
-						filter_char_found = true;
-						taken_chars[path_i] = true;
-						break;
+			if (exact_search) {
+				int exact_search_index = -1;
+				for (int filter_i = 0; filter_i < DEBUGINATOR_strlen(filter); filter_i++) {
+					if (filter[filter_i] == ' ') {
+						exact_search_index = -1;
+						continue;
+					}
+
+					if (exact_search_index == -1) {
+						bool filter_char_found = false;
+						for (int path_i = 0; path_i < path_indices[current_path_index + 1]; path_i++) {
+							bool match = filter[filter_i] == current_full_path[path_i] && !taken_chars[path_i];
+							if (match) {
+								exact_search_index = path_i;
+								filter_char_found = true;
+								taken_chars[path_i] = true;
+								break;
+							}
+						}
+
+						if (!filter_char_found) {
+							is_filtered = true;
+							break;
+						}
+					}
+					else {
+						if (filter[filter_i] != current_full_path[++exact_search_index]) {
+							is_filtered = true;
+							break;
+						}
 					}
 				}
+			}
+			else {
+				for (int filter_i = 0; filter_i < DEBUGINATOR_strlen(filter); filter_i++) {
+					bool filter_char_found = false;
+					for (int path_i = 0; path_i < path_indices[current_path_index + 1]; path_i++) {
+						bool match = filter[filter_i] == current_full_path[path_i] && !taken_chars[path_i];
+						if (match) {
+							filter_char_found = true;
+							taken_chars[path_i] = true;
+							break;
+						}
+					}
 
-				if (!filter_char_found) {
-					is_filtered = true;
-					break;
+					if (!filter_char_found) {
+						is_filtered = true;
+						break;
+					}
 				}
 			}
 
