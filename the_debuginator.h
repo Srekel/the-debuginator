@@ -313,9 +313,14 @@ void debuginator_load_item(TheDebuginator* debuginator, const char* path, const 
 #define DEBUGINATOR_strstr strstr
 #endif
 
-#ifndef DEBUGINATOR_strncpy
+#ifndef DEBUGINATOR_strcpy_s
 #include <string.h>
-#define DEBUGINATOR_strncpy strncpy
+#define DEBUGINATOR_strcpy_s strcpy_s
+#endif
+
+#ifndef DEBUGINATOR_strncpy_s
+#include <string.h>
+#define DEBUGINATOR_strncpy_s strncpy_s
 #endif
 
 #ifndef DEBUGINATOR_tolower
@@ -533,14 +538,14 @@ void debuginator_set_title(DebuginatorItem* item, const char* title, size_t titl
 
 	if (title_length >= DEBUGINATOR_max_title_length) {
 #pragma warning(suppress: 4996)
-		DEBUGINATOR_strncpy(item->title, title, DEBUGINATOR_max_title_length - 3);
+		DEBUGINATOR_strncpy_s(item->title, DEBUGINATOR_max_title_length, title, DEBUGINATOR_max_title_length - 3);
 		item->title[DEBUGINATOR_max_title_length - 3] = '.';
 		item->title[DEBUGINATOR_max_title_length - 2] = '.';
 		item->title[DEBUGINATOR_max_title_length - 1] = '\0';
 	}
 	else {
 #pragma warning(suppress: 4996)
-		DEBUGINATOR_strncpy(item->title, title, title_length);
+		DEBUGINATOR_strncpy_s(item->title, DEBUGINATOR_max_title_length, title, title_length);
 	}
 }
 
@@ -938,7 +943,7 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* filter) 
 		// TODO do memcmp here to check for completely new filter.
 		if (debuginator->hot_item->user_data == (void*)0x12345678) {
 			#pragma warning(suppress: 4996) // todo remove
-			DEBUGINATOR_strncpy(debuginator->filter, filter, sizeof(debuginator->filter));
+			DEBUGINATOR_strcpy_s(debuginator->filter, sizeof(debuginator->filter), filter);
 			return;
 		}
 	}
@@ -949,22 +954,50 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* filter) 
 		lowercasefilter[i] = (char)DEBUGINATOR_tolower(filter[i]);
 	}
 
+	char current_full_path[128] = { 0 };
+	int path_indices[8] = { 0 };
+	int current_path_index = 0;
 
-	DebuginatorItem* item = debuginator->root;
+	DebuginatorItem* item = debuginator->root->folder.first_child;
 	while (item != NULL) {
 		if (item->is_folder) {
 			if (item->folder.first_child != NULL) {
+				DEBUGINATOR_strcpy_s(current_full_path + path_indices[current_path_index], 20, item->title);
+				path_indices[current_path_index+1] = path_indices[current_path_index] + (int)DEBUGINATOR_strlen(item->title);
+
+				for (int i = path_indices[current_path_index]; i < path_indices[current_path_index + 1]; i++) {
+					current_full_path[i] = (char)DEBUGINATOR_tolower(current_full_path[i]);
+				}
+
+				++current_path_index;
 				item = item->folder.first_child;
 				continue;
 			}
 		}
 		else {
-			char lowercasetitle[20];
-			for (size_t i = 0; i < 20; i++) {
-				lowercasetitle[i] = (char)DEBUGINATOR_tolower(item->title[i]);
+			char taken_chars[128] = { 0 };
+			DEBUGINATOR_strcpy_s(current_full_path + path_indices[current_path_index], 20, item->title);
+			path_indices[current_path_index + 1] = path_indices[current_path_index] + (int)DEBUGINATOR_strlen(item->title);
+			for (size_t i = path_indices[current_path_index]; i < path_indices[current_path_index + 1]; i++) {
+				current_full_path[i] = (char)DEBUGINATOR_tolower(current_full_path[i]);
 			}
 
-			bool is_filtered = DEBUGINATOR_strstr(lowercasetitle, lowercasefilter) == NULL;
+			bool is_filtered = false;
+			for (int filter_i = 0; filter_i < DEBUGINATOR_strlen(filter); filter_i++) {
+				bool filter_char_found = false;
+				for (int path_i = 0; path_i < path_indices[current_path_index + 1]; path_i++) {
+					if (filter[filter_i] == current_full_path[path_i] && !taken_chars[path_i]) {
+						filter_char_found = true;
+						taken_chars[path_i] = true;
+						break;
+					}
+				}
+
+				if (!filter_char_found) {
+					is_filtered = true;
+					break;
+				}
+			}
 
 			if (is_filtered && !item->is_filtered) {
 				debuginator__set_total_height(item, 0);
@@ -985,6 +1018,7 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* filter) 
 		else {
 			while (item->parent != NULL && item->parent->next_sibling == NULL) {
 				item = item->parent;
+				--current_path_index;
 			}
 
 			if (item->parent == NULL) {
@@ -993,6 +1027,7 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* filter) 
 			}
 
 			item = item->parent->next_sibling;
+			--current_path_index;
 		}
 	}
 
@@ -1015,7 +1050,7 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* filter) 
 	debuginator->current_height_offset = distance_to_wanted_y;
 
 	#pragma warning(suppress: 4996) // todo remove
-	DEBUGINATOR_strncpy(debuginator->filter, filter, sizeof(debuginator->filter));
+	DEBUGINATOR_strcpy_s(debuginator->filter, sizeof(debuginator->filter), filter);
 }
 
 //██╗███╗   ██╗██╗████████╗
