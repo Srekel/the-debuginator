@@ -64,6 +64,12 @@ Though tests and examples are in separate files/folders/projects.
 
 Can handle any number of items, the "hot" one will be centered (ish) smoothly.
 
+### :heavy_check_mark: Performant
+
+Tested with 250000 menu items with no noticable hit. That's good enough for me! Hey, it's a debug menu.
+
+Though I will likely do some proper profiling and optimization later on.
+
 ### :small_blue_diamond: Hierarchical
 
 Put things in folders in folders. Support for expanding and collapsing folders.
@@ -86,6 +92,20 @@ Different editors for different types of items, and support for users adding the
 
 Quickly and easily filter the items to find the one you want.
 
+### :small_blue_diamond: Input
+
+Agnostic regarding Keyboard/Gamepad. It's handled at application layer, though guidelines for how to bind keys exist.
+
+Mouse input coming later.
+
+### :factory: Reference implementation
+
+Written in near-C C++ and SDL.
+
+### :red_circle: Accordiony
+
+No matter how far down or deep you scroll, you can always see the folders above the current item.
+
 ### :red_circle: Presets
 
 Activate one item to activate a number of other ones.
@@ -97,24 +117,6 @@ Set your most used ones. They will show up in a special folder near the top.
 ### :red_circle: Hotkeys
 
 Press a key when debug menu is active to assign the current item/value. Press it again when menu is closed to toggle/set the value.
-
-### :small_blue_diamond: Input
-
-Agnostic regarding Keyboard/Gamepad. It's handled at application layer, though guidelines for how to bind keys exist.
-
-Mouse input coming later.
-
-### :red_circle: Accordiony
-
-No matter how far down or deep you scroll, you can always see the folders above the current item.
-
-### :small_blue_diamond: Performant
-
-Should handle thousands of items with little impact. Probably not there yet :)
-
-### :factory: Reference implementation
-
-Written in near-C C++ and SDL.
 
 ## Can I help?
 
