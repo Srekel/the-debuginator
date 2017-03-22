@@ -999,39 +999,51 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 
 			bool is_filtered = false;
 			if (exact_search) {
-				int exact_search_index = -1;
-				for (int filter_i = 0; filter_i < DEBUGINATOR_strlen(filter); filter_i++) {
-					if (filter[filter_i] == ' ') {
-						exact_search_index = -1;
+				// "el eb" matches "Debuginator/Help"
+				// "oo " doesn't match "lolol"
+				// "aa aa" doesn't match "Cars/Saab and Volvo"
+				// "aa aa" matches "Caars/Saab"
+				// TODO: Give higher score to results 'later' in path, make best one hot.
+
+				is_filtered = false;
+				bool part_match_found = true;
+				int part_index = 0;
+				int current_path_length = path_indices[current_path_index + 1];
+				while (filter[part_index] != '\0' && part_match_found) {
+					if (filter[part_index] == ' ') {
+						++part_index;
 						continue;
 					}
 
-					if (exact_search_index == -1) {
-						bool filter_char_found = false;
-						for (int path_i = 0; path_i < path_indices[current_path_index + 1]; path_i++) {
-							bool match = filter[filter_i] == current_full_path[path_i] && !taken_chars[path_i];
-							if (match) {
-								exact_search_index = path_i;
-								filter_char_found = true;
-								taken_chars[path_i] = true;
+					part_match_found = false;
+					bool part_search_done = false;
+					for (int path_i = current_path_length - 1; path_i >= 0; path_i--) {
+						for (int filter_i = part_index; filter_i < filter_length + 1; filter_i++) {
+							if (filter[filter_i] == ' ' || filter[filter_i] == '\0') {
+								part_search_done = true;
+								part_match_found = true;
+								for (int mark_i = 0; mark_i < filter_i - part_index; mark_i++) {
+									taken_chars[path_i + mark_i] = true;
+								}
+								part_index = filter_i;
+								break;
+							}
+
+							if (filter[filter_i] != current_full_path[path_i + filter_i - part_index] || taken_chars[path_i]) {
+								//part_search_done = true;
 								break;
 							}
 						}
 
-						if (!filter_char_found) {
-							is_filtered = true;
-							break;
-						}
-					}
-					else {
-						if (filter[filter_i] != current_full_path[++exact_search_index]) {
-							is_filtered = true;
+						if (part_search_done) {
 							break;
 						}
 					}
 				}
+
+				is_filtered = !part_match_found;
 			}
-			else {
+			else { // Unexact search
 				for (int filter_i = 0; filter_i < DEBUGINATOR_strlen(filter); filter_i++) {
 					bool filter_char_found = false;
 					for (int path_i = 0; path_i < path_indices[current_path_index + 1]; path_i++) {
@@ -1083,7 +1095,7 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 	}
 
 	if (debuginator->hot_item == NULL) {
-		debuginator->hot_item = debuginator__find_first_leaf(debuginator->root); // TODO store and use hot item from before search.
+		debuginator->hot_item = debuginator__find_first_leaf(debuginator->root);
 	}
 	else if (debuginator->hot_item->is_filtered) {
 		debuginator->hot_item = debuginator_nearest_visible_item(debuginator->hot_item);
