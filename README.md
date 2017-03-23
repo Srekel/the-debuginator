@@ -11,10 +11,11 @@ Gifs will be added once project is slightly more complete.
 - **Highly work in progress.**
 - Simple unit testing. Currently a bunch of them fails due to heavy refactoring.
 - Reference implementation in SDL.
-- Working implementation with all core features.
+- Working implementation kept up to par with all features.
 - Basic animation support.
-- Not performance tested, but trivially optimized (only draws what's on screen).
+- Not performance tested, but performs decently anyway.
 - Only built and tested with VS2015.
+- A small amount of technical debt stacked up. Will do a pass once things are more final.
 
 ## Features
 
@@ -54,7 +55,9 @@ Only the memory buffer passed in at creation.
 
 ### :heavy_check_mark: No dependencies
 
-For the demo and unit test projects I have a dependency and may add more in the future if it seems like a good idea. I'm less concerned about keeping those "clean" as they aren't a part of the library itself.
+For the library that is.
+
+A font is included, and to build the SDL demo you need SDL 2 and SDL TTF.
 
 ### :heavy_check_mark: STB-style single header library
 
@@ -78,16 +81,6 @@ Put things in folders in folders. Support for expanding and collapsing folders.
 
 So you start up with the settings you had when you exited. Simple interface, application needs to do most of the work.
 
-### :factory: Nice look & feel
-
-Nice default color scheme, multiple themes to choose from, unique "editors" for different types of data, smooth animations, juicy feedback.
-
-Yes, it's important.
-
-### :factory: Custom item editors
-
-Different editors for different types of items, and support for users adding their own.
-
 ### :small_blue_diamond: Filter
 
 Quickly and easily filter the items to find the one you want.
@@ -97,6 +90,16 @@ Quickly and easily filter the items to find the one you want.
 Agnostic regarding Keyboard/Gamepad. It's handled at application layer, though guidelines for how to bind keys exist.
 
 Mouse input coming later.
+
+### :factory: Nice look & feel
+
+Nice default color scheme, multiple themes to choose from, unique "editors" for different types of data, smooth animations, juicy feedback.
+
+Yes, it's important.
+
+### :factory: Custom item editors
+
+Different editors for different types of items, and support for users adding their own.
 
 ### :factory: Reference implementation
 
