@@ -328,6 +328,13 @@ void debuginator_load_item(TheDebuginator* debuginator, const char* path, const 
 #define DEBUGINATOR_tolower tolower
 #endif
 
+
+#ifndef DEBUGINATOR_isalpha
+#include <ctype.h>
+#define DEBUGINATOR_isalpha isalpha
+#define DEBUGINATOR_isdigit isdigit // must override both
+#endif
+
 #ifndef DEBUGINATOR_fabs
 #include <math.h>
 #define DEBUGINATOR_fabs fabs
@@ -935,7 +942,9 @@ bool debuginator__distance_to_hot_item(DebuginatorItem* item, DebuginatorItem* h
 
 void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_filter) {
 	const int filter_length = (int)DEBUGINATOR_strlen(wanted_filter);
+	bool expanding_search = false;
 	if (filter_length < DEBUGINATOR_strlen(debuginator->filter)) {
+		expanding_search = true;
 		if (debuginator->hot_item->user_data == (void*)0x12345678) {
 			debuginator_remove_item(debuginator, debuginator->hot_item->title);
 		}
@@ -968,6 +977,11 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 	int path_indices[8] = { 0 };
 	int current_path_index = 0;
 
+	int booster_indices[32] = { 0 };
+
+	int best_score = -1;
+	DebuginatorItem* best_item = NULL;
+
 	DebuginatorItem* item = debuginator->root->folder.first_child;
 	while (item != NULL) {
 		if (item->is_folder) {
@@ -983,6 +997,7 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 
 				++current_path_index;
 				item = item->folder.first_child;
+
 				continue;
 			}
 		}
@@ -990,25 +1005,41 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 			char taken_chars[128] = { 0 };
 			DEBUGINATOR_strcpy_s(current_full_path + path_indices[current_path_index], 20, item->title);
 			path_indices[current_path_index + 1] = path_indices[current_path_index] + (int)DEBUGINATOR_strlen(item->title);
+			int current_path_length = path_indices[current_path_index + 1];
+
+			// Room for optimization here...
+			int boost_count = 0;
+			for (int path_indices_i = 1; path_indices_i < 8 && path_indices[path_indices_i] != 0; path_indices_i++) {
+				booster_indices[++boost_count] = path_indices[path_indices_i];
+			}
+
+			for (int path_i = 0; path_i < current_path_length-1; path_i++) {
+				char path_char = current_full_path[path_i];
+				bool number_to_alphabet = 
+					(DEBUGINATOR_isalpha(path_char) && DEBUGINATOR_isdigit(current_full_path[path_i + 1])) || 
+					(DEBUGINATOR_isdigit(path_char) && DEBUGINATOR_isalpha(current_full_path[path_i + 1]));
+				if (path_char == ' ' || path_char == '_' || number_to_alphabet) {
+					booster_indices[++boost_count] = path_i;
+				}
+			}
 
 			//if (!exact_search) {
-				for (size_t i = path_indices[current_path_index]; i < path_indices[current_path_index + 1]; i++) {
+				for (size_t i = path_indices[current_path_index]; i < current_path_length; i++) {
 					current_full_path[i] = (char)DEBUGINATOR_tolower(current_full_path[i]);
 				}
 			//}
 
+			int score = -1;
 			bool is_filtered = false;
 			if (exact_search) {
 				// "el eb" matches "Debuginator/Help"
 				// "oo " doesn't match "lolol"
 				// "aa aa" doesn't match "Cars/Saab and Volvo"
 				// "aa aa" matches "Caars/Saab"
-				// TODO: Give higher score to results 'later' in path, make best one hot.
 
 				is_filtered = false;
 				bool part_match_found = true;
 				int part_index = 0;
-				int current_path_length = path_indices[current_path_index + 1];
 				while (filter[part_index] != '\0' && part_match_found) {
 					if (filter[part_index] == ' ') {
 						++part_index;
@@ -1017,6 +1048,8 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 
 					part_match_found = false;
 					bool part_search_done = false;
+
+					// We go in reverse to assign a higher score to matches later in the path.
 					for (int path_i = current_path_length - 1; path_i >= 0; path_i--) {
 						for (int filter_i = part_index; filter_i < filter_length + 1; filter_i++) {
 							if (filter[filter_i] == ' ' || filter[filter_i] == '\0') {
@@ -1026,11 +1059,17 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 									taken_chars[path_i + mark_i] = true;
 								}
 								part_index = filter_i;
+								score += path_i;
+								for (int boost_i = 0; boost_i < boost_count; boost_i++) {
+									if (path_i == booster_indices[boost_i]) {
+										score += 10 + path_i;
+										break;
+									}
+								}
 								break;
 							}
 
 							if (filter[filter_i] != current_full_path[path_i + filter_i - part_index] || taken_chars[path_i]) {
-								//part_search_done = true;
 								break;
 							}
 						}
@@ -1046,11 +1085,14 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 			else { // Unexact search
 				for (int filter_i = 0; filter_i < DEBUGINATOR_strlen(filter); filter_i++) {
 					bool filter_char_found = false;
-					for (int path_i = 0; path_i < path_indices[current_path_index + 1]; path_i++) {
+
+					// We go in reverse to assign a higher score to matches later in the path.
+					for (int path_i = current_path_length - 1; path_i >= 0; path_i--) {
 						bool match = filter[filter_i] == current_full_path[path_i] && !taken_chars[path_i];
 						if (match) {
 							filter_char_found = true;
 							taken_chars[path_i] = true;
+							score += path_i;
 							break;
 						}
 					}
@@ -1073,6 +1115,11 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 			}
 
 			item->is_filtered = is_filtered;
+
+			if (score > best_score) {
+				best_score = score;
+				best_item = item;
+			}
 		}
 
 		if (item->next_sibling != NULL) {
@@ -1094,17 +1141,16 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 		}
 	}
 
-	if (debuginator->hot_item == NULL) {
-		debuginator->hot_item = debuginator__find_first_leaf(debuginator->root);
+	if (expanding_search && debuginator->hot_item != NULL) {
+		// We're good.
 	}
-	else if (debuginator->hot_item->is_filtered) {
-		debuginator->hot_item = debuginator_nearest_visible_item(debuginator->hot_item);
+	else if (best_item != NULL) {
+		debuginator->hot_item = best_item;
+		best_item->parent->folder.hot_child = best_item;
 	}
-
-	if (debuginator->hot_item == NULL) {
+	else {
 		debuginator_create_array_item(debuginator, NULL, "No items found", "Your search filter returned no results.", NULL, (void*)0x12345678, NULL, NULL, 0, 0);
 	}
-
 
 	float distance_from_root_to_hot_item = 0;
 	debuginator__distance_to_hot_item(debuginator->root, debuginator->hot_item, &distance_from_root_to_hot_item);
