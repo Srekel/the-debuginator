@@ -182,6 +182,9 @@ int main(int argc, char **argv)
 
 	GameData* gamedata = game_init(gui, &debuginator);
 
+	bool limit_framerate = true;
+	debuginator_create_bool_item(&debuginator, "SDL Demo/Throttle framerate", "Disables sleeping between frames.", &limit_framerate);
+
 	Uint64 NOW = SDL_GetPerformanceCounter();
 	Uint64 LAST = 0;
 
@@ -226,7 +229,7 @@ int main(int argc, char **argv)
 		// its purpose is to save some battery, not to get exactly X fps.
 		float fps = 30;
 		float frame_time = 1 / fps;
-		if (frame_time > dt) {
+		if (limit_framerate && frame_time > dt) {
 			SDL_Delay((Uint32)(1000 * (frame_time - dt)));
 		}
 
