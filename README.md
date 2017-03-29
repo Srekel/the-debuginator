@@ -41,13 +41,13 @@ See SDL demo for information on how to initialize the debuginator and for more a
 
 ### :heavy_check_mark: C99 compatible
 
-So it's easy to add to any project.
+So it's easy to add to any project. In one case I use an anonymous union (I pragma away the warning), so if your compiler doesn't support that, I recommend forking and fixing. I just like the convenience. 
 
 ### :heavy_check_mark: Built using maximum warning levels and warnings as errors, tested with Cppcheck
 
 Because that's just polite to anyone who wants to use it.
 
-I do occasionally use pragma to ignore silly warnings.
+I do use #pragma to ignore a silly warning (see above).
 
 ### :heavy_check_mark: Allocates nothing
 

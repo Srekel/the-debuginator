@@ -544,14 +544,12 @@ void debuginator_set_title(DebuginatorItem* item, const char* title, size_t titl
 	}
 
 	if (title_length >= DEBUGINATOR_max_title_length) {
-#pragma warning(suppress: 4996)
 		DEBUGINATOR_strncpy_s(item->title, DEBUGINATOR_max_title_length, title, DEBUGINATOR_max_title_length - 3);
 		item->title[DEBUGINATOR_max_title_length - 3] = '.';
 		item->title[DEBUGINATOR_max_title_length - 2] = '.';
 		item->title[DEBUGINATOR_max_title_length - 1] = '\0';
 	}
 	else {
-#pragma warning(suppress: 4996)
 		DEBUGINATOR_strncpy_s(item->title, DEBUGINATOR_max_title_length, title, title_length);
 	}
 }
@@ -952,7 +950,6 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 	else if (filter_length > DEBUGINATOR_strlen(debuginator->filter)) {
 		// TODO do memcmp here to check for completely new filter.
 		if (debuginator->hot_item->user_data == (void*)0x12345678) {
-			#pragma warning(suppress: 4996) // todo remove
 			DEBUGINATOR_strcpy_s(debuginator->filter, sizeof(debuginator->filter), wanted_filter);
 			return;
 		}
@@ -1168,7 +1165,6 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 	float distance_to_wanted_y = wanted_y - distance_from_root_to_hot_item;
 	debuginator->current_height_offset = distance_to_wanted_y;
 
-	#pragma warning(suppress: 4996) // todo remove
 	DEBUGINATOR_strcpy_s(debuginator->filter, sizeof(debuginator->filter), filter);
 }
 
