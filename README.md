@@ -14,7 +14,7 @@ Gifs will be added once project is slightly more complete.
 - Working implementation kept up to par with all features.
 - Basic animation support.
 - Not performance tested, but performs decently anyway.
-- Only built and tested with VS2015.
+- Only built and tested with VS2015 & VS2017.
 - A small amount of technical debt stacked up. Will do a pass once things are more final.
 
 ## Features
@@ -69,9 +69,13 @@ Can handle any number of items, the "hot" one will be centered (ish) smoothly.
 
 ### :heavy_check_mark: Performant
 
-Tested with 250000 menu items with no noticable hit. That's good enough for me! Hey, it's a debug menu.
+Tested with 100000 menu items with no noticable hit on my laptop running a debug build. That's good enough for me! Hey, it's a debug menu.
 
 Though I will likely do some proper profiling and optimization later on.
+
+### :heavy_check_mark: Filter
+
+Quickly and easily filter the items to find the one you want. Uses a fuzzy search mechanism to allow a user who isn't entirely sure what something is called to find it quickly. Adding a space to the search makes the filter run in "exact" mode; each part of the filter must be matched as-is.
 
 ### :small_blue_diamond: Hierarchical
 
@@ -80,10 +84,6 @@ Put things in folders in folders. Support for expanding and collapsing folders.
 ### :small_blue_diamond: Save/Load of settings
 
 So you start up with the settings you had when you exited. Simple interface, application needs to do most of the work.
-
-### :small_blue_diamond: Filter
-
-Quickly and easily filter the items to find the one you want.
 
 ### :small_blue_diamond: Input
 

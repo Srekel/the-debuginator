@@ -958,6 +958,11 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 		}
 	}
 
+	// Exact search
+	// "el eb" matches "Debuginator/Help"
+	// "oo " doesn't match "lolol"
+	// "aa aa" doesn't match "Cars/Saab and Volvo"
+	// "aa aa" matches "Caars/Saab"
 	bool exact_search = false;
 	for (size_t i = 0; i < DEBUGINATOR_strlen(wanted_filter); i++) {
 		if (wanted_filter[i] == ' ') {
@@ -977,8 +982,6 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 	int path_indices[8] = { 0 };
 	int current_path_index = 0;
 
-	int booster_indices[32] = { 0 };
-
 	int best_score = -1;
 	DebuginatorItem* best_item = NULL;
 
@@ -987,7 +990,10 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 		if (item->is_folder) {
 			if (item->folder.first_child != NULL) {
 				DEBUGINATOR_strcpy_s(current_full_path + path_indices[current_path_index], 20, item->title);
+
 				path_indices[current_path_index+1] = path_indices[current_path_index] + (int)DEBUGINATOR_strlen(item->title);
+				*(current_full_path + path_indices[current_path_index + 1]) = ' ';
+				path_indices[current_path_index + 1]++;
 
 				//if (!exact_search) {
 					for (int i = path_indices[current_path_index]; i < path_indices[current_path_index + 1]; i++) {
@@ -1002,27 +1008,11 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 			}
 		}
 		else {
-			char taken_chars[128] = { 0 };
+			bool taken_chars[128] = { 0 };
 			DEBUGINATOR_strcpy_s(current_full_path + path_indices[current_path_index], 20, item->title);
 			path_indices[current_path_index + 1] = path_indices[current_path_index] + (int)DEBUGINATOR_strlen(item->title);
 			int current_path_length = path_indices[current_path_index + 1];
-
-			// Room for optimization here...
-			int boost_count = 0;
-			for (int path_indices_i = 1; path_indices_i < 8 && path_indices[path_indices_i] != 0; path_indices_i++) {
-				booster_indices[++boost_count] = path_indices[path_indices_i];
-			}
-
-			for (int path_i = 0; path_i < current_path_length-1; path_i++) {
-				char path_char = current_full_path[path_i];
-				bool number_to_alphabet = 
-					(DEBUGINATOR_isalpha(path_char) && DEBUGINATOR_isdigit(current_full_path[path_i + 1])) || 
-					(DEBUGINATOR_isdigit(path_char) && DEBUGINATOR_isalpha(current_full_path[path_i + 1]));
-				if (path_char == ' ' || path_char == '_' || number_to_alphabet) {
-					booster_indices[++boost_count] = path_i;
-				}
-			}
-
+			
 			//if (!exact_search) {
 				for (size_t i = path_indices[current_path_index]; i < current_path_length; i++) {
 					current_full_path[i] = (char)DEBUGINATOR_tolower(current_full_path[i]);
@@ -1031,75 +1021,92 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 
 			int score = -1;
 			bool is_filtered = false;
-			if (exact_search) {
-				// "el eb" matches "Debuginator/Help"
-				// "oo " doesn't match "lolol"
-				// "aa aa" doesn't match "Cars/Saab and Volvo"
-				// "aa aa" matches "Caars/Saab"
+			
+			// LOL1010
+			// 100
+			int filter_part = 0;
+			while (filter[filter_part] != '\0') {
+				if (filter[filter_part] == ' ') {
+					++filter_part;
+					continue;
+				}
 
-				is_filtered = false;
-				bool part_match_found = true;
-				int part_index = 0;
-				while (filter[part_index] != '\0' && part_match_found) {
-					if (filter[part_index] == ' ') {
-						++part_index;
-						continue;
-					}
-
-					part_match_found = false;
-					bool part_search_done = false;
-
-					// We go in reverse to assign a higher score to matches later in the path.
-					for (int path_i = current_path_length - 1; path_i >= 0; path_i--) {
-						for (int filter_i = part_index; filter_i < filter_length + 1; filter_i++) {
-							if (filter[filter_i] == ' ' || filter[filter_i] == '\0') {
-								part_search_done = true;
-								part_match_found = true;
-								for (int mark_i = 0; mark_i < filter_i - part_index; mark_i++) {
-									taken_chars[path_i + mark_i] = true;
-								}
-								part_index = filter_i;
-								score += path_i;
-								for (int boost_i = 0; boost_i < boost_count; boost_i++) {
-									if (path_i == booster_indices[boost_i]) {
-										score += 10 + path_i;
-										break;
-									}
-								}
-								break;
-							}
-
-							if (filter[filter_i] != current_full_path[path_i + filter_i - part_index] || taken_chars[path_i]) {
-								break;
-							}
-						}
-
-						if (part_search_done) {
+				int path_part = 0;
+				int matches[8] = { 0 };
+				int match_count = 0;
+				while (current_full_path[path_part] != '\0') {
+					bool filter_part_found = false;
+					for (int path_i = path_part; path_i < current_path_length; path_i++) {
+						if (current_full_path[path_i] == filter[filter_part] && taken_chars[path_i] == false) {
+							path_part = path_i;
+							filter_part_found = true;
 							break;
 						}
+					}
+
+					if (!filter_part_found) {
+						//match_count = 0;
+						break;
+					}
+
+					int match_length = 0;
+					const char* filter_char = filter + filter_part;
+					const char* path_char = current_full_path + path_part;
+					while (*filter_char++ == *path_char++) {
+						match_length++;
+						if (*filter_char == '\0' || *filter_char == ' ' || taken_chars[path_part + match_length] == true) {
+							break;
+						}
+					}
+
+					if (exact_search) {
+						if (filter[filter_part + match_length] != '\0' && filter[filter_part + match_length] != ' ') {
+							path_part += 1;
+							continue;
+						}
+					}
+
+					matches[match_count++] = path_part;
+					matches[match_count++] = match_length;
+					path_part += match_length;
+
+					if (match_count == 8) {
+						break;
 					}
 				}
 
-				is_filtered = !part_match_found;
-			}
-			else { // Unexact search
-				for (int filter_i = 0; filter_i < DEBUGINATOR_strlen(filter); filter_i++) {
-					bool filter_char_found = false;
-
-					// We go in reverse to assign a higher score to matches later in the path.
-					for (int path_i = current_path_length - 1; path_i >= 0; path_i--) {
-						bool match = filter[filter_i] == current_full_path[path_i] && !taken_chars[path_i];
-						if (match) {
-							filter_char_found = true;
-							taken_chars[path_i] = true;
-							score += path_i;
-							break;
-						}
+				int best_match_index = -1;
+				int best_match_score = -1;
+				for (int i = 0; i < match_count; i += 2) {
+					int match_index = matches[i];
+					int match_length = matches[i + 1];
+					int word_break_start = match_index == 0 
+						|| current_full_path[match_index - 1] == ' '
+						|| (!DEBUGINATOR_isalpha(current_full_path[match_index - 1]) && DEBUGINATOR_isalpha(current_full_path[match_index]))
+						|| (!DEBUGINATOR_isdigit(current_full_path[match_index - 1]) && DEBUGINATOR_isdigit(current_full_path[match_index]));
+					int word_break_end = match_index + match_length == current_path_length
+						|| current_full_path[match_index + match_length] == ' '
+						|| (!DEBUGINATOR_isalpha(current_full_path[match_index + match_length]) && DEBUGINATOR_isalpha(current_full_path[match_index]))
+						|| (!DEBUGINATOR_isdigit(current_full_path[match_index + match_length]) && DEBUGINATOR_isdigit(current_full_path[match_index]));
+					int match_in_item_title = match_index >= path_indices[current_path_index];
+					int match_score = (word_break_start * 10 + word_break_end * 5 + match_in_item_title * 10 + match_length) * match_length;
+					if (match_score > best_match_score) {
+						best_match_score = match_score;
+						best_match_index = i;
 					}
+				}
 
-					if (!filter_char_found) {
-						is_filtered = true;
-						break;
+				if (best_match_index == -1) {
+					is_filtered = true;
+					score = -1;
+					break; // Filter not valid
+				}
+				else {
+					filter_part += matches[best_match_index + 1];
+					score += best_match_score;
+					//is_filtered = false;
+					for (int match_i = 0; match_i < matches[best_match_index + 1]; match_i++) {
+						taken_chars[matches[best_match_index] + match_i] = true;
 					}
 				}
 			}
@@ -1117,6 +1124,9 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 			item->is_filtered = is_filtered;
 
 			if (score > best_score) {
+				if (item == debuginator->hot_item) {
+					score++;
+				}
 				best_score = score;
 				best_item = item;
 			}
