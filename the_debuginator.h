@@ -1511,12 +1511,32 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 		debuginator->draw_text("Search: ", &filter_pos, &debuginator->theme.colors[DEBUGINATOR_ItemTitleActive], &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
 
 		filter_pos.x += header_text_size.x;
-		debuginator->draw_text(debuginator->filter, &filter_pos, &debuginator->theme.colors[DEBUGINATOR_ItemTitleActive], &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
+		if (strchr(debuginator->filter, ' ')) {
+			// Exact search mode
+			DebuginatorVector2 underline_size;
+			underline_size.y = 1;
+			char letter[2] = { 0 };
+			for (int i = 0; i < DEBUGINATOR_strlen(debuginator->filter); i++) {
+				letter[0] = debuginator->filter[i];
+				debuginator->draw_text(letter, &filter_pos, &debuginator->theme.colors[DEBUGINATOR_ItemTitleActive], &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
+				DebuginatorVector2 letter_text_size = debuginator->text_size(letter, &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
+				underline_size.x = letter_text_size.x;
+				if (letter[0] != ' ') {
+					DebuginatorVector2 underline_pos = debuginator__vector2(filter_pos.x, filter_pos.y + letter_text_size.y);
+					debuginator->draw_rect(underline_pos, underline_size, debuginator->theme.colors[DEBUGINATOR_ItemValueHot], debuginator->app_user_data);
+				}
+				filter_pos.x += letter_text_size.x;
+			}
+		}
+		else {
+			debuginator->draw_text(debuginator->filter, &filter_pos, &debuginator->theme.colors[DEBUGINATOR_ItemTitleActive], &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
+			DebuginatorVector2 filter_text_size = debuginator->text_size(debuginator->filter, &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
+			filter_pos.x += filter_text_size.x;
+		}
 
-		DebuginatorVector2 filter_text_size = debuginator->text_size(debuginator->filter, &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
 
 		DebuginatorVector2 caret_size = debuginator__vector2(10, header_text_size.y);
-		DebuginatorVector2 caret_pos = debuginator__vector2(filter_pos.x + filter_text_size.x, filter_pos.y);
+		DebuginatorVector2 caret_pos = debuginator__vector2(filter_pos.x, filter_pos.y);
 		filter_color.r = 150;
 		filter_color.g = 250;
 		filter_color.b = 150;
