@@ -88,6 +88,10 @@ typedef enum DebuginatorDrawTypes {
 	DEBUGINATOR_ItemValueDefault,
 	DEBUGINATOR_ItemValueOverridden,
 	DEBUGINATOR_ItemValueHot,
+	DEBUGINATOR_ItemEditorOff,
+	DEBUGINATOR_ItemEditorOn,
+	DEBUGINATOR_ItemEditorBackground,
+	DEBUGINATOR_ItemEditorForeground,
 	DEBUGINATOR_NumDrawTypes
 } DebuginatorDrawTypes;
 
@@ -130,9 +134,9 @@ typedef struct DebuginatorLeafData {
 	const char* description;
 
 	bool is_active;
-	char* hot_value;
 	int hot_index;
 	int active_index;
+	int default_index;
 
 	const char** value_titles;
 	const char** value_descriptions;
@@ -276,6 +280,7 @@ extern void debuginator_set_hot_item(TheDebuginator* debuginator, const char* pa
 extern void debuginator_remove_item(TheDebuginator* debuginator, const char* path);
 void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item);
 void debuginator_load_item(TheDebuginator* debuginator, const char* path, const char* value_title);
+void debuginator_set_default_value(TheDebuginator* debuginator, const char* path, const char* value_title, int value_index); // value index is used if value_title == NULL
 
 #ifdef __cplusplus
 }
@@ -400,7 +405,7 @@ void debuginator__quick_draw_default(TheDebuginator* debuginator, DebuginatorIte
 			value_offset.x = debuginator->screen_resolution.x + debuginator->size.x * (1 - debuginator->openness) - 200;
 		}
 
-		bool is_overriden = item->leaf.active_index != 0;
+		bool is_overriden = item->leaf.active_index != item->leaf.default_index;
 		unsigned default_color_index = is_overriden ? DEBUGINATOR_ItemTitleOverridden : DEBUGINATOR_ItemTitle;
 		debuginator->draw_text(item->leaf.value_titles[item->leaf.active_index], &value_offset, &debuginator->theme.colors[default_color_index], &debuginator->theme.fonts[DEBUGINATOR_ItemTitle], debuginator->app_user_data);
 	}
@@ -451,7 +456,9 @@ void debuginator__quick_draw_boolean(TheDebuginator* debuginator, DebuginatorIte
 	slider_pos.y += 2;
 	size.x = 21;
 	size.y = 16;
-	DebuginatorColor slider = item->leaf.active_index == 0 ? debuginator__color(200, 100, 100, 200) : debuginator__color(100, 200, 100, 200);
+	unsigned char alpha = item->leaf.active_index == item->leaf.default_index ? 100 : 255;
+	DebuginatorColor slider = item->leaf.active_index == 0 ? debuginator->theme.colors[DEBUGINATOR_ItemEditorOff] : debuginator->theme.colors[DEBUGINATOR_ItemEditorOn];
+	slider.a = alpha;
 
 	debuginator->draw_rect(slider_pos, size, slider, debuginator->app_user_data);
 }
@@ -873,6 +880,28 @@ void debuginator_set_hot_item(TheDebuginator* debuginator, const char* path) {
 	item->parent->folder.hot_child = item;
 }
 
+void debuginator_set_default_value(TheDebuginator* debuginator, const char* path, const char* value_title, int value_index) {
+	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, false);
+	if (item == NULL || item->is_folder) {
+		return;
+	}
+	
+	if (value_title != NULL) {
+		for (int i = 0; i < item->leaf.num_values; i++) {
+			if (strcmp(value_title, item->leaf.value_titles[i]) == 0) {
+				value_index = i;
+				break;
+			}
+		}
+	}
+
+	if (value_index < 0 || value_index > item->leaf.num_values) {
+		return;
+	}
+
+	item->leaf.default_index = value_index;
+}
+
 // Note: If you remove the last visible item, you must create a new one under the root.
 void debuginator_remove_item(TheDebuginator* debuginator, const char* path) {
 	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, false);
@@ -1207,6 +1236,8 @@ void debuginator_get_default_config(TheDebuginatorConfig* config) {
 	themes[0].colors[DEBUGINATOR_ItemValueOverridden] = debuginator__color(100, 255, 100, 200);
 	themes[0].colors[DEBUGINATOR_ItemValueHot] = debuginator__color(100, 255, 100, 200);
 	themes[0].colors[DEBUGINATOR_LineHighlight] = debuginator__color(100, 100, 50, 150);
+	themes[0].colors[DEBUGINATOR_ItemEditorOff] = debuginator__color(250, 100, 100, 200);
+	themes[0].colors[DEBUGINATOR_ItemEditorOn] = debuginator__color(130, 220, 255, 200);
 	themes[0].fonts[DEBUGINATOR_ItemDescription].italic = true;
 
 	// Neon theme
@@ -1223,6 +1254,8 @@ void debuginator_get_default_config(TheDebuginatorConfig* config) {
 	themes[1].colors[DEBUGINATOR_ItemValueOverridden] = debuginator__color(100, 100, 255, 200);
 	themes[1].colors[DEBUGINATOR_ItemValueHot] = debuginator__color(100, 100, 255, 200);
 	themes[1].colors[DEBUGINATOR_LineHighlight] = debuginator__color(70, 70, 130, 150);
+	themes[1].colors[DEBUGINATOR_ItemEditorOff] = debuginator__color(0, 0, 255, 200);
+	themes[1].colors[DEBUGINATOR_ItemEditorOn] = debuginator__color(130, 220, 255, 200);
 
 	// Black & White theme
 	themes[2].colors[DEBUGINATOR_Background] = debuginator__color(25, 25, 25, 220);
@@ -1238,6 +1271,8 @@ void debuginator_get_default_config(TheDebuginatorConfig* config) {
 	themes[2].colors[DEBUGINATOR_ItemValueOverridden] = debuginator__color(200, 200, 200, 200);
 	themes[2].colors[DEBUGINATOR_ItemValueHot] = debuginator__color(255, 255, 255, 200);
 	themes[2].colors[DEBUGINATOR_LineHighlight] = debuginator__color(100, 100, 100, 150);
+	themes[2].colors[DEBUGINATOR_ItemEditorOff] = debuginator__color(100, 100, 100, 200);
+	themes[2].colors[DEBUGINATOR_ItemEditorOn] = debuginator__color(250, 250, 250, 200);
 
 	// Beige
 	themes[3].colors[DEBUGINATOR_Background] = debuginator__color(255, 240, 220, 220);
@@ -1253,6 +1288,8 @@ void debuginator_get_default_config(TheDebuginatorConfig* config) {
 	themes[3].colors[DEBUGINATOR_ItemValueOverridden] = debuginator__color(200, 200, 200, 200);
 	themes[3].colors[DEBUGINATOR_ItemValueHot] = debuginator__color(255, 255, 255, 200);
 	themes[3].colors[DEBUGINATOR_LineHighlight] = debuginator__color(100, 100, 100, 150);
+	themes[3].colors[DEBUGINATOR_ItemEditorOff] = debuginator__color(200, 150, 100, 200);
+	themes[3].colors[DEBUGINATOR_ItemEditorOn] = debuginator__color(250, 250, 100, 200);
 
 	config->edit_types[DEBUGINATOR_EditTypeArray].quick_draw = debuginator__quick_draw_default;
 	config->edit_types[DEBUGINATOR_EditTypeArray].expanded_draw = debuginator__expanded_draw_default;
@@ -1587,7 +1624,7 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 			debuginator->draw_rect(line_pos, debuginator__vector2(500, 30), debuginator->theme.colors[DEBUGINATOR_LineHighlight], debuginator->app_user_data);
 		}
 
-		bool is_overriden = item->leaf.active_index != 0;
+		bool is_overriden = item->leaf.active_index != item->leaf.default_index;
 		unsigned default_color_index = is_overriden ? DEBUGINATOR_ItemTitleOverridden : DEBUGINATOR_ItemTitle;
 		unsigned color_index = item == debuginator->hot_item && !item->leaf.is_active ? DEBUGINATOR_ItemTitleActive : (hot ? DEBUGINATOR_ItemTitleHot : default_color_index);
 		DebuginatorFont* font = &debuginator->theme.fonts[DEBUGINATOR_ItemTitle];
@@ -1790,7 +1827,7 @@ void debuginator_move_to_next_leaf(TheDebuginator* debuginator, bool long_move) 
 
 	DebuginatorItem* hot_item_new = debuginator__next_item(hot_item);
 	if (long_move && hot_item_new != NULL) {
-		while (hot_item_new != NULL && hot_item_new->parent == hot_item->parent) {
+		while (hot_item_new != NULL && hot_item_new->parent == hot_item->parent && (hot_item_new->is_folder || hot_item_new->leaf.active_index == hot_item_new->leaf.default_index)) {
 			hot_item_new = debuginator__next_item(hot_item_new);
 		}
 
@@ -1826,7 +1863,7 @@ void debuginator_move_to_prev_leaf(TheDebuginator* debuginator, bool long_move) 
 
 	DebuginatorItem* hot_item_new = debuginator__prev_item(hot_item);
 	if (long_move && hot_item_new != NULL) {
-		while (hot_item_new != NULL && hot_item_new->parent == hot_item->parent) {
+		while (hot_item_new != NULL && hot_item_new->parent == hot_item->parent && (hot_item_new->is_folder || hot_item_new->leaf.active_index == hot_item_new->leaf.default_index)) {
 			hot_item_new = debuginator__prev_item(hot_item_new);
 		}
 
@@ -1938,6 +1975,7 @@ void debuginator_copy_1byte(DebuginatorItem* item, void* value, const char* valu
 }
 
 void debuginator_create_bool_item(TheDebuginator* debuginator, const char* path, const char* description, void* user_data) {
+	bool value_before_creation = *(bool*)user_data;
 	static bool bool_values[2] = { false, true };
 	static const char* bool_titles[2] = { "False", "True" };
 	DEBUGINATOR_assert(sizeof(bool_values[0]) == 1);
@@ -1945,6 +1983,11 @@ void debuginator_create_bool_item(TheDebuginator* debuginator, const char* path,
 		description, debuginator_copy_1byte, user_data,
 		bool_titles, bool_values, 2, sizeof(bool_values[0]));
 	item->leaf.edit_type = DEBUGINATOR_EditTypeBoolean;
+
+	if (value_before_creation == true) {
+		item->leaf.default_index = 1;
+		item->leaf.hot_index = 1;
+	}
 }
 
 #endif // DEBUGINATOR_IMPLEMENTATION
