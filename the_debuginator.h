@@ -1149,14 +1149,21 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 	}
 
 	if (expanding_search && debuginator->hot_item != NULL) {
-		// We're good.
+		// We're good. Just keep the previously hot item; it can't have disappeared.
 	}
 	else if (best_item != NULL) {
 		debuginator->hot_item = best_item;
 		best_item->parent->folder.hot_child = best_item;
 	}
+	else if (filter_length == 0) {
+		// Happens when we remove the last letter of the search, and go from only
+		// "No items found" to all items
+		debuginator->hot_item = debuginator__find_first_leaf(debuginator->root);
+	}
 	else {
-		debuginator_create_array_item(debuginator, NULL, "No items found", "Your search filter returned no results.", NULL, (void*)0x12345678, NULL, NULL, 0, 0);
+		DebuginatorItem* fallback = debuginator_create_array_item(debuginator, NULL, "No items found", "Your search filter returned no results.", NULL, (void*)0x12345678, NULL, NULL, 0, 0);
+		debuginator->hot_item = fallback;
+		fallback->parent->folder.hot_child = fallback;
 	}
 
 	float distance_from_root_to_hot_item = 0;
