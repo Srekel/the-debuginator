@@ -64,6 +64,89 @@ DebuginatorVector2 text_size(const char* text, DebuginatorFont* font, void* user
 	return *(DebuginatorVector2*)&text_size;
 }
 
+int save_item(const char* path, const char* value, char* save_buffer, int save_buffer_size) {
+	if (save_buffer_size < 512) {
+		return -1;
+	}
+
+	int chars = sprintf_s(save_buffer, save_buffer_size, "%s=%s\n", path, value);
+	return chars;
+}
+
+void save(TheDebuginator* debuginator) {
+	int save_buffer_size = 32;
+	char* save_buffer = NULL;
+	while (true) {
+		save_buffer = (char*)malloc(save_buffer_size);
+		memset(save_buffer, 0, save_buffer_size);
+		int saved = debuginator_save(debuginator, save_item, save_buffer, save_buffer_size);
+		if (saved >= 0) {
+			break;
+		}
+
+		save_buffer_size *= 16;
+		free(save_buffer);
+	}
+
+	FILE* file = NULL;
+	int error = fopen_s(&file, "DebuginatorConfig.txt", "w");
+	if (file == NULL || error < 0) {
+		return;
+	}
+
+	fputs(save_buffer, file);
+	fclose(file);
+	free(save_buffer);
+}
+
+bool load(TheDebuginator* debuginator, char* loaded_data_buffer, int loaded_buffer_size) {
+	FILE* file = NULL;
+	int error = fopen_s(&file, "DebuginatorConfig.txt", "r");
+	if (file == NULL || error < 0) {
+		return true;
+	}
+
+	bool result = true;
+	char load_buffer[1024] = { 0 };
+	fread_s(load_buffer, 1024, 1, 1023, file);
+	const char* data = load_buffer;
+	while (*data != '\0') {
+		if (loaded_buffer_size < 512) {
+			result = false;
+			break;
+		}
+
+		const char* key = data;
+		const char* value = NULL;
+		const char* loaded_data_buffer_key = NULL;
+		const char* loaded_data_buffer_value = NULL;
+		while (*data++ != '\0') {
+			if (*data == '=') {
+				memcpy(loaded_data_buffer, key, data - key);
+				loaded_data_buffer[data - key] = 0;
+				loaded_data_buffer_key = loaded_data_buffer;
+				loaded_data_buffer += data - key + 1;
+				loaded_buffer_size -= (int)(data - key + 1);
+				value = (++data);
+			}
+
+			if (*data == '\n' && value != NULL) {
+				memcpy(loaded_data_buffer, value, data - value);
+				loaded_data_buffer[data - value] = 0;
+				loaded_data_buffer_value = loaded_data_buffer;
+				loaded_data_buffer += data - value + 1;
+				loaded_buffer_size -= (int)(data - value + 1);
+				debuginator_load_item(debuginator, loaded_data_buffer_key, loaded_data_buffer_value);
+				++data;
+				break;
+			}
+		}
+	}
+
+	fclose(file);
+	return result;
+}
+
 bool handle_debuginator_input(SDL_Event* event, TheDebuginator* debuginator) {
 	switch (event->type) {
 		case SDL_KEYDOWN:
@@ -81,6 +164,7 @@ bool handle_debuginator_input(SDL_Event* event, TheDebuginator* debuginator) {
 			else if (event->key.keysym.sym == SDLK_LEFT || event->key.keysym.sym == SDLK_ESCAPE) {
 				if (debuginator->is_open && !debuginator->hot_item->leaf.is_active) {
 					debuginator_set_open(debuginator, false);
+					save(debuginator);
 					return true;
 				}
 				else if (!debuginator->hot_item->is_folder && debuginator->hot_item->leaf.is_active) {
@@ -175,10 +259,17 @@ int main(int argc, char **argv)
 	config.screen_resolution.x = (float)res_x;
 	config.screen_resolution.y = (float)res_y;
 	config.focus_height = 0.3f;
+	config.create_default_debuginator_items = true;
 	config.left_aligned = true;
 
 	TheDebuginator debuginator;
 	debuginator_create(&config, &debuginator);
+	
+	char* loaded_data_buffer = (char*)malloc(10 * 1024 * 1024);
+	bool load_result = load(&debuginator, loaded_data_buffer, 10 * 1024 * 1024);
+	if (!load_result) {
+		return 1;
+	}
 
 	GameData* gamedata = game_init(gui, &debuginator);
 
@@ -248,6 +339,8 @@ int main(int argc, char **argv)
 		}
 	}
 
+	free(item_buffer);
+	free(loaded_data_buffer);
 	gui_destroy_gui(gui);
 	return 0;
 }

@@ -29,6 +29,8 @@ struct GameBox {
 struct GameData {
 	GuiHandle gui;
 	bool mybool;
+	bool gamebool;
+	bool load_test;
 	bool draw_boxes;
 	char mystring[256];
 	GameBox boxes[256];

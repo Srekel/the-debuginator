@@ -115,8 +115,11 @@ typedef DebuginatorVector2 (*DebuginatorTextSizeCallback)
 typedef void(*DebuginatorItemQuickDrawCallback)(DebuginatorItem* item, void* data);
 typedef void(*DebuginatorOnItemChangedCallback)(DebuginatorItem* item, void* value, const char* value_title);
 
+typedef int(*DebuginatorSaveItemCallback)(const char* path, const char* value, char* save_buffer, int save_buffer_size);
+
 typedef enum DebuginatorItemEditorDataType {
 	DEBUGINATOR_EditTypeArray, // The default
+	DEBUGINATOR_EditTypeActionArray, // For items with direct actions and no state
 	DEBUGINATOR_EditTypeBoolean,
 	/*DEBUGINATOR_EditTypeUserType1,
 	...
@@ -177,6 +180,7 @@ typedef struct DebuginatorItemEditorData {
 	void(*quick_draw)(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position);
 	float(*expanded_height)(DebuginatorItem* item, void* userdata);
 	void(*expanded_draw)(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position);
+	bool forget_state;
 } DebuginatorItemEditorData;
 
 typedef struct DebuginatorAnimation {
@@ -214,8 +218,6 @@ typedef struct TheDebuginatorConfig {
 	bool left_aligned;
 	int open_direction;
 	float focus_height;
-
-	void(*on_save_item)(DebuginatorItem* item, void* app_user_data);
 } TheDebuginatorConfig;
 
 typedef struct TheDebuginator {
@@ -259,8 +261,6 @@ typedef struct TheDebuginator {
 	DebuginatorAnimation animations[8];
 	int animation_count;
 
-	void(*on_save_item)(DebuginatorItem* item, void* app_user_data);
-
 	bool filter_enabled;
 	char filter[32];
 	int filter_length;
@@ -279,8 +279,11 @@ extern DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, Debugi
 extern void debuginator_set_hot_item(TheDebuginator* debuginator, const char* path);
 extern void debuginator_remove_item(TheDebuginator* debuginator, const char* path);
 void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item);
+
+int debuginator_save(TheDebuginator* debuginator, DebuginatorSaveItemCallback callback, char* save_buffer, int save_buffer_size);
 void debuginator_load_item(TheDebuginator* debuginator, const char* path, const char* value_title);
 void debuginator_set_default_value(TheDebuginator* debuginator, const char* path, const char* value_title, int value_index); // value index is used if value_title == NULL
+void debuginator_set_edit_type(TheDebuginator* debuginator, const char* path, DebuginatorItemEditorDataType edit_type);
 
 #ifdef __cplusplus
 }
@@ -862,12 +865,88 @@ DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 	return item;
 }
 
+int debuginator_save(TheDebuginator* debuginator, DebuginatorSaveItemCallback callback, char* save_buffer, int save_buffer_size) {
+	char current_full_path[128] = { 0 };
+	int path_indices[8] = { 0 };
+	int current_path_index = 0;
+
+	DebuginatorItem* item = debuginator->root->folder.first_child;
+	while (item != NULL) {
+		if (item->is_folder) {
+			if (item->folder.first_child != NULL) {
+				DEBUGINATOR_strcpy_s(current_full_path + path_indices[current_path_index], 20, item->title);
+
+				path_indices[current_path_index + 1] = path_indices[current_path_index] + (int)DEBUGINATOR_strlen(item->title);
+				*(current_full_path + path_indices[current_path_index + 1]) = '/';
+				path_indices[current_path_index + 1]++;
+
+				++current_path_index;
+				item = item->folder.first_child;
+
+				continue;
+			}
+		}
+		else {
+			DEBUGINATOR_strcpy_s(current_full_path + path_indices[current_path_index], 20, item->title);
+			path_indices[current_path_index + 1] = path_indices[current_path_index] + (int)DEBUGINATOR_strlen(item->title);
+			//int current_path_length = path_indices[current_path_index + 1];
+
+			if (item->leaf.active_index != item->leaf.default_index) {
+				int saved = callback(current_full_path, item->leaf.value_titles[item->leaf.active_index], save_buffer, save_buffer_size);
+				if (saved < 0) {
+					return -1;
+				}
+
+				save_buffer += saved;
+				save_buffer_size -= saved;
+			}
+		}
+
+		if (item->next_sibling != NULL) {
+			item = item->next_sibling;
+		}
+		else {
+			while (item->parent != NULL && item->parent->next_sibling == NULL) {
+				item = item->parent;
+				--current_path_index;
+			}
+
+			if (item->parent == NULL) {
+				// Went all the way 'back' to the menu root.
+				break;
+			}
+
+			item = item->parent->next_sibling;
+			--current_path_index;
+		}
+	}
+
+	return save_buffer_size;
+}
+
+
 void debuginator_load_item(TheDebuginator* debuginator, const char* path, const char* value_title) {
-	DebuginatorItem* item = debuginator_create_array_item(debuginator, NULL, path, NULL, NULL, NULL, NULL, NULL, 0, 0);
-	item->leaf.description = value_title; // Some might call this a hack... :D
-	item->leaf.hot_index = -2;
-	debuginator__set_total_height(item, 0);
-	debuginator__set_num_visible_children(item->parent, -1);
+	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, false);
+	if (item == NULL) {
+		item = debuginator_create_array_item(debuginator, NULL, path, NULL, NULL, NULL, NULL, NULL, 0, 0);
+		item->leaf.description = value_title; // Some might call this a hack... :D
+		item->leaf.hot_index = -2;
+		debuginator__set_total_height(item, 0);
+		debuginator__set_num_visible_children(item->parent, -1);
+	}
+	else if (item->is_folder) {
+	}
+	else {
+		for (int i = 0; i < item->leaf.num_values; i++) {
+			if (strcmp(item->leaf.value_titles[i], value_title) == 0) {
+				item->leaf.hot_index = i;
+				if (!debuginator->edit_types[item->leaf.edit_type].forget_state) {
+					debuginator_activate(debuginator, item);
+				}
+				break;
+			}
+		}
+	}
 }
 
 void debuginator_set_hot_item(TheDebuginator* debuginator, const char* path) {
@@ -901,6 +980,16 @@ void debuginator_set_default_value(TheDebuginator* debuginator, const char* path
 
 	item->leaf.default_index = value_index;
 }
+
+void debuginator_set_edit_type(TheDebuginator* debuginator, const char* path, DebuginatorItemEditorDataType edit_type) {
+	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, false);
+	if (item == NULL) {
+		return;
+	}
+
+	item->leaf.edit_type = edit_type;
+}
+
 
 // Note: If you remove the last visible item, you must create a new one under the root.
 void debuginator_remove_item(TheDebuginator* debuginator, const char* path) {
@@ -1293,6 +1382,8 @@ void debuginator_get_default_config(TheDebuginatorConfig* config) {
 
 	config->edit_types[DEBUGINATOR_EditTypeArray].quick_draw = debuginator__quick_draw_default;
 	config->edit_types[DEBUGINATOR_EditTypeArray].expanded_draw = debuginator__expanded_draw_default;
+	config->edit_types[DEBUGINATOR_EditTypeActionArray].expanded_draw = debuginator__expanded_draw_default;
+	config->edit_types[DEBUGINATOR_EditTypeActionArray].forget_state = true;
 	config->edit_types[DEBUGINATOR_EditTypeBoolean].quick_draw = debuginator__quick_draw_boolean;
 	config->edit_types[DEBUGINATOR_EditTypeBoolean].expanded_draw = debuginator__expanded_draw_boolean;
 }
@@ -1624,13 +1715,15 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 			debuginator->draw_rect(line_pos, debuginator__vector2(500, 30), debuginator->theme.colors[DEBUGINATOR_LineHighlight], debuginator->app_user_data);
 		}
 
-		bool is_overriden = item->leaf.active_index != item->leaf.default_index;
+		bool is_overriden = item->leaf.active_index != item->leaf.default_index && !debuginator->edit_types[item->leaf.edit_type].forget_state;
 		unsigned default_color_index = is_overriden ? DEBUGINATOR_ItemTitleOverridden : DEBUGINATOR_ItemTitle;
 		unsigned color_index = item == debuginator->hot_item && !item->leaf.is_active ? DEBUGINATOR_ItemTitleActive : (hot ? DEBUGINATOR_ItemTitleHot : default_color_index);
 		DebuginatorFont* font = &debuginator->theme.fonts[DEBUGINATOR_ItemTitle];
 		debuginator->draw_text(item->title, &offset, &debuginator->theme.colors[color_index], font, debuginator->app_user_data);
 
-		debuginator->edit_types[item->leaf.edit_type].quick_draw(debuginator, item, &offset);
+		if (debuginator->edit_types[item->leaf.edit_type].quick_draw != NULL) {
+			debuginator->edit_types[item->leaf.edit_type].quick_draw(debuginator, item, &offset);
+		}
 		
 		if (item->leaf.is_active) {
 			offset.x += 20;
@@ -1680,10 +1773,6 @@ void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item) {
 	item->leaf.draw_t = 0;
 	if (item->leaf.num_values == 0) {
 		return;
-	}
-
-	if (item->leaf.active_index != item->leaf.hot_index && debuginator->on_save_item != NULL) {
-		debuginator->on_save_item(item, debuginator->app_user_data);
 	}
 
 	item->leaf.active_index = item->leaf.hot_index;

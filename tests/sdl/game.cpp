@@ -24,7 +24,6 @@ static void on_boxes_activated(DebuginatorItem* item, void* value, const char* v
 
 static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
 	(void)data;
-	debuginator_load_item(debuginator, "SDL Demo/Load test", "True");
 	{
 		static const char* string_titles[5] = { "String A", "String B", "String C", "String D", "String E" };
 		debuginator_create_array_item(debuginator, NULL, "SDL Demo/String Test",
@@ -38,23 +37,26 @@ static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
 		static const char* string_titles[3] = { "Clear all boxes", "Add box", data->box_string };
 		debuginator_create_array_item(debuginator, NULL, "SDL Demo/Boxes",
 			"Box things", on_boxes_activated, data,
-			string_titles, NULL, 3, 0);	}
+			string_titles, NULL, 3, 0);	
+		debuginator_set_edit_type(debuginator, "SDL Demo/Boxes", DEBUGINATOR_EditTypeActionArray);
+	}
 
 	debuginator_create_bool_item(debuginator, "SimpleBool 1", "Change a bool.", &data->mybool);
 	debuginator_create_bool_item(debuginator, "Folder/SimpleBool 2", "Change a bool.", &data->mybool);
 	debuginator_create_bool_item(debuginator, "Folder/SimpleBool 3", "Change a bool.", &data->mybool);
 	debuginator_create_bool_item(debuginator, "Folder/Subfolder/SimpleBool 4 with a really long long title", "Change a bool.", &data->mybool);
-	debuginator_create_bool_item(debuginator, "SDL Demo/Load test", "Change a bool.", &data->mybool);
-
+	debuginator_create_bool_item(debuginator, "SDL Demo/Load test", "Change a bool.", &data->load_test);
 
 	debuginator_new_folder_item(debuginator, NULL, "Folder 2", 0);
 	char folder[64] = { 0 };
-	for (int i = 0; i < 500; i++) {
-		for (int j = 0; j < 500; j++) {
+	for (int i = 0; i < 100; i++) {
+		for (int j = 0; j < 10; j++) {
 			sprintf_s(folder, 64, "Game/Test%02d/GameBool%02d", i, j);
-			debuginator_create_bool_item(debuginator, folder, "Change a bool.", &data->mybool);
+			debuginator_create_bool_item(debuginator, folder, "Change a bool.", &data->gamebool);
 		}
 	}
+
+	//debuginator_create_bool_item(debuginator, "Game/Test10/GameBool00", "Change a bool.", &data->gamebool);
 }
 
 static GameData s_game_data;
