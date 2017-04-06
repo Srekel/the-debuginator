@@ -8,7 +8,8 @@
 #include "game.h"
 
 #pragma warning(suppress: 4505) // unreferenced local function
-static void on_boxes_activated(DebuginatorItem* item, void* value, const char* value_title) {
+static void on_boxes_activated(DebuginatorItem* item, void* value, const char* value_title, void* app_userdata) {
+	(void)app_userdata;
 	(void)value;
 	GameData* data = (GameData*)item->user_data;
 	if (strcmp(value_title, "Add box") == 0 && data->boxes_n < 256) {

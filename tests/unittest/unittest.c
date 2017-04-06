@@ -52,8 +52,9 @@ const char* word_wrap(const char* text, DebuginatorFont font, float max_width, c
 	return NULL;
 }
 
-static void unittest_on_item_changed_stringtest(DebuginatorItem* item, void* value, const char* value_title) {
+static void unittest_on_item_changed_stringtest(DebuginatorItem* item, void* value, const char* value_title, void* app_userdata) {
 	(void)value_title;
+	(void)app_userdata;
 	const char** string_ptr = (const char**)value;
 	UnitTestData* callback_data = (UnitTestData*)item->user_data; // same as &g_testdata
 

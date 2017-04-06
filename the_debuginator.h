@@ -112,9 +112,7 @@ typedef const char* (*DebuginatorWordWrapCallback)
 typedef DebuginatorVector2 (*DebuginatorTextSizeCallback)
 	(const char* text, DebuginatorFont* font, void* userdata);
 
-typedef void(*DebuginatorItemQuickDrawCallback)(DebuginatorItem* item, void* data);
-typedef void(*DebuginatorOnItemChangedCallback)(DebuginatorItem* item, void* value, const char* value_title);
-
+typedef void(*DebuginatorOnItemChangedCallback)(DebuginatorItem* item, void* value, const char* value_title, void* app_userdata);
 typedef int(*DebuginatorSaveItemCallback)(const char* path, const char* value, char* save_buffer, int save_buffer_size);
 
 typedef enum DebuginatorItemEditorDataType {
@@ -126,6 +124,25 @@ typedef enum DebuginatorItemEditorDataType {
 	DEBUGINATOR_EditTypeUserTypeN,*/
 	DEBUGINATOR_EditTypeCount = 16,
 } DebuginatorItemEditorDataType;
+
+DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
+	DebuginatorItem* parent, const char* path, const char* description,
+	DebuginatorOnItemChangedCallback on_item_changed_callback, void* user_data,
+	const char** value_titles, void* values, int num_values, size_t value_size);
+
+void debuginator_create_bool_item(TheDebuginator* debuginator, const char* path, const char* description, void* user_data);
+
+DebuginatorItem* debuginator_new_folder_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* title, size_t title_length);
+DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* path, bool create_if_not_exist);
+void debuginator_set_hot_item(TheDebuginator* debuginator, const char* path);
+void debuginator_remove_item(TheDebuginator* debuginator, const char* path);
+
+int debuginator_save(TheDebuginator* debuginator, DebuginatorSaveItemCallback callback, char* save_buffer, int save_buffer_size);
+void debuginator_load_item(TheDebuginator* debuginator, const char* path, const char* value_title);
+void debuginator_set_default_value(TheDebuginator* debuginator, const char* path, const char* value_title, int value_index); // value index is used if value_title == NULL
+void debuginator_set_edit_type(TheDebuginator* debuginator, const char* path, DebuginatorItemEditorDataType edit_type);
+
+void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item);
 
 typedef struct DebuginatorFolderData {
 	DebuginatorItem* first_child;
@@ -153,6 +170,17 @@ typedef struct DebuginatorLeafData {
 	float draw_t;
 } DebuginatorLeafData;
 
+typedef enum DebuginatorAnimationType {
+	DEBUGINATOR_ItemActivate
+} DebuginatorAnimationType;
+
+typedef struct DebuginatorItemEditorData {
+	void(*quick_draw)(TheDebuginator* debuginator, DebuginatorItem* item_data, DebuginatorVector2* position);
+	float(*expanded_height)(DebuginatorItem* item, void* userdata);
+	void(*expanded_draw)(TheDebuginator* debuginator, DebuginatorItem* item_data, DebuginatorVector2* position);
+	bool forget_state;
+} DebuginatorItemEditorData;
+
 typedef struct DebuginatorItem {
 	char title[20];
 	bool is_folder;
@@ -168,20 +196,15 @@ typedef struct DebuginatorItem {
 	union {
 		DebuginatorLeafData leaf;
 		DebuginatorFolderData folder;
-		#pragma warning(suppress: 4201) // Unnamed union
+#pragma warning(suppress: 4201) // Unnamed union
 	};
 } DebuginatorItem;
 
-typedef enum DebuginatorAnimationType {
-	DEBUGINATOR_ItemActivate
-} DebuginatorAnimationType;
+#ifdef __cplusplus
+}
+#endif
 
-typedef struct DebuginatorItemEditorData {
-	void(*quick_draw)(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position);
-	float(*expanded_height)(DebuginatorItem* item, void* userdata);
-	void(*expanded_draw)(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position);
-	bool forget_state;
-} DebuginatorItemEditorData;
+#ifdef DEBUGINATOR_IMPLEMENTATION
 
 typedef struct DebuginatorAnimation {
 	DebuginatorAnimationType type;
@@ -265,31 +288,6 @@ typedef struct TheDebuginator {
 	char filter[32];
 	int filter_length;
 } TheDebuginator;
-
-
-extern DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
-	DebuginatorItem* parent, const char* path, const char* description,
-	DebuginatorOnItemChangedCallback on_item_changed_callback, void* user_data,
-	const char** value_titles, void* values, int num_values, size_t value_size);
-
-extern void debuginator_create_bool_item(TheDebuginator* debuginator, const char* path, const char* description, void* user_data);
-
-extern DebuginatorItem* debuginator_new_folder_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* title, size_t title_length);
-extern DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* path, bool create_if_not_exist);
-extern void debuginator_set_hot_item(TheDebuginator* debuginator, const char* path);
-extern void debuginator_remove_item(TheDebuginator* debuginator, const char* path);
-void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item);
-
-int debuginator_save(TheDebuginator* debuginator, DebuginatorSaveItemCallback callback, char* save_buffer, int save_buffer_size);
-void debuginator_load_item(TheDebuginator* debuginator, const char* path, const char* value_title);
-void debuginator_set_default_value(TheDebuginator* debuginator, const char* path, const char* value_title, int value_index); // value index is used if value_title == NULL
-void debuginator_set_edit_type(TheDebuginator* debuginator, const char* path, DebuginatorItemEditorDataType edit_type);
-
-#ifdef __cplusplus
-}
-#endif
-
-#ifdef DEBUGINATOR_IMPLEMENTATION
 
 #ifndef DEBUGINATOR_assert
 #include <assert.h>
@@ -541,7 +539,8 @@ void debuginator__set_num_visible_children(DebuginatorItem* item, int diff) {
 	}
 }
 
-void debuginator__on_change_theme(DebuginatorItem* item, void* value, const char* value_title) {
+void debuginator__on_change_theme(DebuginatorItem* item, void* value, const char* value_title, void* app_userdata) {
+	(void)app_userdata;
 	(void)value_title;
 	TheDebuginator* debuginator = (TheDebuginator*)item->user_data;
 	debuginator->theme_index = *(int*)value;
@@ -974,11 +973,9 @@ void debuginator_set_default_value(TheDebuginator* debuginator, const char* path
 		}
 	}
 
-	if (value_index < 0 || value_index > item->leaf.num_values) {
-		return;
+	if (0 <= value_index && value_index < item->leaf.num_values) {
+		item->leaf.default_index = value_index;
 	}
-
-	item->leaf.default_index = value_index;
 }
 
 void debuginator_set_edit_type(TheDebuginator* debuginator, const char* path, DebuginatorItemEditorDataType edit_type) {
@@ -989,7 +986,6 @@ void debuginator_set_edit_type(TheDebuginator* debuginator, const char* path, De
 
 	item->leaf.edit_type = edit_type;
 }
-
 
 // Note: If you remove the last visible item, you must create a new one under the root.
 void debuginator_remove_item(TheDebuginator* debuginator, const char* path) {
@@ -1803,7 +1799,7 @@ void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item) {
 	}
 
 	void* value = ((char*)item->leaf.values) + item->leaf.hot_index * item->leaf.array_element_size;
-	item->leaf.on_item_changed_callback(item, value, item->leaf.value_titles[item->leaf.hot_index]);
+	item->leaf.on_item_changed_callback(item, value, item->leaf.value_titles[item->leaf.hot_index], debuginator->app_user_data);
 }
 
 void debuginator_move_sibling_previous(TheDebuginator* debuginator) {
@@ -2058,8 +2054,9 @@ void debug_menu_handle_input(TheDebuginator* debuginator, DebuginatorInput* inpu
 // ╚██████╔╝   ██║   ██║███████╗██║   ██║      ██║
 //  ╚═════╝    ╚═╝   ╚═╝╚══════╝╚═╝   ╚═╝      ╚═╝
 
-void debuginator_copy_1byte(DebuginatorItem* item, void* value, const char* value_title) {
+void debuginator_copy_1byte(DebuginatorItem* item, void* value, const char* value_title, void* app_userdata) {
 	(void)value_title;
+	(void)app_userdata;
 	memcpy(item->user_data, value, 1);
 }
 
