@@ -130,9 +130,9 @@ DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 	DebuginatorOnItemChangedCallback on_item_changed_callback, void* user_data,
 	const char** value_titles, void* values, int num_values, size_t value_size);
 
-void debuginator_create_bool_item(TheDebuginator* debuginator, const char* path, const char* description, void* user_data);
+DebuginatorItem* debuginator_create_bool_item(TheDebuginator* debuginator, const char* path, const char* description, void* user_data);
 
-DebuginatorItem* debuginator_new_folder_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* title, size_t title_length);
+DebuginatorItem* debuginator_new_folder_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* title, int title_length);
 DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* path, bool create_if_not_exist);
 void debuginator_set_hot_item(TheDebuginator* debuginator, const char* path);
 void debuginator_remove_item(TheDebuginator* debuginator, const char* path);
@@ -182,7 +182,7 @@ typedef struct DebuginatorItemEditorData {
 } DebuginatorItemEditorData;
 
 typedef struct DebuginatorItem {
-	char title[20];
+	char* title;
 	bool is_folder;
 	bool is_filtered;
 	void* user_data;
@@ -206,88 +206,6 @@ typedef struct DebuginatorItem {
 
 #ifdef DEBUGINATOR_IMPLEMENTATION
 
-typedef struct DebuginatorAnimation {
-	DebuginatorAnimationType type;
-	union {
-		struct {
-			DebuginatorItem* item;
-			int value_index;
-			DebuginatorVector2 start_pos;
-		} item_activate;
-	} data;
-
-	float duration;
-	float time;
-} DebuginatorAnimation;
-
-typedef struct TheDebuginatorConfig {
-	bool create_default_debuginator_items;
-
-	size_t item_buffer_capacity;
-	DebuginatorItem* item_buffer;
-
-	DebuginatorTheme themes[16];
-
-	DebuginatorItemEditorData edit_types[DEBUGINATOR_EditTypeCount];
-
-	void* app_user_data;
-	DebuginatorDrawTextCallback draw_text;
-	DebuginatorDrawRectCallback draw_rect;
-	DebuginatorWordWrapCallback word_wrap;
-	DebuginatorTextSizeCallback text_size;
-
-	DebuginatorVector2 size; // Might not be needed in the future
-	DebuginatorVector2 screen_resolution;
-	bool left_aligned;
-	int open_direction;
-	float focus_height;
-} TheDebuginatorConfig;
-
-typedef struct TheDebuginator {
-	DebuginatorItem* root;
-	DebuginatorItem* hot_item;
-
-	size_t item_buffer_capacity;
-	size_t item_buffer_size;
-	DebuginatorItem* item_buffer;
-
-	size_t free_list_size;
-	size_t free_list[256];
-
-	bool is_open;
-	float openness_timer; // range [0,1]
-	float openness; // range [0,1]
-
-	DebuginatorTheme themes[16];
-	DebuginatorTheme theme; // current theme
-	int theme_index;
-
-	DebuginatorItemEditorData edit_types[DEBUGINATOR_EditTypeCount];
-
-	float dt;
-	float draw_timer;
-	float filter_timer;
-	void* app_user_data;
-	DebuginatorDrawTextCallback draw_text;
-	DebuginatorDrawRectCallback draw_rect;
-	DebuginatorWordWrapCallback word_wrap;
-	DebuginatorTextSizeCallback text_size;
-
-	DebuginatorVector2 size;
-	DebuginatorVector2 root_position;
-	DebuginatorVector2 screen_resolution;
-	bool left_aligned;
-	int open_direction;
-	float focus_height;
-	float current_height_offset;
-
-	DebuginatorAnimation animations[8];
-	int animation_count;
-
-	bool filter_enabled;
-	char filter[32];
-	int filter_length;
-} TheDebuginator;
 
 #ifndef DEBUGINATOR_assert
 #include <assert.h>
@@ -370,6 +288,201 @@ typedef struct TheDebuginator {
 #ifndef DEBUGINATOR_debug_print
 #define DEBUGINATOR_debug_print
 #endif
+
+
+typedef struct DebuginatorSlotAllocator DebuginatorSlotAllocator;
+typedef struct DebuginatorBlockAllocator DebuginatorBlockAllocator;
+typedef struct DebuginatorSlotAllocator {
+	char* arena;
+	int size;
+	int capacity;
+	int element_size;
+	void* next_free_slot;
+	void*(*allocate)(DebuginatorSlotAllocator* allocator, int num_bytes);
+	void(*deallocate)(DebuginatorSlotAllocator* allocator, void* ptr);
+} DebuginatorSlotAllocator;
+
+typedef struct DebuginatorBlockAllocatorStaticData {
+	char* arena_end;
+	int arena_capacity;
+	int block_capacity;
+	char* next_free_block;
+} DebuginatorBlockAllocatorStaticData;
+
+typedef struct DebuginatorBlockAllocator {
+	// void*(*allocate)(DebuginatorBlockAllocator* allocator, int num_bytes);
+	// void(*deallocate)(DebuginatorBlockAllocator* allocator, void* ptr);
+	DebuginatorBlockAllocatorStaticData* data;
+	int element_size;
+	char* current_block;
+	int current_block_size;
+	char* next_free_slot;
+} DebuginatorBlockAllocator;
+
+void debuginator__block_allocator_init(DebuginatorBlockAllocator* allocator, int element_size, DebuginatorBlockAllocatorStaticData* data) {
+	DEBUGINATOR_memset(allocator, 0, sizeof(*allocator));
+	allocator->data = data;
+	allocator->element_size = element_size;
+	allocator->current_block = data->next_free_block;
+	data->next_free_block += data->block_capacity;
+}
+
+void* debuginator__block_allocate(DebuginatorBlockAllocator* allocator, int num_bytes) {
+	(void)num_bytes;
+	if (allocator->current_block == NULL || allocator->data->block_capacity - allocator->current_block_size < num_bytes) {
+		if (allocator->data->arena_end < allocator->data->next_free_block) {
+			return NULL;
+		}
+
+		allocator->current_block_size = 0;
+		allocator->current_block = allocator->data->next_free_block;
+		allocator->data->next_free_block += allocator->data->block_capacity;
+		*((DebuginatorBlockAllocator**)allocator->current_block) = allocator;
+	}
+
+	void* result = allocator->current_block + allocator->current_block_size;
+	allocator->current_block_size += allocator->element_size;
+	return result;
+}
+
+void debuginator__block_deallocate(DebuginatorBlockAllocator* allocator, void* ptr) {
+	uintptr_t* next_ptr = (uintptr_t*)ptr;
+	if (allocator->next_free_slot == NULL) {
+		*next_ptr = 0;
+	}
+	else {
+		*next_ptr = (uintptr_t)allocator->next_free_slot;
+	}
+	allocator->next_free_slot = (char*)ptr;
+}
+
+//
+//void* debuginator__slot_allocate(DebuginatorSlotAllocator* allocator, int num_bytes) {
+//	(void)num_bytes;
+//	if (allocator->next_free_slot == NULL) {
+//		if (allocator->size == allocator->capacity) {
+//			return NULL;
+//		}
+//
+//		void* result = allocator->arena + allocator->size;
+//		allocator->size += allocator->element_size;
+//		return result;
+//	}
+//
+//	void* result = allocator->next_free_slot;
+//	allocator->next_free_slot = result;
+//	return result;
+//}
+//
+//void debuginator__slot_deallocate(DebuginatorSlotAllocator* allocator, void* ptr) {
+//	if (allocator->next_free_slot == NULL) {
+//		int* int_ptr = (int*)ptr;
+//		*int_ptr = 0;
+//		allocator->next_free_slot = int_ptr;
+//	}
+//}
+
+typedef struct DebuginatorAnimation {
+	DebuginatorAnimationType type;
+	union {
+		struct {
+			DebuginatorItem* item;
+			int value_index;
+			DebuginatorVector2 start_pos;
+		} item_activate;
+	} data;
+
+	float duration;
+	float time;
+} DebuginatorAnimation;
+
+typedef struct TheDebuginatorConfig {
+	bool create_default_debuginator_items;
+
+	char* memory_arena;
+	int memory_arena_capacity;
+
+	DebuginatorTheme themes[16];
+
+	DebuginatorItemEditorData edit_types[DEBUGINATOR_EditTypeCount];
+
+	void* app_user_data;
+	DebuginatorDrawTextCallback draw_text;
+	DebuginatorDrawRectCallback draw_rect;
+	DebuginatorWordWrapCallback word_wrap;
+	DebuginatorTextSizeCallback text_size;
+
+	DebuginatorVector2 size; // Might not be needed in the future
+	DebuginatorVector2 screen_resolution;
+	bool left_aligned;
+	int open_direction;
+	float focus_height;
+} TheDebuginatorConfig;
+
+typedef struct TheDebuginator {
+	DebuginatorItem* root;
+	DebuginatorItem* hot_item;
+
+	bool is_open;
+	float openness_timer; // range [0,1]
+	float openness; // range [0,1]
+
+	DebuginatorTheme themes[16];
+	DebuginatorTheme theme; // current theme
+	int theme_index;
+
+	DebuginatorItemEditorData edit_types[DEBUGINATOR_EditTypeCount];
+
+	float dt;
+	float draw_timer;
+	float filter_timer;
+	void* app_user_data;
+	DebuginatorDrawTextCallback draw_text;
+	DebuginatorDrawRectCallback draw_rect;
+	DebuginatorWordWrapCallback word_wrap;
+	DebuginatorTextSizeCallback text_size;
+
+	DebuginatorVector2 size;
+	DebuginatorVector2 root_position;
+	DebuginatorVector2 screen_resolution;
+	bool left_aligned;
+	int open_direction;
+	float focus_height;
+	float current_height_offset;
+
+	DebuginatorAnimation animations[8];
+	int animation_count;
+
+	bool filter_enabled;
+	char filter[32];
+	int filter_length;
+
+	char* memory_arena; // char* for pointer arithmetic
+	int memory_arena_capacity;
+	DebuginatorBlockAllocatorStaticData allocator_data;
+	//int allocator_by_allocation[4];
+	DebuginatorBlockAllocator allocators[4];
+	/*
+	DebuginatorItem* memory_item_buffer;
+	int memory_item_buffer_size;
+	int memory_item_buffer_capacity;
+	int memory_item_buffer_free_index;
+	char* memory_fixed_string_buffer;
+	int memory_fixed_string_buffer_size;
+	int memory_fixed_string_buffer_capacity;
+	int memory_fixed_string_buffer_index;
+	char* memory_string_buffer;
+	int memory_string_buffer_size;
+	int memory_string_buffer_capacity;
+	char* memory_string_buffer_free_index;
+	size_t item_buffer_capacity;
+	size_t item_buffer_size;
+	DebuginatorItem* item_buffer;
+
+	size_t free_list_size;
+	size_t free_list[256];*/
+
+} TheDebuginator;
 
 DebuginatorVector2 debuginator__vector2(float x, float y) {
 	DebuginatorVector2 v; v.x = x; v.y = y;
@@ -485,6 +598,37 @@ void debuginator__expanded_draw_boolean(TheDebuginator* debuginator, Debuginator
 	}
 }
 
+void* debuginator__allocate(TheDebuginator* debuginator, int bytes/*, const void* origin*/) {
+	for (int i = 0; i < 4; i++) {
+		if (bytes <= debuginator->allocators[i].element_size) {
+			void* result = debuginator__block_allocate(&debuginator->allocators[i], bytes);
+			DEBUGINATOR_memset(result, 0, bytes);
+			return result;
+		}
+	}
+
+	DEBUGINATOR_assert(false);
+	return NULL;
+}
+
+void debuginator__deallocate(TheDebuginator* debuginator, void* void_ptr) {
+	char* ptr = (char*)void_ptr;
+	DEBUGINATOR_assert(debuginator->memory_arena <= ptr && ptr < debuginator->memory_arena + debuginator->memory_arena_capacity);
+	uintptr_t block_address = (uintptr_t)ptr;
+	int capacity = debuginator->allocator_data.block_capacity;
+	block_address /= capacity;
+	block_address *= capacity;
+	//char* block_ptr = (char*)block_address;
+	DebuginatorBlockAllocator* allocator = (DebuginatorBlockAllocator*)block_address;
+	debuginator__block_deallocate(allocator, void_ptr);
+/*
+	for (int i = 0; i < 4; i++) {
+		if (ptr < debuginator->allocators[i].arena + debuginator->allocators[i].capacity) {
+			debuginator->allocators[i].deallocate(&debuginator->allocators[i], void_ptr);
+		}
+	}*/
+}
+
 DebuginatorAnimation* debuginator__get_free_animation(TheDebuginator* debuginator) {
 	if (debuginator->animation_count == sizeof(debuginator->animations) / sizeof(*debuginator->animations)) {
 		return NULL;
@@ -495,21 +639,21 @@ DebuginatorAnimation* debuginator__get_free_animation(TheDebuginator* debuginato
 	return animation;
 }
 
-DebuginatorItem* debuginator_get_free_item(TheDebuginator* debuginator) {
-	DebuginatorItem* item;
-	if (debuginator->free_list_size > 0) {
-		size_t free_index = debuginator->free_list[--debuginator->free_list_size];
-		DEBUGINATOR_assert(free_index < debuginator->item_buffer_capacity);
-		item = &debuginator->item_buffer[free_index];
-	}
-	else {
-		DEBUGINATOR_assert(debuginator->item_buffer_size < debuginator->item_buffer_capacity);
-		item = &debuginator->item_buffer[debuginator->item_buffer_size++];
-	}
+//DebuginatorItem* debuginator_get_free_item(TheDebuginator* debuginator) {
+	//DebuginatorItem* item;
+	//if (debuginator->free_list_size > 0) {
+	//	size_t free_index = debuginator->free_list[--debuginator->free_list_size];
+	//	DEBUGINATOR_assert(free_index < debuginator->item_buffer_capacity);
+	//	item = &debuginator->item_buffer[free_index];
+	//}
+	//else {
+	//	DEBUGINATOR_assert(debuginator->item_buffer_size < debuginator->item_buffer_capacity);
+	//	item = &debuginator->item_buffer[debuginator->item_buffer_size++];
+	//}
 
-	DEBUGINATOR_memset(item, 0, sizeof(*item));
-	return item;
-}
+	//DEBUGINATOR_memset(item, 0, sizeof(*item));
+	//return item;
+//}
 
 void debuginator__set_total_height(DebuginatorItem* item, float height) {
 	//if (height == 30 && item->is_folder) {
@@ -547,20 +691,14 @@ void debuginator__on_change_theme(DebuginatorItem* item, void* value, const char
 	debuginator->theme = debuginator->themes[debuginator->theme_index];
 }
 
-void debuginator_set_title(DebuginatorItem* item, const char* title, size_t title_length) {
+void debuginator_set_title(TheDebuginator* debuginator, DebuginatorItem* item, const char* title, int title_length) {
 	if (title_length == 0) {
-		title_length = DEBUGINATOR_strlen(title);
+		title_length = (int)DEBUGINATOR_strlen(title);
 	}
 
-	if (title_length >= DEBUGINATOR_max_title_length) {
-		DEBUGINATOR_strncpy_s(item->title, DEBUGINATOR_max_title_length, title, DEBUGINATOR_max_title_length - 3);
-		item->title[DEBUGINATOR_max_title_length - 3] = '.';
-		item->title[DEBUGINATOR_max_title_length - 2] = '.';
-		item->title[DEBUGINATOR_max_title_length - 1] = '\0';
-	}
-	else {
-		DEBUGINATOR_strncpy_s(item->title, DEBUGINATOR_max_title_length, title, title_length);
-	}
+	item->title = (char*)debuginator__allocate(debuginator, title_length);
+	memcpy((void*)item->title, title, title_length);
+	item->title[title_length] = '\0';
 }
 
 DebuginatorItem* debuginator__next_visible_sibling(DebuginatorItem* item) {
@@ -745,19 +883,11 @@ void debuginator_set_parent(DebuginatorItem* item, DebuginatorItem* parent) {
 	}
 }
 
-DebuginatorItem* debuginator_new_folder_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* title, size_t title_length) {
-	DEBUGINATOR_assert(debuginator->item_buffer_size < debuginator->item_buffer_capacity);
-	DebuginatorItem* folder_item;
-	if (debuginator->free_list_size > 0) {
-		folder_item = &debuginator->item_buffer[--debuginator->free_list_size];
-	}
-	else {
-		folder_item = &debuginator->item_buffer[debuginator->item_buffer_size++];
-	}
-
+DebuginatorItem* debuginator_new_folder_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* title, int title_length) {
+	DebuginatorItem* folder_item = (DebuginatorItem*)debuginator__allocate(debuginator, sizeof(DebuginatorItem));
 	folder_item->is_folder = true;
 	folder_item->folder.num_visible_children = 0;
-	debuginator_set_title(folder_item, title, title_length);
+	debuginator_set_title(debuginator, folder_item, title, title_length);
 	debuginator_set_parent(folder_item, parent);
 	debuginator__set_total_height(folder_item, 30);
 	return folder_item;
@@ -798,8 +928,8 @@ DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, DebuginatorIt
 		if (next_slash == NULL) {
 			// Found the last part of the path
 			if (current_item == NULL) {
-				current_item = debuginator_get_free_item(debuginator);
-				debuginator_set_title(current_item, temp_path, 0);
+				current_item = (DebuginatorItem*)debuginator__allocate(debuginator, sizeof(DebuginatorItem));
+				debuginator_set_title(debuginator, current_item, temp_path, 0);
 				debuginator_set_parent(current_item, parent);
 			}
 
@@ -809,7 +939,7 @@ DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, DebuginatorIt
 			// Found a folder
 			if (current_item == NULL) {
 				// Parent item doesn't exist yet
-				parent = debuginator_new_folder_item(debuginator, parent, temp_path, next_slash - temp_path);
+				parent = debuginator_new_folder_item(debuginator, parent, temp_path, (int)(next_slash - temp_path));
 			}
 			else {
 				parent = current_item;
@@ -865,7 +995,7 @@ DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 }
 
 int debuginator_save(TheDebuginator* debuginator, DebuginatorSaveItemCallback callback, char* save_buffer, int save_buffer_size) {
-	char current_full_path[128] = { 0 };
+	char current_full_path[256] = { 0 };
 	int path_indices[8] = { 0 };
 	int current_path_index = 0;
 
@@ -873,7 +1003,7 @@ int debuginator_save(TheDebuginator* debuginator, DebuginatorSaveItemCallback ca
 	while (item != NULL) {
 		if (item->is_folder) {
 			if (item->folder.first_child != NULL) {
-				DEBUGINATOR_strcpy_s(current_full_path + path_indices[current_path_index], 20, item->title);
+				DEBUGINATOR_strcpy_s(current_full_path + path_indices[current_path_index], 50, item->title); // HACK
 
 				path_indices[current_path_index + 1] = path_indices[current_path_index] + (int)DEBUGINATOR_strlen(item->title);
 				*(current_full_path + path_indices[current_path_index + 1]) = '/';
@@ -886,7 +1016,7 @@ int debuginator_save(TheDebuginator* debuginator, DebuginatorSaveItemCallback ca
 			}
 		}
 		else {
-			DEBUGINATOR_strcpy_s(current_full_path + path_indices[current_path_index], 20, item->title);
+			DEBUGINATOR_strcpy_s(current_full_path + path_indices[current_path_index], 50, item->title); // HACK
 			path_indices[current_path_index + 1] = path_indices[current_path_index] + (int)DEBUGINATOR_strlen(item->title);
 			//int current_path_length = path_indices[current_path_index + 1];
 
@@ -1389,17 +1519,23 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 	DEBUGINATOR_assert(config->draw_text != NULL);
 	//DEBUGINATOR_assert(config->app_user_data);
 	DEBUGINATOR_assert(config->word_wrap != NULL);
-	DEBUGINATOR_assert(config->item_buffer != NULL);
-	DEBUGINATOR_assert(config->item_buffer_capacity > 0);
+	DEBUGINATOR_assert(config->memory_arena != NULL);
+	DEBUGINATOR_assert(config->memory_arena_capacity > 0);
 	//DEBUGINATOR_assert(config->open_direction == -1 || config->open_direction == 1);
 	DEBUGINATOR_assert(config->size.x > 0 && config->size.y > 0);
 	DEBUGINATOR_assert(config->screen_resolution.x > 0 && config->screen_resolution.y > 0);
 
 	DEBUGINATOR_memset(debuginator, 0, sizeof(*debuginator));
+	debuginator->memory_arena = config->memory_arena;
+	debuginator->memory_arena_capacity = config->memory_arena_capacity;
 
-	debuginator->item_buffer_capacity = config->item_buffer_capacity;
-	debuginator->item_buffer = config->item_buffer;
-	DEBUGINATOR_memset(debuginator->item_buffer, 0, sizeof(DebuginatorItem) * debuginator->item_buffer_capacity);
+	debuginator->allocator_data.arena_end = debuginator->memory_arena + debuginator->memory_arena_capacity;
+	debuginator->allocator_data.block_capacity = 1024;
+	debuginator->allocator_data.next_free_block = (char*)((((uintptr_t)debuginator->memory_arena + 1024) / 1024) * 1024);
+	debuginator__block_allocator_init(&debuginator->allocators[0], 8, &debuginator->allocator_data);
+	debuginator__block_allocator_init(&debuginator->allocators[1], 32, &debuginator->allocator_data);
+	debuginator__block_allocator_init(&debuginator->allocators[2], sizeof(DebuginatorItem), &debuginator->allocator_data);
+	debuginator__block_allocator_init(&debuginator->allocators[3], 1000, &debuginator->allocator_data);
 
 	debuginator->draw_rect = config->draw_rect;
 	debuginator->draw_text = config->draw_text;
@@ -2060,7 +2196,7 @@ void debuginator_copy_1byte(DebuginatorItem* item, void* value, const char* valu
 	memcpy(item->user_data, value, 1);
 }
 
-void debuginator_create_bool_item(TheDebuginator* debuginator, const char* path, const char* description, void* user_data) {
+DebuginatorItem* debuginator_create_bool_item(TheDebuginator* debuginator, const char* path, const char* description, void* user_data) {
 	bool value_before_creation = *(bool*)user_data;
 	static bool bool_values[2] = { false, true };
 	static const char* bool_titles[2] = { "False", "True" };
@@ -2074,6 +2210,8 @@ void debuginator_create_bool_item(TheDebuginator* debuginator, const char* path,
 		item->leaf.default_index = 1;
 		item->leaf.hot_index = 1;
 	}
+
+	return item;
 }
 
 #endif // DEBUGINATOR_IMPLEMENTATION

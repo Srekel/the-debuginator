@@ -244,11 +244,12 @@ int main(int argc, char **argv)
 	}
 
 	const int NUM_ITEMS = 1024 * 512;
-	DebuginatorItem* item_buffer = (DebuginatorItem*)malloc(sizeof(DebuginatorItem) * NUM_ITEMS);
+	int memory_arena_capacity = sizeof(DebuginatorItem) * NUM_ITEMS;
+	char* memory_arena = (char*)malloc(memory_arena_capacity);
 	TheDebuginatorConfig config;
 	debuginator_get_default_config(&config);
-	config.item_buffer = item_buffer;
-	config.item_buffer_capacity = NUM_ITEMS;
+	config.memory_arena = memory_arena;
+	config.memory_arena_capacity = memory_arena_capacity;
 	config.draw_rect = draw_rect;
 	config.draw_text = draw_text;
 	config.app_user_data = (void*)gui;
@@ -339,7 +340,7 @@ int main(int argc, char **argv)
 		}
 	}
 
-	free(item_buffer);
+	free(memory_arena);
 	free(loaded_data_buffer);
 	gui_destroy_gui(gui);
 	return 0;

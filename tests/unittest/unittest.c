@@ -84,11 +84,11 @@ static void unittest_debug_menu_setup(TheDebuginator* debuginator) {
 static void unittest_debug_menu_run() {
 	memset(&g_testdata, 0, sizeof(g_testdata));
 	UnitTestData* testdata = &g_testdata;
-	DebuginatorItem item_buffer[16];
+	//DebuginatorItem item_buffer[16];
 	TheDebuginatorConfig config;
 	debuginator_get_default_config(&config);
-	config.item_buffer = item_buffer;
-	config.item_buffer_capacity = sizeof(item_buffer) / sizeof(item_buffer[0]);
+	//config.item_buffer = item_buffer;
+	//config.item_buffer_capacity = sizeof(item_buffer) / sizeof(item_buffer[0]);
 	config.draw_rect = draw_rect;
 	config.draw_text = draw_text;
 	config.app_user_data = NULL;
