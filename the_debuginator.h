@@ -127,16 +127,21 @@ typedef enum DebuginatorItemEditorDataType {
 	DEBUGINATOR_EditTypeCount = 16,
 } DebuginatorItemEditorDataType;
 
+bool debuginator_is_open(TheDebuginator* debuginator);
+void debuginator_set_open(TheDebuginator* debuginator, bool open);
+
 DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 	DebuginatorItem* parent, const char* path, const char* description,
 	DebuginatorOnItemChangedCallback on_item_changed_callback, void* user_data,
 	const char** value_titles, void* values, int num_values, size_t value_size);
 
 DebuginatorItem* debuginator_create_bool_item(TheDebuginator* debuginator, const char* path, const char* description, void* user_data);
+DebuginatorItem* debuginator_create_preset_item(TheDebuginator* debuginator, const char* path, const char** paths, const char** value_titles, int** value_indices, int num_paths);
 
 DebuginatorItem* debuginator_new_folder_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* title, int title_length);
 DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* path, bool create_if_not_exist);
 void debuginator_set_hot_item(TheDebuginator* debuginator, const char* path);
+DebuginatorItem* debuginator_get_hot_item(TheDebuginator* debuginator);
 void debuginator_remove_item(TheDebuginator* debuginator, const char* path);
 
 int debuginator_save(TheDebuginator* debuginator, DebuginatorSaveItemCallback callback, char* save_buffer, int save_buffer_size);
@@ -145,6 +150,16 @@ void debuginator_set_default_value(TheDebuginator* debuginator, const char* path
 void debuginator_set_edit_type(TheDebuginator* debuginator, const char* path, DebuginatorItemEditorDataType edit_type);
 
 void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item);
+
+void debuginator_move_to_next_leaf(TheDebuginator* debuginator, bool long_move);
+void debuginator_move_to_prev_leaf(TheDebuginator* debuginator, bool long_move);
+void debuginator_move_to_child(TheDebuginator* debuginator, bool toggle_and_activate);
+void debuginator_move_to_parent(TheDebuginator* debuginator);
+
+bool debuginator_is_filtering_enabled(TheDebuginator* debuginator);
+void debuginator_set_filtering_enabled(TheDebuginator* debuginator, bool enabled);
+char* debuginator_get_filter(TheDebuginator* debuginator);
+void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_filter);
 
 typedef struct DebuginatorFolderData {
 	DebuginatorItem* first_child;
@@ -201,6 +216,31 @@ typedef struct DebuginatorItem {
 #pragma warning(suppress: 4201) // Unnamed union
 	};
 } DebuginatorItem;
+
+
+typedef struct TheDebuginatorConfig {
+	bool create_default_debuginator_items;
+
+	char* memory_arena;
+	int memory_arena_capacity;
+
+	DebuginatorTheme themes[16];
+
+	DebuginatorItemEditorData edit_types[DEBUGINATOR_EditTypeCount];
+
+	void* app_user_data;
+	DebuginatorDrawTextCallback draw_text;
+	DebuginatorDrawRectCallback draw_rect;
+	DebuginatorWordWrapCallback word_wrap;
+	DebuginatorTextSizeCallback text_size;
+
+	DebuginatorVector2 size; // Might not be needed in the future
+	DebuginatorVector2 screen_resolution;
+	bool left_aligned;
+	int open_direction;
+	float focus_height;
+} TheDebuginatorConfig;
+
 
 #ifdef __cplusplus
 }
@@ -398,29 +438,6 @@ typedef struct DebuginatorAnimation {
 	float time;
 } DebuginatorAnimation;
 
-typedef struct TheDebuginatorConfig {
-	bool create_default_debuginator_items;
-
-	char* memory_arena;
-	int memory_arena_capacity;
-
-	DebuginatorTheme themes[16];
-
-	DebuginatorItemEditorData edit_types[DEBUGINATOR_EditTypeCount];
-
-	void* app_user_data;
-	DebuginatorDrawTextCallback draw_text;
-	DebuginatorDrawRectCallback draw_rect;
-	DebuginatorWordWrapCallback word_wrap;
-	DebuginatorTextSizeCallback text_size;
-
-	DebuginatorVector2 size; // Might not be needed in the future
-	DebuginatorVector2 screen_resolution;
-	bool left_aligned;
-	int open_direction;
-	float focus_height;
-} TheDebuginatorConfig;
-
 typedef struct TheDebuginator {
 	DebuginatorItem* root;
 	DebuginatorItem* hot_item;
@@ -554,7 +571,7 @@ void debuginator__quick_draw_boolean(TheDebuginator* debuginator, DebuginatorIte
 	DebuginatorColor background = debuginator__color(0, 0, 0, 100);
 	debuginator->draw_rect(pos, size, background, debuginator->app_user_data);
 
-	item->leaf.draw_t += debuginator->dt;
+	item->leaf.draw_t += debuginator->dt * 5;
 	if (item->leaf.draw_t > 1) {
 		item->leaf.draw_t = 1;
 	}
@@ -1122,6 +1139,10 @@ void debuginator_load_item(TheDebuginator* debuginator, const char* path, const 
 	}
 }
 
+DebuginatorItem* debuginator_get_hot_item(TheDebuginator* debuginator) {
+	return debuginator->hot_item;
+}
+
 void debuginator_set_hot_item(TheDebuginator* debuginator, const char* path) {
 	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, false);
 	if (item == NULL) {
@@ -1228,6 +1249,18 @@ bool debuginator__distance_to_hot_item(DebuginatorItem* item, DebuginatorItem* h
 	}
 
 	return false;
+}
+
+bool debuginator_is_filtering_enabled(TheDebuginator* debuginator) {
+	return debuginator->filter_enabled;
+}
+
+void debuginator_set_filtering_enabled(TheDebuginator* debuginator, bool enabled) {
+	debuginator->filter_enabled = enabled;
+}
+
+char* debuginator_get_filter(TheDebuginator* debuginator) {
+	return debuginator->filter;
 }
 
 void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_filter) {
@@ -1467,13 +1500,6 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 	DEBUGINATOR_strcpy_s(debuginator->filter, sizeof(debuginator->filter), filter);
 }
 
-//██╗███╗   ██╗██╗████████╗
-//██║████╗  ██║██║╚══██╔══╝
-//██║██╔██╗ ██║██║   ██║
-//██║██║╚██╗██║██║   ██║
-//██║██║ ╚████║██║   ██║
-//╚═╝╚═╝  ╚═══╝╚═╝   ╚═╝
-
 void debuginator_get_default_config(TheDebuginatorConfig* config) {
 	DEBUGINATOR_memset(config, 0, sizeof(*config));
 
@@ -1649,19 +1675,11 @@ void debuginator_print(DebuginatorItem* item, int indentation) {
 	}
 }
 
-//██╗   ██╗██████╗ ██████╗  █████╗ ████████╗███████╗
-//██║   ██║██╔══██╗██╔══██╗██╔══██╗╚══██╔══╝██╔════╝
-//██║   ██║██████╔╝██║  ██║███████║   ██║   █████╗
-//██║   ██║██╔═══╝ ██║  ██║██╔══██║   ██║   ██╔══╝
-//╚██████╔╝██║     ██████╔╝██║  ██║   ██║   ███████╗
-//╚═════╝ ╚═╝     ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚══════╝
-
-
 void debuginator_update(TheDebuginator* debuginator, float dt) {
 	debuginator->dt = dt;
-	debuginator->draw_timer += dt;
+	debuginator->draw_timer += dt * 5;
 	if (debuginator->is_open && debuginator->openness < 1) {
-		debuginator->openness_timer += dt;
+		debuginator->openness_timer += dt * 5;
 		if (debuginator->openness_timer > 1) {
 			debuginator->openness_timer = 1;
 		}
@@ -1670,7 +1688,7 @@ void debuginator_update(TheDebuginator* debuginator, float dt) {
 	}
 
 	else if (!debuginator->is_open && debuginator->openness > 0) {
-		debuginator->openness_timer -= dt;
+		debuginator->openness_timer -= dt * 5;
 		if (debuginator->openness_timer < 0) {
 			debuginator->openness_timer = 0;
 		}
@@ -1689,13 +1707,6 @@ void debuginator_update(TheDebuginator* debuginator, float dt) {
 	}
 }
 
-
-//██████╗ ██████╗  █████╗ ██╗    ██╗
-//██╔══██╗██╔══██╗██╔══██╗██║    ██║
-//██║  ██║██████╔╝███████║██║ █╗ ██║
-//██║  ██║██╔══██╗██╔══██║██║███╗██║
-//██████╔╝██║  ██║██║  ██║╚███╔███╔╝
-//╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝ ╚══╝╚══╝
 
 float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2 offset, bool hot);
 
@@ -1721,6 +1732,7 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 	offset.y = debuginator->current_height_offset;
 
 	// Draw all items
+	offset.x += 10;
 	DebuginatorItem* item_to_draw = debuginator__first_visible_child(debuginator->root);
 	while (item_to_draw && offset.y < -30) {
 		// We'll start to draw off-screen which we don't want.
@@ -1794,32 +1806,44 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 	if (running_animations == 0) {
 		debuginator->animation_count = 0;
 	}
+	offset.x -= 10;
 
-	if (debuginator->filter_enabled) {
+	bool filter_hint_mode = !debuginator->filter_enabled && debuginator->current_height_offset > 100;
+	if (debuginator->filter_enabled || filter_hint_mode) {
 		debuginator->filter_timer += dt * 5;
 		if (debuginator->filter_timer > 1) {
 			debuginator->filter_timer = 1;
 		}
+		if (filter_hint_mode && debuginator->filter_timer > 0.5f) {
+			debuginator->filter_timer = 0.5f;
+		}
 	}
 	else {
-		debuginator->filter_timer -= dt * 15;
+		debuginator->filter_timer -= dt * 10;
 		if (debuginator->filter_timer < 0) {
 			debuginator->filter_timer = 0;
 		}
 	}
 
 	if (debuginator->filter_timer > 0) {
+		float alpha = debuginator->filter_timer * (filter_hint_mode ? 0.5f : 1);
 		DebuginatorVector2 filter_pos = debuginator__vector2(debuginator->openness * debuginator->size.x - 450, 25);
-		DebuginatorVector2 filter_size = debuginator__vector2(100 + (debuginator->size.x - 200) * debuginator->filter_timer, 50);
-		DebuginatorColor filter_color = debuginator__color(50, 100, 50, (int)(200 * debuginator->filter_timer));
+		DebuginatorVector2 filter_size = debuginator__vector2(150 + (debuginator->size.x - 150) * debuginator->filter_timer, 50);
+		DebuginatorColor filter_color = debuginator__color(50, 100, 50, (int)(200 * debuginator->filter_timer * alpha));
 		debuginator->draw_rect(filter_pos, filter_size, filter_color, debuginator->app_user_data);
 
 		DebuginatorVector2 header_text_size = debuginator->text_size("Search: ", &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
+		filter_size.x = header_text_size.x + 40;
+		debuginator->draw_rect(filter_pos, filter_size, filter_color, debuginator->app_user_data);
+
 		filter_pos.x += 20;
 		filter_pos.y = filter_pos.y + filter_size.y / 2 - header_text_size.y / 2;
-		
-		debuginator->draw_text("Search: ", &filter_pos, &debuginator->theme.colors[DEBUGINATOR_ItemTitleActive], &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
 
+		DebuginatorColor header_color = debuginator->theme.colors[DEBUGINATOR_ItemTitleActive];
+		header_color.a *= alpha;
+		debuginator->draw_text("Search: ", &filter_pos, &header_color, &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
+
+		filter_pos.x += 40;
 		filter_pos.x += header_text_size.x;
 		if (strchr(debuginator->filter, ' ')) {
 			// Exact search mode
@@ -1844,14 +1868,21 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 			filter_pos.x += filter_text_size.x;
 		}
 
-
-		DebuginatorVector2 caret_size = debuginator__vector2(10, header_text_size.y);
-		DebuginatorVector2 caret_pos = debuginator__vector2(filter_pos.x, filter_pos.y);
-		filter_color.r = 150;
-		filter_color.g = 250;
-		filter_color.b = 150;
-		filter_color.a = DEBUGINATOR_sin(debuginator->draw_timer) < 0.5 ? 220 : 50;
-		debuginator->draw_rect(caret_pos, caret_size, filter_color, debuginator->app_user_data);
+		if (debuginator->filter_enabled) {
+			DebuginatorVector2 caret_size = debuginator__vector2(10, header_text_size.y);
+			DebuginatorVector2 caret_pos = debuginator__vector2(filter_pos.x, filter_pos.y);
+			filter_color.r = 150;
+			filter_color.g = 250;
+			filter_color.b = 150;
+			filter_color.a = alpha * DEBUGINATOR_sin(debuginator->draw_timer) < 0.5 ? 220 : 50;
+			debuginator->draw_rect(caret_pos, caret_size, filter_color, debuginator->app_user_data);
+		}
+		else if (filter_hint_mode) {
+			//filter_pos.x += 50;
+			DebuginatorColor hint_color = header_color;
+			hint_color.a *= 0.5;
+			debuginator->draw_text("(backspace)", &filter_pos, &hint_color, &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
+		}
 	}
 }
 
@@ -1942,15 +1973,9 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 	return offset.y;
 }
 
-
-
-
-//██╗███╗   ██╗██████╗ ██╗   ██╗████████╗
-//██║████╗  ██║██╔══██╗██║   ██║╚══██╔══╝
-//██║██╔██╗ ██║██████╔╝██║   ██║   ██║
-//██║██║╚██╗██║██╔═══╝ ██║   ██║   ██║
-//██║██║ ╚████║██║     ╚██████╔╝   ██║
-//╚═╝╚═╝  ╚═══╝╚═╝      ╚═════╝    ╚═╝
+bool debuginator_is_open(TheDebuginator* debuginator) {
+	return debuginator->is_open;
+}
 
 void debuginator_set_open(TheDebuginator* debuginator, bool is_open) {
 	debuginator->is_open = is_open;
