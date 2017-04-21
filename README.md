@@ -69,7 +69,7 @@ Can handle any number of items, the "hot" one will be centered (ish) smoothly.
 
 ### :heavy_check_mark: Performant
 
-Tested with 100000 menu items with no noticable hit on my laptop running a debug build. That's good enough for me! Hey, it's a debug menu.
+Tested with 10000 menu items with no noticable hit on my laptop running a debug build. That's good enough for me! Hey, it's a debug menu.
 
 Though I will likely do some proper profiling and optimization later on.
 
@@ -91,27 +91,27 @@ Agnostic regarding Keyboard/Gamepad. It's handled at application layer, though g
 
 Mouse input coming later.
 
+### :small_blue_diamond: Custom item editors
+
+Different editors for different types of items, and support for users adding their own.
+
 ### :factory: Nice look & feel
 
 Nice default color scheme, multiple themes to choose from, unique "editors" for different types of data, smooth animations, juicy feedback.
 
 Yes, it's important.
 
-### :factory: Custom item editors
-
-Different editors for different types of items, and support for users adding their own.
-
 ### :factory: Reference implementation
 
 Written in near-C C++ and SDL.
 
+### :factory: Presets
+
+Activate one item to activate a number of other ones.
+
 ### :red_circle: Accordiony
 
 No matter how far down or deep you scroll, you can always see the folders above the current item.
-
-### :red_circle: Presets
-
-Activate one item to activate a number of other ones.
 
 ### :red_circle: Favorites
 

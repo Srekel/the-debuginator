@@ -85,6 +85,11 @@
     <IncludePath>$(IncludePath)</IncludePath>
     <OutDir>$(SolutionDir)\Build\$(Platform)_$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)\Build\_$(ProjectName)\$(Platform)_$(Configuration)\</IntDir>
+    <TargetName>TheDebuginator_SDLDemo_Debug</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>$(SolutionDir)\Build\$(Platform)_$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)\Build\_$(ProjectName)\$(Platform)_$(Configuration)\</IntDir>
     <TargetName>TheDebuginator_SDLDemo</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -145,11 +150,22 @@ copy $(SolutionDir)3rdparty\liberation-fonts-ttf-2.00.1\*.ttf $(OutputPath)</Com
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\external\SDL2-2.0.5\include;$(SolutionDir)..\..\external\SDL2_ttf-2.0.14\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <SubSystem>Console</SubSystem>
+      <AdditionalDependencies>SDL2.lib;SDL2main.lib;SDL2_ttf.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)..\..\external\SDL2-2.0.5\lib\x64;$(SolutionDir)..\..\external\SDL2_ttf-2.0.14\lib\x64</AdditionalLibraryDirectories>
     </Link>
+    <PostBuildEvent>
+      <Command>copy $(SolutionDir)..\..\external\SDL2-2.0.5\lib\x64\SDL2.dll $(OutputPath)
+
+copy $(SolutionDir)..\..\external\SDL2_ttf-2.0.14\lib\x64\*.dll $(OutputPath)
+
+copy $(SolutionDir)3rdparty\liberation-fonts-ttf-2.00.1\*.ttf $(OutputPath)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

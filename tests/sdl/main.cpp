@@ -59,6 +59,10 @@ const char* word_wrap(const char* text, DebuginatorFont font, float max_width, c
 	return gui_word_wrap((GuiHandle)userdata, s_fonts[font.italic ? FONT_ItemDescription : FONT_ItemTitle], text, (int)max_width, buffer, buffer_size);
 }
 
+void word_wrap2(const char* text, DebuginatorFont font, float max_width, char** buffer, int buffer_size, void* userdata) {
+	gui_word_wrap2((GuiHandle)userdata, s_fonts[font.italic ? FONT_ItemDescription : FONT_ItemTitle], text, (int)max_width, buffer, buffer_size);
+}
+
 DebuginatorVector2 text_size(const char* text, DebuginatorFont* font, void* userdata) {
 	Vector2 text_size = gui_text_size((GuiHandle)userdata, text, s_fonts[font->italic ? FONT_ItemDescription : FONT_ItemTitle]);
 	return *(DebuginatorVector2*)&text_size;
@@ -253,7 +257,7 @@ int main(int argc, char **argv)
 	config.draw_rect = draw_rect;
 	config.draw_text = draw_text;
 	config.app_user_data = (void*)gui;
-	config.word_wrap = word_wrap;
+	config.word_wrap = word_wrap2;
 	config.text_size = text_size;
 	config.size.x = 500;
 	config.size.y = (float)res_y;
@@ -271,11 +275,19 @@ int main(int argc, char **argv)
 	if (!load_result) {
 		return 1;
 	}
+	free(loaded_data_buffer);
 
 	GameData* gamedata = game_init(gui, &debuginator);
 
 	bool limit_framerate = true;
 	debuginator_create_bool_item(&debuginator, "SDL Demo/Throttle framerate", "Disables sleeping between frames.", &limit_framerate);
+
+	bool show_framerate = true;
+	debuginator_create_bool_item(&debuginator, "SDL Demo/Show framerate", "Shows framerate and frame time in ms.", &show_framerate);
+
+	const char* preset_paths[2] = { "SDL Demo/Throttle framerate", "SDL Demo/Show framerate" };
+	const char* preset_value_titles[2] = { "True", "False" };
+	debuginator_create_preset_item(&debuginator, "SDL Demo/Preset example", preset_paths, preset_value_titles, NULL, 2);
 
 	Uint64 NOW = SDL_GetPerformanceCounter();
 	Uint64 LAST = 0;
@@ -325,7 +337,7 @@ int main(int argc, char **argv)
 			SDL_Delay((Uint32)(1000 * (frame_time - dt)));
 		}
 
-		if (dt > 0) {
+		if (show_framerate && dt > 0) {
 			char fpsstr[64] = { 0 };
 			sprintf_s(fpsstr, 64, "FPS: %.2lf / ms: %.15lf", 1/dt, dt * 1000);
 			gui_draw_text(gui, fpsstr, Vector2(res_x * 0.5f, 20.f), s_fonts[FONT_ItemDescription], Color(255, 255, 0, 255));
@@ -341,7 +353,6 @@ int main(int argc, char **argv)
 	}
 
 	free(memory_arena);
-	free(loaded_data_buffer);
 	gui_destroy_gui(gui);
 	return 0;
 }

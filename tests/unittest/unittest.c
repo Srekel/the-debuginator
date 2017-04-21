@@ -92,7 +92,7 @@ static void unittest_debug_menu_run() {
 	config.draw_rect = draw_rect;
 	config.draw_text = draw_text;
 	config.app_user_data = NULL;
-	config.word_wrap = word_wrap;
+	//config.word_wrap = word_wrap; TODO FIX
 
 	config.size.x = 500;
 	config.size.y = 1000;

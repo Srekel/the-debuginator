@@ -164,7 +164,7 @@ const char* gui_word_wrap(GuiHandle gui_handle, FontTemplateHandle font_handle, 
 		if (width >= max_width) {
 			return next_word;
 		}
-			
+
 		strcpy_s(buffer, buffer_size, temp_buffer);
 		if (next_word == NULL) {
 			return NULL;
@@ -172,6 +172,66 @@ const char* gui_word_wrap(GuiHandle gui_handle, FontTemplateHandle font_handle, 
 
 		next_word = strchr(next_word + 1, ' ');
 	}
+}
+
+void gui_word_wrap2(GuiHandle gui_handle, FontTemplateHandle font_handle, const char* text, int max_width, char** buffer, int buffer_size) {
+	(void)gui_handle;
+	FontTemplate* font_template = (FontTemplate*)font_handle;
+
+	// Step until find a word end (' ' '\n')
+	// Is it longer than max_width? If so, copy into buffer, move to next line.
+
+	// "Multiple strings."
+
+	char** pointers = buffer;
+	char* line = (char*)(buffer + (buffer_size / 8 / 2)); // Reserve first half of buffer for the pointers
+	*pointers = line;
+	const char* text_word = text;
+	const char* text_char = text;
+	char* current_line_pos = line;
+	char* current_word_pos = line;
+	while (*text_char != '\0') {
+		while (*text_char != '\0') {
+			*current_line_pos++ = *text_char++;
+			if (*text_char == ' ') {
+				break;
+				//strncpy_s(line, current_line_pos, text_char - current_line_pos);
+			}
+
+		}
+
+		// We found a word end.
+		int width;
+		if (TTF_SizeText(font_template->font, line, &width, NULL) != 0) {
+			break;
+		}
+		
+		if (width >= max_width) 
+		{
+			// Current line is too big
+			if (current_word_pos == line) {
+				// Word is too long to fit on a line
+				*++line = '\0';
+				pointers++;
+				*pointers = ++line;
+				text_word = text_char;
+			}
+			else {
+				// Move current word to next line.
+				*current_word_pos = '\0';
+				line = current_word_pos;
+			}
+
+			while (*text_char == ' ') {
+				++text_char;
+			}
+		}
+		else {
+			// Current word fit.
+			text_word = text_char;
+		}
+	}
+
 }
 
 Vector2 gui_text_size(GuiHandle gui_handle, const char* text, FontTemplateHandle font_handle) {

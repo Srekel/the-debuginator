@@ -50,8 +50,8 @@ static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
 
 	debuginator_new_folder_item(debuginator, NULL, "Folder 2", 0);
 	char folder[64] = { 0 };
-	for (int i = 0; i < 100; i++) {
-		for (int j = 0; j < 10; j++) {
+	for (int i = 0; i < 10; i++) {
+		for (int j = 0; j < 100; j++) {
 			sprintf_s(folder, 64, "Game/Test%02d/GameBool%02d", i, j);
 			debuginator_create_bool_item(debuginator, folder, "Change a bool.", &data->gamebool);
 		}
