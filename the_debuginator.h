@@ -1727,9 +1727,12 @@ void debuginator_update(TheDebuginator* debuginator, float dt) {
 float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2 offset, bool hot);
 
 void debuginator_draw(TheDebuginator* debuginator, float dt) {
-	// TODO return if fully closed
+	// Don't do anything if we're fully closed
+	if (!debuginator->is_open && debuginator->openness == 0) {
+		return;
+	}
 
-	// update theme opacity
+	// Update theme opacity
 	DebuginatorTheme* source_theme = &debuginator->themes[debuginator->theme_index];
 	for (size_t i = 0; i < DEBUGINATOR_NumDrawTypes; i++) {
 		debuginator->theme.colors[i].a = (unsigned char)(source_theme->colors[i].a * debuginator->openness);
@@ -1824,6 +1827,7 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 	}
 	offset.x -= 10;
 
+	// Draw search filter
 	bool filter_hint_mode = !debuginator->filter_enabled && debuginator->current_height_offset > 100;
 	if (debuginator->filter_enabled || filter_hint_mode) {
 		debuginator->filter_timer += dt * 5;
