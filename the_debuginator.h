@@ -1674,7 +1674,7 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 			static int theme_indices[4] = { 0, 1, 2, 3 };
 			static const char* string_titles[4] = { "Classic", "Blue", "Black & White", "Beige" };
 			debuginator_create_array_item(debuginator, NULL, "Debuginator/Theme",
-				"Change color theme of The Debuginator.", debuginator__on_change_theme, debuginator,
+				"Change color theme of The Debuginator. \nNote that only Classic is currently polished.", debuginator__on_change_theme, debuginator,
 				string_titles, (void*)theme_indices, 4, sizeof(theme_indices[0]));
 		}
 	}
@@ -2403,7 +2403,7 @@ DebuginatorItem* debuginator_create_preset_item(TheDebuginator* debuginator, con
 This software is available under 2 licenses -- choose whichever you prefer.
 ------------------------------------------------------------------------------
 ALTERNATIVE A - MIT License
-Copyright (c) 2017 Sean Barrett
+Copyright (c) 2017 Anders Elfgren
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
 the Software without restriction, including without limitation the rights to
