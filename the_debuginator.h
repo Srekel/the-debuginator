@@ -1515,7 +1515,7 @@ void debuginator_get_default_config(TheDebuginatorConfig* config) {
 
 	config->create_default_debuginator_items = true;
 	config->open_direction = 1;
-	config->focus_height = 0.65f;
+	config->focus_height = 0.3f;
 	config->left_aligned = true;
 
 	// Initialize default themes
@@ -1844,7 +1844,7 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 	if (debuginator->filter_timer > 0) {
 		float alpha = debuginator->filter_timer * (filter_hint_mode ? 0.5f : 1);
 		DebuginatorVector2 filter_pos = debuginator__vector2(debuginator->openness * debuginator->size.x - 450, 25);
-		DebuginatorVector2 filter_size = debuginator__vector2(150 + (debuginator->size.x - 150) * debuginator->filter_timer, 50);
+		DebuginatorVector2 filter_size = debuginator__vector2(150 + (debuginator->size.x - 250) * debuginator->filter_timer, 50);
 		DebuginatorColor filter_color = debuginator__color(50, 100, 50, (int)(200 * debuginator->filter_timer * alpha));
 		debuginator->draw_rect(filter_pos, filter_size, filter_color, debuginator->app_user_data);
 
