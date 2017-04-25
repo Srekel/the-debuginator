@@ -370,21 +370,27 @@ void debuginator__block_allocator_init(DebuginatorBlockAllocator* allocator, int
 	allocator->data = data;
 	allocator->element_size = element_size;
 	allocator->current_block = data->next_free_block;
+	allocator->current_block_size = allocator->element_size; // Make room for allocator ptr at start of block
 	data->next_free_block += data->block_capacity;
+	DEBUGINATOR_assert(allocator->data->arena_end > allocator->data->next_free_block);
+	*((DebuginatorBlockAllocator**)allocator->current_block) = allocator;
 }
 
 void* debuginator__block_allocate(DebuginatorBlockAllocator* allocator, int num_bytes) {
 	(void)num_bytes;
-	if (allocator->current_block == NULL || allocator->data->block_capacity - allocator->current_block_size < num_bytes) {
+	if (allocator->data->block_capacity - allocator->current_block_size < num_bytes) {
 		if (allocator->data->arena_end < allocator->data->next_free_block) {
 			return NULL;
 		}
 
-		allocator->current_block_size = 0;
+		allocator->current_block_size = allocator->element_size; // Make room for allocator ptr at start of block
 		allocator->current_block = allocator->data->next_free_block;
 		allocator->data->next_free_block += allocator->data->block_capacity;
+		DEBUGINATOR_assert(allocator->data->arena_end > allocator->data->next_free_block);
 		*((DebuginatorBlockAllocator**)allocator->current_block) = allocator;
 	}
+
+	// TODO: Use the freed slots.
 
 	void* result = allocator->current_block + allocator->current_block_size;
 	allocator->current_block_size += allocator->element_size;
@@ -668,7 +674,7 @@ void debuginator__deallocate(TheDebuginator* debuginator, void* void_ptr) {
 	block_address /= capacity;
 	block_address *= capacity;
 	//char* block_ptr = (char*)block_address;
-	DebuginatorBlockAllocator* allocator = (DebuginatorBlockAllocator*)block_address;
+	DebuginatorBlockAllocator* allocator = *(DebuginatorBlockAllocator**)block_address;
 	debuginator__block_deallocate(allocator, void_ptr);
 	DEBUGINATOR_memset(void_ptr, 0xcc, allocator->element_size);
 /*
@@ -1610,8 +1616,8 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 	debuginator->memory_arena_capacity = config->memory_arena_capacity;
 
 	debuginator->allocator_data.arena_end = debuginator->memory_arena + debuginator->memory_arena_capacity;
-	debuginator->allocator_data.block_capacity = 1024;
-	debuginator->allocator_data.next_free_block = (char*)((((uintptr_t)debuginator->memory_arena + 1024) / 1024) * 1024);
+	debuginator->allocator_data.block_capacity = 0x1000;
+	debuginator->allocator_data.next_free_block = (char*)((((uintptr_t)debuginator->memory_arena + 0x1000 - 1) / 0x1000) * 0x1000);
 	debuginator__block_allocator_init(&debuginator->allocators[0], 8, &debuginator->allocator_data);
 	debuginator__block_allocator_init(&debuginator->allocators[1], 32, &debuginator->allocator_data);
 	debuginator__block_allocator_init(&debuginator->allocators[2], sizeof(DebuginatorItem), &debuginator->allocator_data);
