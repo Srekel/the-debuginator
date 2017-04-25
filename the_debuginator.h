@@ -144,7 +144,8 @@ DebuginatorItem* debuginator_new_folder_item(TheDebuginator* debuginator, Debugi
 DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* path, bool create_if_not_exist);
 void debuginator_set_hot_item(TheDebuginator* debuginator, const char* path);
 DebuginatorItem* debuginator_get_hot_item(TheDebuginator* debuginator);
-void debuginator_remove_item(TheDebuginator* debuginator, const char* path);
+void debuginator_remove_item(TheDebuginator* debuginator, DebuginatorItem* item);
+void debuginator_remove_item_by_path(TheDebuginator* debuginator, const char* path);
 
 int debuginator_save(TheDebuginator* debuginator, DebuginatorSaveItemCallback callback, char* save_buffer, int save_buffer_size);
 void debuginator_load_item(TheDebuginator* debuginator, const char* path, const char* value_title);
@@ -1197,10 +1198,13 @@ void debuginator_set_edit_type(TheDebuginator* debuginator, const char* path, De
 }
 
 // Note: If you remove the last visible item, you must create a new one under the root.
-void debuginator_remove_item(TheDebuginator* debuginator, const char* path) {
-	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, false);
-	if (item == NULL) {
-		return;
+void debuginator_remove_item(TheDebuginator* debuginator, DebuginatorItem* item) {
+	if (item->is_folder) {
+		DebuginatorItem* child = item->folder.first_child;
+		while (child != NULL) {
+			debuginator_remove_item(debuginator, child);
+			child = item->folder.first_child;
+		}
 	}
 
 	if (item->prev_sibling) {
@@ -1238,7 +1242,17 @@ void debuginator_remove_item(TheDebuginator* debuginator, const char* path) {
 	if (item->is_folder) {
 		debuginator__deallocate(debuginator, item->leaf.description);
 	}
-	// TODO: Release item...
+
+	debuginator__deallocate(debuginator, item);
+}
+
+void debuginator_remove_item_by_path(TheDebuginator* debuginator, const char* path) {
+	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, false);
+	if (item == NULL) {
+		return;
+	}
+
+	debuginator_remove_item(debuginator, item);
 }
 
 bool debuginator__distance_to_hot_item(DebuginatorItem* item, DebuginatorItem* hot_item, float* distance) {
@@ -1283,7 +1297,7 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 	if (filter_length < DEBUGINATOR_strlen(debuginator->filter)) {
 		expanding_search = true;
 		if (debuginator->hot_item->user_data == (void*)0x12345678) {
-			debuginator_remove_item(debuginator, debuginator->hot_item->title);
+			debuginator_remove_item(debuginator, debuginator->hot_item);
 		}
 	}
 	else if (filter_length > DEBUGINATOR_strlen(debuginator->filter)) {
