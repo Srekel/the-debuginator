@@ -1840,7 +1840,7 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 		filter_pos.y = filter_pos.y + filter_size.y / 2 - header_text_size.y / 2;
 
 		DebuginatorColor header_color = debuginator->theme.colors[DEBUGINATOR_ItemTitleActive];
-		header_color.a *= alpha;
+		header_color.a = (unsigned char)(header_color.a * alpha);
 		debuginator->draw_text("Search: ", &filter_pos, &header_color, &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
 
 		filter_pos.x += 40;
@@ -1880,7 +1880,7 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 		else if (filter_hint_mode) {
 			//filter_pos.x += 50;
 			DebuginatorColor hint_color = header_color;
-			hint_color.a *= 0.5;
+			hint_color.a = (unsigned char)(hint_color.a * alpha);
 			debuginator->draw_text("(backspace)", &filter_pos, &hint_color, &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
 		}
 	}
@@ -2289,6 +2289,7 @@ DebuginatorItem* debuginator_create_bool_item(TheDebuginator* debuginator, const
 	if (value_before_creation == true) {
 		item->leaf.default_index = 1;
 		item->leaf.hot_index = 1;
+		item->leaf.active_index = 1;
 	}
 
 	return item;
