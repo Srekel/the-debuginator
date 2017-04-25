@@ -112,6 +112,8 @@ typedef void(*DebuginatorWordWrapCallback)
 	(const char* text, DebuginatorFont font, float max_width, unsigned* row_count, unsigned* row_lengths, int row_lengths_buffer_size, void* app_userdata);
 typedef DebuginatorVector2 (*DebuginatorTextSizeCallback)
 	(const char* text, DebuginatorFont* font, void* userdata);
+typedef void (*DebuginatorOnOpenChangedCallback)
+	(bool opened, bool done, void* app_userdata);
 
 typedef void(*DebuginatorOnItemChangedCallback)(DebuginatorItem* item, void* value, const char* value_title, void* app_userdata);
 typedef int(*DebuginatorSaveItemCallback)(const char* path, const char* value, char* save_buffer, int save_buffer_size);
@@ -233,6 +235,7 @@ typedef struct TheDebuginatorConfig {
 	DebuginatorDrawRectCallback draw_rect;
 	DebuginatorWordWrapCallback word_wrap;
 	DebuginatorTextSizeCallback text_size;
+	DebuginatorOnOpenChangedCallback on_opened_changed;
 
 	DebuginatorVector2 size; // Might not be needed in the future
 	DebuginatorVector2 screen_resolution;
@@ -470,6 +473,7 @@ typedef struct TheDebuginator {
 	DebuginatorDrawRectCallback draw_rect;
 	DebuginatorWordWrapCallback word_wrap;
 	DebuginatorTextSizeCallback text_size;
+	DebuginatorOnOpenChangedCallback on_opened_changed;
 
 	DebuginatorVector2 size;
 	DebuginatorVector2 root_position;
@@ -1627,6 +1631,7 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 	debuginator->draw_text = config->draw_text;
 	debuginator->word_wrap = config->word_wrap;
 	debuginator->text_size = config->text_size;
+	debuginator->on_opened_changed = config->on_opened_changed;
 	debuginator->app_user_data = config->app_user_data;
 
 	debuginator->size = config->size;
@@ -1698,6 +1703,9 @@ void debuginator_update(TheDebuginator* debuginator, float dt) {
 		debuginator->openness_timer += dt * 5;
 		if (debuginator->openness_timer > 1) {
 			debuginator->openness_timer = 1;
+			if (debuginator->on_opened_changed) {
+				debuginator->on_opened_changed(true, true, debuginator->app_user_data);
+			}
 		}
 
 		debuginator->openness = debuginator__ease_out(debuginator->openness_timer, 0, 1, 1);
@@ -1707,6 +1715,9 @@ void debuginator_update(TheDebuginator* debuginator, float dt) {
 		debuginator->openness_timer -= dt * 5;
 		if (debuginator->openness_timer < 0) {
 			debuginator->openness_timer = 0;
+			if (debuginator->on_opened_changed) {
+				debuginator->on_opened_changed(false, true, debuginator->app_user_data);
+			}
 		}
 
 		debuginator->openness = debuginator__ease_out(debuginator->openness_timer, 0, 1, 1);
@@ -2003,6 +2014,9 @@ bool debuginator_is_open(TheDebuginator* debuginator) {
 
 void debuginator_set_open(TheDebuginator* debuginator, bool is_open) {
 	debuginator->is_open = is_open;
+	if (debuginator->on_opened_changed) {
+		debuginator->on_opened_changed(is_open, false, debuginator->app_user_data);
+	}
 }
 
 void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item) {
