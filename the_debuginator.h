@@ -1430,16 +1430,16 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 				for (int i = 0; i < match_count; i += 2) {
 					int match_index = matches[i];
 					int match_length = matches[i + 1];
-					int word_break_start = match_index == 0 
+					int is_word_break_start = match_index == 0 
 						|| current_full_path[match_index - 1] == ' '
 						|| (!DEBUGINATOR_isalpha(current_full_path[match_index - 1]) && DEBUGINATOR_isalpha(current_full_path[match_index]))
 						|| (!DEBUGINATOR_isdigit(current_full_path[match_index - 1]) && DEBUGINATOR_isdigit(current_full_path[match_index]));
-					int word_break_end = match_index + match_length == current_path_length
+					int is_word_break_end = match_index + match_length == current_path_length
 						|| current_full_path[match_index + match_length] == ' '
 						|| (!DEBUGINATOR_isalpha(current_full_path[match_index + match_length]) && DEBUGINATOR_isalpha(current_full_path[match_index]))
 						|| (!DEBUGINATOR_isdigit(current_full_path[match_index + match_length]) && DEBUGINATOR_isdigit(current_full_path[match_index]));
-					int match_in_item_title = match_index >= path_indices[current_path_index];
-					int match_score = (word_break_start * 10 + word_break_end * 5 + match_in_item_title * 10 + match_length) * match_length;
+					int is_match_in_item_title = match_index >= path_indices[current_path_index];
+					int match_score = (is_word_break_start * 10 + is_word_break_end * 5 + is_match_in_item_title * 10 + match_length) * match_length;
 					if (match_score > best_match_score) {
 						best_match_score = match_score;
 						best_match_index = i;
