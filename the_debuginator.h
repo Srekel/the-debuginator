@@ -108,8 +108,8 @@ typedef void (*DebuginatorDrawTextCallback)
 	(const char* text, DebuginatorVector2* position, DebuginatorColor* color, DebuginatorFont* font, void* userdata);
 typedef void (*DebuginatorDrawRectCallback)
 	(DebuginatorVector2 position, DebuginatorVector2 size, DebuginatorColor color, void* userdata);
-typedef void (*DebuginatorWordWrapCallback)
-	(const char* text, DebuginatorFont font, float max_width, char** buffer, int buffer_size, void* userdata);
+typedef void(*DebuginatorWordWrapCallback)
+	(const char* text, DebuginatorFont font, float max_width, unsigned* row_count, unsigned* row_lengths, int row_lengths_buffer_size, void* app_userdata);
 typedef DebuginatorVector2 (*DebuginatorTextSizeCallback)
 	(const char* text, DebuginatorFont* font, void* userdata);
 
@@ -304,6 +304,10 @@ typedef struct TheDebuginatorConfig {
 #ifndef DEBUGINATOR_fabs
 #include <math.h>
 #define DEBUGINATOR_fabs fabs
+#endif
+
+#ifndef DEBUGINATOR_min
+#define DEBUGINATOR_min(a,b) (((a)<(b))?(a):(b))
 #endif
 
 #ifndef DEBUGINATOR_sin
@@ -1645,8 +1649,14 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 
 	if (config->create_default_debuginator_items) {
 		{
-			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help",
-				"The Debuginator is a debug menu. With a keyboard, you open it with Right Arrow and close it with Left Arrow. You use those keys, plus Up/Down arrows to navigate. Right Arrow is also used to change value on a menu item.", NULL, NULL,
+			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/About",
+				"The Debuginator is an open source debug menu. New versions can be found here: https://github.com/Srekel/the-debuginator", NULL, NULL,
+				NULL, NULL, 0, 0);
+			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/Keyboard default usage",
+				"Open the menu with Right Arrow. \nClose it with Left Arrow. \nUse all arrow keys to navigate. \nRight Arrow is also used to change value on a menu item.", NULL, NULL,
+				NULL, NULL, 0, 0);
+			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/Keyboard default advanced usage",
+				"Hold CTRL for faster navigation and item toggling. \nEscape to quickly close the menu.\nBackspace to toggle search.", NULL, NULL,
 				NULL, NULL, 0, 0);
 		}
 		{
@@ -1942,25 +1952,29 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 			offset.x += 20;
 
 			const char* description = item->leaf.description;
-			float description_width = debuginator->size.x - 150 - offset.x;
+			float description_width = debuginator->size.x - 50 - offset.x;
 			if (!debuginator->left_aligned) {
 				description_width = debuginator->screen_resolution.x - offset.x;
 			}
 
-			// Temp hack until word wrap fixed.
-			offset.y += 30;
-			debuginator->draw_text(description, &offset, &debuginator->theme.colors[DEBUGINATOR_ItemDescription], &debuginator->theme.fonts[DEBUGINATOR_ItemDescription], debuginator->app_user_data);
-
-			float description_height = 30;
-			//int description_wrapped_size = 16 + (int)DEBUGINATOR_strlen(description) * 3;
-			//char** description_wrapped = (char**)debuginator__allocate(debuginator, description_wrapped_size);
-			//debuginator->word_wrap(description, debuginator->theme.fonts[DEBUGINATOR_ItemDescription], description_width, description_wrapped, description_wrapped_size, debuginator->app_user_data);
-			//while (*description_wrapped != NULL) {
-			//	char* description_line = *description_wrapped++;
-			//	offset.y += 30;
-			//	description_height += 30;
-			//	debuginator->draw_text(description_line, &offset, &debuginator->theme.colors[DEBUGINATOR_ItemDescription], &debuginator->theme.fonts[DEBUGINATOR_ItemDescription], debuginator->app_user_data);
-			//}
+			char description_line_to_draw[64];
+			float description_height = 0;
+			unsigned row_lengths[32];
+			unsigned row_count = 0;
+			debuginator->word_wrap(description, debuginator->theme.fonts[DEBUGINATOR_ItemDescription], description_width, &row_count, row_lengths, 32, debuginator->app_user_data);
+			unsigned row_index = 0;
+			for (unsigned i = 0; i < row_count; i++) {
+				unsigned row_index_end = row_index + row_lengths[i];
+				const char* description_line = description + row_index;
+				DEBUGINATOR_strncpy_s(description_line_to_draw, 64, description_line, DEBUGINATOR_min(row_index_end - row_index, 64));
+				row_index = row_index_end;
+				while (description[row_index] == '\n') {
+					++row_index;
+				}
+				offset.y += 30;
+				description_height += 30;
+				debuginator->draw_text(description_line_to_draw, &offset, &debuginator->theme.colors[DEBUGINATOR_ItemDescription], &debuginator->theme.fonts[DEBUGINATOR_ItemDescription], debuginator->app_user_data);
+			}
 
 			// Feels kinda ugly to do this here but... works for now.
 			debuginator__set_total_height(item, 30 + description_height + 30 * (item->leaf.num_values));
