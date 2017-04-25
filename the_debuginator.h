@@ -1992,16 +1992,16 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 				description_width = debuginator->screen_resolution.x - offset.x;
 			}
 
-			char description_line_to_draw[64];
+			char description_line_to_draw[64] = { 0 };
 			float description_height = 0;
-			unsigned row_lengths[32];
+			unsigned row_lengths[32] = { 0 };
 			unsigned row_count = 0;
 			debuginator->word_wrap(description, debuginator->theme.fonts[DEBUGINATOR_ItemDescription], description_width, &row_count, row_lengths, 32, debuginator->app_user_data);
 			unsigned row_index = 0;
 			for (unsigned i = 0; i < row_count; i++) {
 				unsigned row_index_end = row_index + row_lengths[i];
 				const char* description_line = description + row_index;
-				DEBUGINATOR_strncpy_s(description_line_to_draw, 64, description_line, DEBUGINATOR_min(row_index_end - row_index, 64));
+				DEBUGINATOR_strncpy_s(description_line_to_draw, 64, description_line, DEBUGINATOR_min(row_index_end - row_index, 63));
 				row_index = row_index_end;
 				while (description[row_index] == '\n') {
 					++row_index;
