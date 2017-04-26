@@ -2019,27 +2019,27 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 				description_width = debuginator->screen_resolution.x - offset.x;
 			}
 
-			char description_line_to_draw[64] = { 0 };
+			char description_line_to_draw[64];
 			float description_height = 0;
-			unsigned row_lengths[32] = { 0 };
+			unsigned row_lengths[32];
 			unsigned row_count = 0;
 			debuginator->word_wrap(description, debuginator->theme.fonts[DEBUGINATOR_ItemDescription], description_width, &row_count, row_lengths, 32, debuginator->app_user_data);
 			unsigned row_index = 0;
 			for (unsigned i = 0; i < row_count; i++) {
 				unsigned row_index_end = row_index + row_lengths[i];
 				const char* description_line = description + row_index;
-				DEBUGINATOR_strncpy_s(description_line_to_draw, 64, description_line, DEBUGINATOR_min(row_index_end - row_index, 63));
+				DEBUGINATOR_strncpy_s(description_line_to_draw, 64, description_line, DEBUGINATOR_min(row_index_end - row_index, 64));
 				row_index = row_index_end;
 				while (description[row_index] == '\n') {
 					++row_index;
 				}
-				offset.y += 30;
-				description_height += 30;
+				offset.y += debuginator->item_height;
+				description_height += debuginator->item_height;
 				debuginator->draw_text(description_line_to_draw, &offset, &debuginator->theme.colors[DEBUGINATOR_ItemDescription], &debuginator->theme.fonts[DEBUGINATOR_ItemDescription], debuginator->app_user_data);
 			}
 
 			// Feels kinda ugly to do this here but... works for now.
-			debuginator__set_total_height(item, 30 + description_height + 30 * (item->leaf.num_values));
+			debuginator__set_total_height(item, debuginator->item_height + description_height + debuginator->item_height * (item->leaf.num_values));
 
 			debuginator->edit_types[item->leaf.edit_type].expanded_draw(debuginator, item, &offset);
 
