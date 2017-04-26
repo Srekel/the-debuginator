@@ -44,7 +44,7 @@ void draw_text(const char* text, DebuginatorVector2* position, DebuginatorColor*
 }
 
 #pragma warning(suppress: 4100) // Unreferenced param
-void draw_rect(DebuginatorVector2 position, DebuginatorVector2 size, DebuginatorColor color, void* userdata) {
+void draw_rect(DebuginatorVector2* position, DebuginatorVector2* size, DebuginatorColor* color, void* userdata) {
 }
 
 #pragma warning(suppress: 4100) // Unreferenced param

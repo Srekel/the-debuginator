@@ -51,8 +51,8 @@ void draw_text(const char* text, DebuginatorVector2* position, DebuginatorColor*
 	gui_draw_text(gui, text, *(Vector2*)position, s_fonts[color_index], *(Color*)color);
 }
 
-void draw_rect(DebuginatorVector2 position, DebuginatorVector2 size, DebuginatorColor color, void* userdata) {
-	gui_draw_rect_filled((GuiHandle)userdata, *(Vector2*)&position, *(Vector2*)&size, *(Color*)&color);
+void draw_rect(DebuginatorVector2* position, DebuginatorVector2* size, DebuginatorColor* color, void* userdata) {
+	gui_draw_rect_filled((GuiHandle)userdata, *(Vector2*)position, *(Vector2*)size, *(Color*)color);
 }
 
 void word_wrap(const char* text, DebuginatorFont font, float max_width, unsigned* row_count, unsigned* row_lengths, int row_lengths_buffer_size, void* app_userdata) {
