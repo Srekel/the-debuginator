@@ -309,7 +309,7 @@ static void unittest_debug_menu_run() {
 	}
 	{
 		// Remove item
-		debuginator_remove_item(&debuginator, "Folder 2/String item");
+		debuginator_remove_item_by_path(&debuginator, "Folder 2/String item");
 		DebuginatorItem* expected_null_item = debuginator_get_item(&debuginator, NULL, "Folder 2/String item", false);
 		ASSERT(expected_null_item == NULL);
 

@@ -55,8 +55,10 @@ void draw_rect(DebuginatorVector2 position, DebuginatorVector2 size, Debuginator
 	gui_draw_rect_filled((GuiHandle)userdata, *(Vector2*)&position, *(Vector2*)&size, *(Color*)&color);
 }
 
-const char* word_wrap(const char* text, DebuginatorFont font, float max_width, char* buffer, int buffer_size, void* userdata) {
-	return gui_word_wrap((GuiHandle)userdata, s_fonts[font.italic ? FONT_ItemDescription : FONT_ItemTitle], text, (int)max_width, buffer, buffer_size);
+void word_wrap(const char* text, DebuginatorFont font, float max_width, unsigned* row_count, unsigned* row_lengths, int row_lengths_buffer_size, void* app_userdata) {
+	(void)text, font, max_width, row_count, row_lengths, row_lengths_buffer_size, row_lengths_buffer_size, app_userdata;
+	*row_count = 1;
+	row_lengths[0] = (int)strlen(text) - 1;
 }
 
 void word_wrap2(const char* text, DebuginatorFont font, float max_width, char** buffer, int buffer_size, void* userdata) {
@@ -257,7 +259,7 @@ int main(int argc, char **argv)
 	config.draw_rect = draw_rect;
 	config.draw_text = draw_text;
 	config.app_user_data = (void*)gui;
-	config.word_wrap = word_wrap2;
+	config.word_wrap = word_wrap;
 	config.text_size = text_size;
 	config.size.x = 500;
 	config.size.y = (float)res_y;
@@ -322,12 +324,12 @@ int main(int argc, char **argv)
 			}
 		}
 
-		debuginator_update(&debuginator, (float)dt * 5);
+		debuginator_update(&debuginator, (float)dt);
 
 		gui_frame_begin(gui);
 
 		game_update(gamedata, (float)dt);
-		debuginator_draw(&debuginator, (float)dt * 1.f);
+		debuginator_draw(&debuginator, (float)dt);
 
 		// Not a good way to enforce a framerate due to delay being inprecise but
 		// its purpose is to save some battery, not to get exactly X fps.
