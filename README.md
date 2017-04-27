@@ -65,9 +65,11 @@ Tested with 10000 menu items with no noticable hit on my laptop running a debug 
 
 Though I will likely do some proper profiling and optimization later on.
 
-### :heavy_check_mark: Filter
+### :heavy_check_mark: Search filter
 
 Quickly and easily filter the items to find the one you want. Uses a fuzzy search mechanism to allow a user who isn't entirely sure what something is called to find it quickly. Adding a space to the search makes the filter run in "exact" mode; each part of the filter must be matched as-is.
+
+Check my post on this for a bit of details about it: https://medium.com/@Srekel/implementing-a-fuzzy-search-algorithm-for-the-debuginator-cacc349e6c55
 
 ### :small_blue_diamond: Hierarchical
 
