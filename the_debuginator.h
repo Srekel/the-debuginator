@@ -165,6 +165,7 @@ char* debuginator_get_filter(TheDebuginator* debuginator);
 void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_filter);
 
 void debuginator_set_item_height(TheDebuginator* debuginator, int item_height);
+void debuginator_set_size(TheDebuginator* debuginator, int width, int height);
 
 typedef struct DebuginatorFolderData {
 	DebuginatorItem* first_child;
@@ -1549,6 +1550,14 @@ void debuginator_set_item_height(TheDebuginator* debuginator, int item_height) {
 	debuginator->current_height_offset = distance_to_wanted_y;
 }
 
+void debuginator_set_size(TheDebuginator* debuginator, int width, int height) {
+	// TODO: Remove one of these.
+	debuginator->screen_resolution.x = width;
+	debuginator->screen_resolution.y = height;
+	debuginator->size.x = width;
+	debuginator->size.y = height;
+}
+
 void debuginator_get_default_config(TheDebuginatorConfig* config) {
 	DEBUGINATOR_memset(config, 0, sizeof(*config));
 
@@ -1700,11 +1709,20 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/About",
 				"The Debuginator is an open source debug menu. New versions can be found here: https://github.com/Srekel/the-debuginator", NULL, NULL,
 				NULL, NULL, 0, 0);
+
+			// Not sure if this should be here or in each app/plugin that uses The Debuginator.. but I'll put it here for now.
 			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/Keyboard default usage",
 				"Open the menu with Right Arrow. \nClose it with Left Arrow. \nUse all arrow keys to navigate. \nRight Arrow is also used to change value on a menu item.", NULL, NULL,
 				NULL, NULL, 0, 0);
 			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/Keyboard default advanced usage",
 				"Hold CTRL for faster navigation and item toggling. \nEscape to quickly close the menu.\nBackspace to toggle search.", NULL, NULL,
+				NULL, NULL, 0, 0);
+
+			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/Gamepad default usage",
+				"Open the menu with Start/Options button. \nClose it with Left D-Pad. \nUse D-Pad to navigate. \nD-Pad Right is used to change value on a menu item.", NULL, NULL,
+				NULL, NULL, 0, 0);
+			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/Gamepad default advanced usage",
+				"Use the corresponding AXBY buttons to do the same things as the D-Pad, but faster!", NULL, NULL,
 				NULL, NULL, 0, 0);
 		}
 		{
@@ -1734,6 +1752,11 @@ void debuginator_print(DebuginatorItem* item, int indentation) {
 }
 
 void debuginator_update(TheDebuginator* debuginator, float dt) {
+	// To not lerp outside 1
+	if (dt > 0.5f) {
+		dt = 0.5f;
+	}
+
 	debuginator->dt = dt;
 	debuginator->draw_timer += dt * 5;
 	if (debuginator->is_open && debuginator->openness < 1) {
@@ -1765,7 +1788,7 @@ void debuginator_update(TheDebuginator* debuginator, float dt) {
 	debuginator__distance_to_hot_item(debuginator->root, debuginator->hot_item, debuginator->item_height, &distance_from_root_to_hot_item);
 	float wanted_y = debuginator->size.y * debuginator->focus_height;
 	float distance_to_wanted_y = wanted_y - distance_from_root_to_hot_item;
-	debuginator->current_height_offset = debuginator__lerp(debuginator->current_height_offset, distance_to_wanted_y, dt);
+	debuginator->current_height_offset = debuginator__lerp(debuginator->current_height_offset, distance_to_wanted_y, DEBUGINATOR_min(1, dt * 10));
 	if (DEBUGINATOR_fabs(debuginator->current_height_offset - distance_to_wanted_y) < 0.1f) {
 		debuginator->current_height_offset = distance_to_wanted_y;
 	}
