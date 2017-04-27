@@ -220,6 +220,14 @@ The leaf item also has a userdata field that you will use in your callbacks.
 
 In addition to leaf items, there are folder items which currently doesn't really do anything in particular except be there. You don't need to create folder items before items, they'll be created implicitly if they don't already exist. You can pass NULL to the *parent* parameter, in fact, it's the most common use case. It's mainly there as an optimization. 
 
+### Saving and loading
+
+I recommend looking at the SDL demo for a good example of how to do this. But here's how it works.
+
+Saving is fairly straightforward. Call debuginator_save and pass in a callback that gets called for each item who's value is different from the default. I recommend storing it to a single key-value map, like "MyGame/MySetting = True".
+
+Loading uses a bit of a trick inside The Debuginator. Remember how I said you can use the same path twice when creating an item, and it'll just overwrite it the second time? Here's the trick: Call debuginator_load_item. It takes a path and a value (which should match the title of one of the values of the item). If the item doesn't exist, it'll create one with no data, so it won't be visible.. except it will store the value inside the *description* field. Once the item is created *for reals*, it'll look to see if there's something already there, stored in the description field, and if so, use that to set the hot/active index.
+
 ### Examples
 
 Here's how to add a boolean item that toggles god mode for the player:
