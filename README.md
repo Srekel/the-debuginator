@@ -10,10 +10,9 @@ Gifs will be added once project is slightly more complete.
 
 - **Highly work in progress.**
 - Simple unit testing. Currently a bunch of them fails due to heavy refactoring.
-- Reference implementation in SDL.
-- Working implementation kept up to par with all features.
-- Basic animation support.
-- Not performance tested, but performs decently anyway.
+- Reference implementation in SDL kept up to par with all features.
+- Performs well enough in terms of CPU speed. 10k - 200k items is a breeze on my work station.
+- Memory wise it's a bit worse. It's not designed to be cheap on memory (about 110 bytes + item title length per item), but I believe there's a bug in my allocator (design) that makes it fairly wasteful, so... I'll need to look into that.
 - Only built and tested with VS2015 & VS2017.
 - A small amount of technical debt stacked up. Will do a pass once things are more final.
 
@@ -129,9 +128,10 @@ Note that this does **NOT** include any folders that has LICENSE or README files
 # How to use the_debuginator.h
 
 ## Installation
-Put the_debuginator.h somewhere in your project.
+Put the_debuginator.h somewhere in your project. It's an STB-style single header library and as such usage is a bit special.
 
 Add this to *one* cpp file:
+
 ```C
 #define DEBUGINATOR_IMPLEMENTATION
 // #define DEBUGINATOR_OPTIONAL_SETTING_OR_OVERRIDE_X
@@ -196,14 +196,27 @@ int main(...) {
 }
 ```
 
+Actual usage, such as adding items or modifying settings, can be done from any c file.
+
 ## How to use
 
 ### The gist of it 
+This is the core for creating an item:
+
+```C
+DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
+	DebuginatorItem* parent, const char* path, const char* description,
+	DebuginatorOnItemChangedCallback on_item_changed_callback, void* user_data,
+	const char** value_titles, void* values, int num_values, int value_size) 
+```
+
 Each *item* is defined by its path. If you create two items with the same path, only one will actually exist - with the data from the last call. 
 
 An *leaf item* has a list of *values*. A value has a title and a... value. The Debuginator doesn't care about what the values are, it just sees them as an array; a pointer and an element size. When you activate a value on an item, you'll get a callback with the value pointing to the correct place in that array. For bools, you don't really need to care about that stuff, it's handled by the wrapper function.
 
-In addition to leaf items, there are folder items which currently doesn't really do anything in particular except be there.
+The leaf item also has a userdata field that you will use in your callbacks.
+
+In addition to leaf items, there are folder items which currently doesn't really do anything in particular except be there. You don't need to create folder items before items, they'll be created implicitly if they don't already exist. You can pass NULL to the *parent* parameter, in fact, it's the most common use case. It's mainly there as an optimization. 
 
 ### Examples
 
@@ -223,7 +236,7 @@ Here's how to add a boolean item that toggles god mode for the player:
       &debuginator,
       "Player Mechanics/God Mode",
       "Player is invincible if enabled",
-      &player_godmode);
+      &my_player.godmode);
 ```
 
 Here's how to create a preset item - it'll toggle multiple things.
@@ -231,7 +244,9 @@ Here's how to create a preset item - it'll toggle multiple things.
 ```C
     const char* preset_paths[2] = { "Workflow/Skip intro", "Player Mechanics/God Mode" };
     const char* preset_value_titles[2] = { "True", "True" };
-    debuginator_create_preset_item(&debuginator, "My Presets/Good workflow", preset_paths, preset_value_titles, NULL, 2);
+    debuginator_create_preset_item(&debuginator, 
+    		"My Presets/Good workflow", 
+		preset_paths, preset_value_titles, NULL, 2);
 ```
 
 Here's how to create a generic item with a few strings and no callback (not sure what use case there is for that, but hey)... If you look at the definition of the other create_item functions, you'll see that they simply wrap this one.
@@ -239,7 +254,8 @@ Here's how to create a generic item with a few strings and no callback (not sure
 ```C
 	{
 		static const char* string_titles[5] = { "String A", "String B", "String C", "String D", "String E" };
-		debuginator_create_array_item(&debuginator, NULL, "My Game/String Test",
+		debuginator_create_array_item(&debuginator, 
+			NULL, "My Game/String Test",
 			"Multiple strings.", NULL, NULL,
 			string_titles, NULL, 5, 0);
 	}
@@ -270,7 +286,8 @@ Here's how to create a generic item with multiple things WITH a callback.
 
 		static const char* uisize_titles[4] = { "Small", "Medium", "Large", "ULTRA LARGE" };
 		static int uisizes[4] = { 0, 1, 2, 3 };
-		DebuginatorItem* uisize_item = debuginator_create_array_item(debuginator, NULL, "Debuginator/UI size",
+		DebuginatorItem* uisize_item = debuginator_create_array_item(debuginator, 
+			NULL, "Debuginator/UI size",
 			"Change font and item size.", on_change_ui_size, wrapper,
 			uisize_titles, uisizes, 4, sizeof(uisizes[0]));
 ```
