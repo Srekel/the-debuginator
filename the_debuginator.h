@@ -135,7 +135,7 @@ void debuginator_set_open(TheDebuginator* debuginator, bool open);
 DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 	DebuginatorItem* parent, const char* path, const char* description,
 	DebuginatorOnItemChangedCallback on_item_changed_callback, void* user_data,
-	const char** value_titles, void* values, int num_values, size_t value_size);
+	const char** value_titles, void* values, int num_values, int value_size);
 
 DebuginatorItem* debuginator_create_bool_item(TheDebuginator* debuginator, const char* path, const char* description, void* user_data);
 DebuginatorItem* debuginator_create_preset_item(TheDebuginator* debuginator, const char* path, const char** paths, const char** value_titles, int** value_indices, int num_paths);
@@ -174,22 +174,20 @@ typedef struct DebuginatorFolderData {
 
 typedef struct DebuginatorLeafData {
 	char* description;
-
-	bool is_active;
-	int hot_index;
-	int active_index;
-	int default_index;
-
 	const char** value_titles;
-	const char** value_descriptions;
 	void* values;
 
 	int num_values;
-	size_t array_element_size;
+	int array_element_size;
 
 	DebuginatorOnItemChangedCallback on_item_changed_callback;
 	DebuginatorItemEditorDataType edit_type;
 	float draw_t;
+
+	int hot_index;
+	int active_index;
+	int default_index;
+	bool is_active;
 } DebuginatorLeafData;
 
 typedef enum DebuginatorAnimationType {
@@ -205,10 +203,7 @@ typedef struct DebuginatorItemEditorData {
 
 typedef struct DebuginatorItem {
 	char* title;
-	bool is_folder;
-	bool is_filtered;
 	void* user_data;
-	int total_height; // Including self and children
 
 	DebuginatorItem* prev_sibling;
 	DebuginatorItem* next_sibling;
@@ -219,6 +214,10 @@ typedef struct DebuginatorItem {
 		DebuginatorFolderData folder;
 #pragma warning(suppress: 4201) // Unnamed union
 	};
+
+	int total_height; // Including self and children
+	bool is_folder;
+	bool is_filtered;
 } DebuginatorItem;
 
 
@@ -1010,7 +1009,7 @@ DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, DebuginatorIt
 DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 	DebuginatorItem* parent, const char* path, const char* description,
 	DebuginatorOnItemChangedCallback on_item_changed_callback, void* user_data,
-	const char** value_titles, void* values, int num_values, size_t value_size) {
+	const char** value_titles, void* values, int num_values, int value_size) {
 
 	DebuginatorItem* item = debuginator_get_item(debuginator, parent, path, true);
 	item->is_folder = false;
