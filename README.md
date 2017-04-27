@@ -348,3 +348,46 @@ void debuginator_set_size(TheDebuginator* debuginator, int width, int height);
 ```
 
 
+# How to use Stingray Plugin
+
+## Installation
+
+Add it to your project and build it. Currently it just builds as static library, sorry about that.
+
+## Setup
+
+Somewhere in your project's code:
+
+```C
+	PluginManagerApi *plugin_manager_api = (PluginManagerApi*)get_engine_api(PLUGIN_MANAGER_API_ID);
+	TheDebuginatorApi* debuginator_api = (TheDebuginatorApi*)plugin_manager_api->get_next_plugin_api(THE_DEBUGINATOR_API_ID, NULL);
+	ScriptApi* script_api = (ScriptApi*)get_engine_api(C_API_ID);
+	
+	TheDebuginatorConfig config;
+	ASSERT(debuginator_api->get_default_config != NULL, "Debugintor plugin not loaded.");
+	debuginator_api->get_default_config(&config);
+	
+	config.memory_arena_capacity = 1024 * 32;
+	config.size.x = 500;
+
+	DebuginatorPluginCreateContext create_context = { 0 };
+	create_context.config = config;
+	create_context.gui = gui;
+	create_context.font = hash64("core/performance_hud/debug");
+	create_context.font_material = script_api->Gui->material(my_gui, create_context.font);
+
+	debuginator_api->create_debuginator(NULL, &create_context);
+```
+
+## Update
+
+```C
+	void update(float dt) {
+		TheDebuginator* debuginator = debuginator_api->get_debuginator(NULL);
+		int devices = Debuginator_Keyboard | Debuginator_Gamepad;
+		debuginator_api->handle_default_input(debuginator, devices);
+	}
+```
+## That's it?
+
+That's it. Basically. The plugin automatically handles a few things for you. You don't have to call handle_default_input if you want to implement your own control scheme, and you can edit the config and create context however you wish.
