@@ -1552,10 +1552,10 @@ void debuginator_set_item_height(TheDebuginator* debuginator, int item_height) {
 
 void debuginator_set_size(TheDebuginator* debuginator, int width, int height) {
 	// TODO: Remove one of these.
-	debuginator->screen_resolution.x = width;
-	debuginator->screen_resolution.y = height;
-	debuginator->size.x = width;
-	debuginator->size.y = height;
+	debuginator->screen_resolution.x = (float)width;
+	debuginator->screen_resolution.y = (float)height;
+	debuginator->size.x = (float)width;
+	debuginator->size.y = (float)height;
 }
 
 void debuginator_get_default_config(TheDebuginatorConfig* config) {
@@ -1947,7 +1947,7 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 				DebuginatorVector2 letter_text_size = debuginator->text_size(letter, &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
 				underline_size.x = letter_text_size.x;
 				if (letter[0] != ' ') {
-					DebuginatorVector2 underline_pos = debuginator__vector2(filter_pos.x, filter_pos.y + letter_text_size.y);
+					DebuginatorVector2 underline_pos = debuginator__vector2(filter_pos.x, filter_pos.y - 5);
 					debuginator->draw_rect(&underline_pos, &underline_size, &debuginator->theme.colors[DEBUGINATOR_ItemValueHot], debuginator->app_user_data);
 				}
 				filter_pos.x += letter_text_size.x;
