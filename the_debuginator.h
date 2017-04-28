@@ -200,6 +200,7 @@ typedef struct DebuginatorItemEditorData {
 	float(*expanded_height)(DebuginatorItem* item, void* userdata);
 	void(*expanded_draw)(TheDebuginator* debuginator, DebuginatorItem* item_data, DebuginatorVector2* position);
 	bool forget_state;
+	bool toggle_by_default;
 } DebuginatorItemEditorData;
 
 typedef struct DebuginatorItem {
@@ -1645,8 +1646,10 @@ void debuginator_get_default_config(TheDebuginatorConfig* config) {
 	config->edit_types[DEBUGINATOR_EditTypeActionArray].forget_state = true;
 	config->edit_types[DEBUGINATOR_EditTypeBoolean].quick_draw = debuginator__quick_draw_boolean;
 	config->edit_types[DEBUGINATOR_EditTypeBoolean].expanded_draw = debuginator__expanded_draw_boolean;
+	config->edit_types[DEBUGINATOR_EditTypeBoolean].toggle_by_default = true;
 	config->edit_types[DEBUGINATOR_EditTypePreset].quick_draw = debuginator__quick_draw_preset;
 	config->edit_types[DEBUGINATOR_EditTypePreset].expanded_draw = debuginator__expanded_draw_preset;
+	config->edit_types[DEBUGINATOR_EditTypePreset].toggle_by_default = true;
 }
 
 void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginator) {
@@ -2286,7 +2289,8 @@ void debuginator_move_to_child(TheDebuginator* debuginator, bool toggle_and_acti
 	DebuginatorItem* hot_item_new = debuginator->hot_item;
 
 	if (!hot_item->is_folder) {
-		if (toggle_and_activate) {
+		bool toggle_by_default = debuginator->edit_types[hot_item->leaf.edit_type].toggle_by_default;
+		if (toggle_and_activate && !toggle_by_default || !toggle_and_activate && toggle_by_default && !hot_item->leaf.is_active) {
 			if (++hot_item->leaf.hot_index == hot_item->leaf.num_values) {
 				hot_item->leaf.hot_index = 0;
 			}
