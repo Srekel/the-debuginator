@@ -2088,6 +2088,9 @@ void debuginator_set_open(TheDebuginator* debuginator, bool is_open) {
 void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item) {
 	item->leaf.draw_t = 0;
 	if (item->leaf.num_values == 0) {
+		if (item->leaf.on_item_changed_callback != NULL) {
+			item->leaf.on_item_changed_callback(item, NULL, NULL, debuginator->app_user_data);
+		}
 		return;
 	}
 

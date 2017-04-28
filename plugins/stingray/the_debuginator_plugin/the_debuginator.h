@@ -200,6 +200,7 @@ typedef struct DebuginatorItemEditorData {
 	float(*expanded_height)(DebuginatorItem* item, void* userdata);
 	void(*expanded_draw)(TheDebuginator* debuginator, DebuginatorItem* item_data, DebuginatorVector2* position);
 	bool forget_state;
+	bool toggle_by_default;
 } DebuginatorItemEditorData;
 
 typedef struct DebuginatorItem {
@@ -1552,10 +1553,10 @@ void debuginator_set_item_height(TheDebuginator* debuginator, int item_height) {
 
 void debuginator_set_size(TheDebuginator* debuginator, int width, int height) {
 	// TODO: Remove one of these.
-	debuginator->screen_resolution.x = width;
-	debuginator->screen_resolution.y = height;
-	debuginator->size.x = width;
-	debuginator->size.y = height;
+	debuginator->screen_resolution.x = (float)width;
+	debuginator->screen_resolution.y = (float)height;
+	debuginator->size.x = (float)width;
+	debuginator->size.y = (float)height;
 }
 
 void debuginator_get_default_config(TheDebuginatorConfig* config) {
@@ -1645,8 +1646,10 @@ void debuginator_get_default_config(TheDebuginatorConfig* config) {
 	config->edit_types[DEBUGINATOR_EditTypeActionArray].forget_state = true;
 	config->edit_types[DEBUGINATOR_EditTypeBoolean].quick_draw = debuginator__quick_draw_boolean;
 	config->edit_types[DEBUGINATOR_EditTypeBoolean].expanded_draw = debuginator__expanded_draw_boolean;
+	config->edit_types[DEBUGINATOR_EditTypeBoolean].toggle_by_default = true;
 	config->edit_types[DEBUGINATOR_EditTypePreset].quick_draw = debuginator__quick_draw_preset;
 	config->edit_types[DEBUGINATOR_EditTypePreset].expanded_draw = debuginator__expanded_draw_preset;
+	config->edit_types[DEBUGINATOR_EditTypePreset].toggle_by_default = true;
 }
 
 void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginator) {
@@ -1947,7 +1950,7 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 				DebuginatorVector2 letter_text_size = debuginator->text_size(letter, &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
 				underline_size.x = letter_text_size.x;
 				if (letter[0] != ' ') {
-					DebuginatorVector2 underline_pos = debuginator__vector2(filter_pos.x, filter_pos.y + letter_text_size.y);
+					DebuginatorVector2 underline_pos = debuginator__vector2(filter_pos.x, filter_pos.y - 5);
 					debuginator->draw_rect(&underline_pos, &underline_size, &debuginator->theme.colors[DEBUGINATOR_ItemValueHot], debuginator->app_user_data);
 				}
 				filter_pos.x += letter_text_size.x;
@@ -2085,6 +2088,9 @@ void debuginator_set_open(TheDebuginator* debuginator, bool is_open) {
 void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item) {
 	item->leaf.draw_t = 0;
 	if (item->leaf.num_values == 0) {
+		if (item->leaf.on_item_changed_callback != NULL) {
+			item->leaf.on_item_changed_callback(item, NULL, NULL, debuginator->app_user_data);
+		}
 		return;
 	}
 
@@ -2286,7 +2292,8 @@ void debuginator_move_to_child(TheDebuginator* debuginator, bool toggle_and_acti
 	DebuginatorItem* hot_item_new = debuginator->hot_item;
 
 	if (!hot_item->is_folder) {
-		if (toggle_and_activate) {
+		bool toggle_by_default = debuginator->edit_types[hot_item->leaf.edit_type].toggle_by_default;
+		if (toggle_and_activate && !toggle_by_default || !toggle_and_activate && toggle_by_default && !hot_item->leaf.is_active) {
 			if (++hot_item->leaf.hot_index == hot_item->leaf.num_values) {
 				hot_item->leaf.hot_index = 0;
 			}
