@@ -142,7 +142,9 @@ bool load(TheDebuginator* debuginator, char* loaded_data_buffer, int loaded_buff
 				loaded_data_buffer_value = loaded_data_buffer;
 				loaded_data_buffer += data - value + 1;
 				loaded_buffer_size -= (int)(data - value + 1);
-				debuginator_load_item(debuginator, loaded_data_buffer_key, loaded_data_buffer_value);
+				// Debuginator needs to own this
+				const char* value_title = debuginator_copy_string(debuginator, loaded_data_buffer_value, 0);
+				debuginator_load_item(debuginator, loaded_data_buffer_key, value_title);
 				++data;
 				break;
 			}

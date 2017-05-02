@@ -30,9 +30,6 @@ Other source files should just include the_debuginator.h
 
 See the accompanying SDL demo and unit test projects for references on how to use it.
 
-ASCII banners generated using
-http://patorjk.com/software/taag/#p=display&f=ANSI%20Shadow&t=update
-
 ## License
 
 See end of file for license information.
@@ -167,6 +164,8 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 void debuginator_set_item_height(TheDebuginator* debuginator, int item_height);
 void debuginator_set_size(TheDebuginator* debuginator, int width, int height);
 
+char* debuginator_copy_string(TheDebuginator* debuginator, const char* string, int length);
+
 typedef struct DebuginatorFolderData {
 	DebuginatorItem* first_child;
 	DebuginatorItem* hot_child;
@@ -174,7 +173,7 @@ typedef struct DebuginatorFolderData {
 } DebuginatorFolderData;
 
 typedef struct DebuginatorLeafData {
-	char* description;
+	const char* description;
 	const char** value_titles;
 	void* values;
 
@@ -363,24 +362,30 @@ typedef struct DebuginatorBlockAllocatorStaticData {
 } DebuginatorBlockAllocatorStaticData;
 
 typedef struct DebuginatorBlockAllocator {
-	// void*(*allocate)(DebuginatorBlockAllocator* allocator, int num_bytes);
-	// void(*deallocate)(DebuginatorBlockAllocator* allocator, void* ptr);
 	DebuginatorBlockAllocatorStaticData* data;
 	int element_size;
 	char* current_block;
 	int current_block_size;
 	char* next_free_slot;
+	int stat_total_used;
+	int stat_num_allocations;
+	int stat_num_freed;
+	int stat_num_blocks;
+	int stat_wasted_block_space;
 } DebuginatorBlockAllocator;
 
 void debuginator__block_allocator_init(DebuginatorBlockAllocator* allocator, int element_size, DebuginatorBlockAllocatorStaticData* data) {
 	DEBUGINATOR_memset(allocator, 0, sizeof(*allocator));
 	allocator->data = data;
 	allocator->element_size = element_size;
-	allocator->current_block = data->next_free_block;
-	allocator->current_block_size = allocator->element_size; // Make room for allocator ptr at start of block
+	allocator->current_block = data->next_free_block; 
+	// We're throwing some memory away here to not have to check if the current block is NULL for every allocate.
+	allocator->current_block_size = sizeof(DebuginatorBlockAllocator*); // Make room for allocator ptr at start of block
 	data->next_free_block += data->block_capacity;
 	DEBUGINATOR_assert(allocator->data->arena_end > allocator->data->next_free_block);
 	*((DebuginatorBlockAllocator**)allocator->current_block) = allocator;
+	allocator->stat_wasted_block_space += sizeof(DebuginatorBlockAllocator*);
+	allocator->stat_num_blocks++;
 }
 
 void* debuginator__block_allocate(DebuginatorBlockAllocator* allocator, int num_bytes) {
@@ -390,21 +395,33 @@ void* debuginator__block_allocate(DebuginatorBlockAllocator* allocator, int num_
 			return NULL;
 		}
 
-		allocator->current_block_size = allocator->element_size; // Make room for allocator ptr at start of block
+		allocator->stat_wasted_block_space += allocator->data->block_capacity - allocator->current_block_size;
+		allocator->current_block_size = sizeof(DebuginatorBlockAllocator*); // Make room for allocator ptr at start of block
 		allocator->current_block = allocator->data->next_free_block;
 		allocator->data->next_free_block += allocator->data->block_capacity;
 		DEBUGINATOR_assert(allocator->data->arena_end > allocator->data->next_free_block);
 		*((DebuginatorBlockAllocator**)allocator->current_block) = allocator;
+		allocator->stat_wasted_block_space += sizeof(DebuginatorBlockAllocator*);
+		allocator->stat_num_blocks++;
 	}
 
-	// TODO: Use the freed slots.
+	allocator->stat_num_allocations++;
+	allocator->stat_total_used += allocator->element_size;
+	allocator->stat_wasted_block_space += allocator->element_size - num_bytes;
+
+	if (allocator->next_free_slot) {
+		void* result = allocator->next_free_slot;
+		allocator->next_free_slot = *(char**)allocator->next_free_slot;
+		allocator->stat_num_freed--;
+		return result;
+	}
 
 	void* result = allocator->current_block + allocator->current_block_size;
 	allocator->current_block_size += allocator->element_size;
 	return result;
 }
 
-void debuginator__block_deallocate(DebuginatorBlockAllocator* allocator, void* ptr) {
+void debuginator__block_deallocate(DebuginatorBlockAllocator* allocator, const void* ptr) {
 	uintptr_t* next_ptr = (uintptr_t*)ptr;
 	if (allocator->next_free_slot == NULL) {
 		*next_ptr = 0;
@@ -413,6 +430,9 @@ void debuginator__block_deallocate(DebuginatorBlockAllocator* allocator, void* p
 		*next_ptr = (uintptr_t)allocator->next_free_slot;
 	}
 	allocator->next_free_slot = (char*)ptr;
+	allocator->stat_total_used -= allocator->element_size;
+	allocator->stat_num_freed++;
+	allocator->stat_num_allocations--;
 }
 
 //
@@ -498,7 +518,7 @@ typedef struct TheDebuginator {
 	char* memory_arena; // char* for pointer arithmetic
 	int memory_arena_capacity;
 	DebuginatorBlockAllocatorStaticData allocator_data;
-	DebuginatorBlockAllocator allocators[4];
+	DebuginatorBlockAllocator allocators[6];
 
 } TheDebuginator;
 
@@ -642,7 +662,7 @@ void debuginator__expanded_draw_preset(TheDebuginator* debuginator, DebuginatorI
 }
 
 void* debuginator__allocate(TheDebuginator* debuginator, int bytes/*, const void* origin*/) {
-	for (int i = 0; i < 4; i++) {
+	for (int i = 0; i < 6; i++) {
 		if (bytes <= debuginator->allocators[i].element_size) {
 			void* result = debuginator__block_allocate(&debuginator->allocators[i], bytes);
 			DEBUGINATOR_assert(result != NULL);
@@ -655,17 +675,24 @@ void* debuginator__allocate(TheDebuginator* debuginator, int bytes/*, const void
 	return NULL;
 }
 
-void debuginator__deallocate(TheDebuginator* debuginator, void* void_ptr) {
+void debuginator__deallocate(TheDebuginator* debuginator, const void* void_ptr) {
+	// We remove the const part and that's fine, if it's our string we can do whatever we want with it,
+	// and if not, then we don't do anything (see right below). It makes the API a bit nicer.
 	char* ptr = (char*)void_ptr;
-	DEBUGINATOR_assert(debuginator->memory_arena <= ptr && ptr < debuginator->memory_arena + debuginator->memory_arena_capacity);
+	if (!(debuginator->memory_arena <= ptr && ptr < debuginator->memory_arena + debuginator->memory_arena_capacity)) {
+		// Yes, to simplify other code we do this check here. That way we can always attempt to deallocate a string
+		// even though we don't have ownership of it.
+		return;
+	}
+
 	uintptr_t block_address = (uintptr_t)ptr;
 	int capacity = debuginator->allocator_data.block_capacity;
 	block_address /= capacity;
 	block_address *= capacity;
 	//char* block_ptr = (char*)block_address;
 	DebuginatorBlockAllocator* allocator = *(DebuginatorBlockAllocator**)block_address;
+	DEBUGINATOR_memset(ptr, 0xcd, allocator->element_size);
 	debuginator__block_deallocate(allocator, void_ptr);
-	DEBUGINATOR_memset(void_ptr, 0xcc, allocator->element_size);
 /*
 	for (int i = 0; i < 4; i++) {
 		if (ptr < debuginator->allocators[i].arena + debuginator->allocators[i].capacity) {
@@ -674,7 +701,7 @@ void debuginator__deallocate(TheDebuginator* debuginator, void* void_ptr) {
 	}*/
 }
 
-char* debuginator__copy_string(TheDebuginator* debuginator, const char* string, int length) {
+char* debuginator_copy_string(TheDebuginator* debuginator, const char* string, int length) {
 	if (length == 0) {
 		length = (int)DEBUGINATOR_strlen(string);
 	}
@@ -752,9 +779,7 @@ void debuginator_set_title(TheDebuginator* debuginator, DebuginatorItem* item, c
 		title_length = (int)DEBUGINATOR_strlen(title);
 	}
 
-	item->title = (char*)debuginator__allocate(debuginator, title_length + 1);
-	memcpy((void*)item->title, title, title_length);
-	item->title[title_length] = '\0';
+	item->title = debuginator_copy_string(debuginator, title, title_length);
 }
 
 DebuginatorItem* debuginator__next_visible_sibling(DebuginatorItem* item) {
@@ -1047,7 +1072,8 @@ DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 			}
 		}
 	}
-	item->leaf.description = description == NULL ? NULL : debuginator__copy_string(debuginator, description, 0);
+
+	item->leaf.description = description;
 	debuginator__set_num_visible_children(item->parent, 1);
 
 	//TODO preserve hot item
@@ -1118,7 +1144,7 @@ void debuginator_load_item(TheDebuginator* debuginator, const char* path, const 
 	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, false);
 	if (item == NULL) {
 		item = debuginator_create_array_item(debuginator, NULL, path, NULL, NULL, NULL, NULL, NULL, 0, 0);
-		item->leaf.description = debuginator__copy_string(debuginator, value_title, 0); // Temporarily reuse description field
+		item->leaf.description = value_title; // Temporarily reuse description field
 		item->leaf.hot_index = -2;
 		debuginator__set_total_height(item, 0);
 		debuginator__set_num_visible_children(item->parent, -1);
@@ -1209,10 +1235,10 @@ void debuginator_remove_item(TheDebuginator* debuginator, DebuginatorItem* item)
 		else {
 			parent->folder.hot_child = NULL;
 		}
+	}
 
-		if (parent->folder.first_child == item) {
-			parent->folder.first_child = item->next_sibling;
-		}
+	if (parent->folder.first_child == item) {
+		parent->folder.first_child = item->next_sibling;
 	}
 
 	if (debuginator->hot_item == item) {
@@ -1223,7 +1249,7 @@ void debuginator_remove_item(TheDebuginator* debuginator, DebuginatorItem* item)
 	debuginator__set_num_visible_children(item->parent, -1);
 
 	debuginator__deallocate(debuginator, item->title);
-	if (item->is_folder) {
+	if (!item->is_folder) {
 		debuginator__deallocate(debuginator, item->leaf.description);
 	}
 
@@ -1276,6 +1302,9 @@ char* debuginator_get_filter(TheDebuginator* debuginator) {
 }
 
 void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_filter) {
+	// See this for a description of how the fuzzy filtering works.
+	// https://medium.com/@Srekel/implementing-a-fuzzy-search-algorithm-for-the-debuginator-cacc349e6c55
+
 	const int filter_length = (int)DEBUGINATOR_strlen(wanted_filter);
 	bool expanding_search = false;
 	if (filter_length < DEBUGINATOR_strlen(debuginator->filter)) {
@@ -1667,13 +1696,17 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 	debuginator->memory_arena = config->memory_arena;
 	debuginator->memory_arena_capacity = config->memory_arena_capacity;
 
+	// Allocators begin at the first block, meaning we waste memory between memory_arena and
+	// the first block. That's ok.
 	debuginator->allocator_data.arena_end = debuginator->memory_arena + debuginator->memory_arena_capacity;
 	debuginator->allocator_data.block_capacity = 0x1000;
 	debuginator->allocator_data.next_free_block = (char*)((((uintptr_t)debuginator->memory_arena + 0x1000 - 1) / 0x1000) * 0x1000);
 	debuginator__block_allocator_init(&debuginator->allocators[0], 8, &debuginator->allocator_data);
-	debuginator__block_allocator_init(&debuginator->allocators[1], 32, &debuginator->allocator_data);
-	debuginator__block_allocator_init(&debuginator->allocators[2], sizeof(DebuginatorItem), &debuginator->allocator_data);
-	debuginator__block_allocator_init(&debuginator->allocators[3], 1000, &debuginator->allocator_data);
+	debuginator__block_allocator_init(&debuginator->allocators[1], 16, &debuginator->allocator_data);
+	debuginator__block_allocator_init(&debuginator->allocators[2], 32, &debuginator->allocator_data);
+	debuginator__block_allocator_init(&debuginator->allocators[3], 64, &debuginator->allocator_data);
+	debuginator__block_allocator_init(&debuginator->allocators[4], sizeof(DebuginatorItem), &debuginator->allocator_data);
+	debuginator__block_allocator_init(&debuginator->allocators[5], 1000, &debuginator->allocator_data);
 
 	debuginator->draw_rect = config->draw_rect;
 	debuginator->draw_text = config->draw_text;
