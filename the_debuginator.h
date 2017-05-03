@@ -126,44 +126,97 @@ typedef enum DebuginatorItemEditorDataType {
 	DEBUGINATOR_EditTypeCount = 16,
 } DebuginatorItemEditorDataType;
 
+// Returns true when it's started to show, returns false as soon as it's closing.
 bool debuginator_is_open(TheDebuginator* debuginator);
+
+// Starts opening or closing
 void debuginator_set_open(TheDebuginator* debuginator, bool open);
 
+// parent is optional, can be used for a bit of performance I suppose.
+// path is on the format a_parent/the_new_item
+// description is optional
+// on item changed callback is optional
+// userdata is optional
+// value_titles is optional if num_values == 0.
+// values is optional if num_values == 0. Should otherwise be an array of num_values items that are value_size bytes large.
+// num_values can be >= 0.
+// value size can be 0 if num_values == 0
 DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 	DebuginatorItem* parent, const char* path, const char* description,
 	DebuginatorOnItemChangedCallback on_item_changed_callback, void* user_data,
 	const char** value_titles, void* values, int num_values, int value_size);
 
+// Wraps create_array_item. user_data should point to a single byte. It'll get 1 or 0 written to it.
 DebuginatorItem* debuginator_create_bool_item(TheDebuginator* debuginator, const char* path, const char* description, void* user_data);
+
+// Wraps create_array_item. Creates an item which, upon activation, sets the value of all items referenced to by paths, to
+// have the value from the corresponding index in value_titles.
+// value_indices is currently not used
+// paths and value_titles need to be of length num_paths.
 DebuginatorItem* debuginator_create_preset_item(TheDebuginator* debuginator, const char* path, const char** paths, const char** value_titles, int** value_indices, int num_paths);
 
+// If you simply want to create a new folder. 
 DebuginatorItem* debuginator_new_folder_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* title, int title_length);
+
+// Get an item by its path. 
 DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* path, bool create_if_not_exist);
-void debuginator_set_hot_item(TheDebuginator* debuginator, const char* path);
-DebuginatorItem* debuginator_get_hot_item(TheDebuginator* debuginator);
+
+// Remove an item by reference
 void debuginator_remove_item(TheDebuginator* debuginator, DebuginatorItem* item);
+
+// Remove an item by its path
 void debuginator_remove_item_by_path(TheDebuginator* debuginator, const char* path);
 
+void debuginator_set_hot_item(TheDebuginator* debuginator, const char* path);
+DebuginatorItem* debuginator_get_hot_item(TheDebuginator* debuginator);
+
+// Save the state. Each item whose current active_index is different from its default_index will be saved, by a call to the
+// callback you pass in.
 int debuginator_save(TheDebuginator* debuginator, DebuginatorSaveItemCallback callback, char* save_buffer, int save_buffer_size);
+
+// Preload an item. If the item doesn't exist, it will be created but be hidden until properly created later.
+// value_title should be the value you want it to have when finally created.
 void debuginator_load_item(TheDebuginator* debuginator, const char* path, const char* value_title);
+
+// Set an item's default value. If value_title is NULL, value_index will be used instead.
 void debuginator_set_default_value(TheDebuginator* debuginator, const char* path, const char* value_title, int value_index); // value index is used if value_title == NULL
+
+// Set an item's edit type.
 void debuginator_set_edit_type(TheDebuginator* debuginator, const char* path, DebuginatorItemEditorDataType edit_type);
 
+// Change an item's active index to its hot index, and trigger an activation - callbacks and animations and all.
 void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item);
 
+// Navigation functions
+// Moves the hot item or hot index to the next/previous visible item or index.
+// If long_move is true, it will move to the next item that either has a different parent
+// or a different overridden state.
 void debuginator_move_to_next_leaf(TheDebuginator* debuginator, bool long_move);
 void debuginator_move_to_prev_leaf(TheDebuginator* debuginator, bool long_move);
+
+// Expands a leaf item (makes it "active") if it's closed, activates it if it's already opened.
+// If toggle_and_activate is true, it will increase the hot index once and then activate, 
+// even if it's not expanded. If the item's edit type's toggle_by_default is true,
+// this behaviour is inverted.
 void debuginator_move_to_child(TheDebuginator* debuginator, bool toggle_and_activate);
+
+// Closes an expanded item.
 void debuginator_move_to_parent(TheDebuginator* debuginator);
 
+// Filter (search) functionality
 bool debuginator_is_filtering_enabled(TheDebuginator* debuginator);
 void debuginator_set_filtering_enabled(TheDebuginator* debuginator, bool enabled);
-char* debuginator_get_filter(TheDebuginator* debuginator);
+const char* debuginator_get_filter(TheDebuginator* debuginator);
 void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_filter);
 
+// Sets the height of all items. Default 30.
 void debuginator_set_item_height(TheDebuginator* debuginator, int item_height);
+
+// Sets width and height of The Debuginator
 void debuginator_set_size(TheDebuginator* debuginator, int width, int height);
 
+// Copies a string and returns a pointer to one that the debuginator owns and will
+// free if assigned as the description. (TODO: Add for value_titles)
 char* debuginator_copy_string(TheDebuginator* debuginator, const char* string, int length);
 
 typedef struct DebuginatorFolderData {
@@ -173,20 +226,36 @@ typedef struct DebuginatorFolderData {
 } DebuginatorFolderData;
 
 typedef struct DebuginatorLeafData {
+	// A helpful text for the user
 	const char* description;
+
+	// The values and the UI titles
 	const char** value_titles;
 	void* values;
-
 	int num_values;
+
+	// How big each element in values is
 	int array_element_size;
 
+	// Gets called when item is activated
 	DebuginatorOnItemChangedCallback on_item_changed_callback;
+	
+	// How the item is visualized and how its user interaction works.
 	DebuginatorItemEditorDataType edit_type;
+
+	// For animations.
 	float draw_t;
 
+	// The currently "hovered" value index. 
 	int hot_index;
+
+	// The currently set value index. Will be set to hot_index upon activation.
 	int active_index;
+
+	// The item's default index. Used for saving, and for UI.
 	int default_index;
+
+	// If the item is expanded. TODO: Rename variable.
 	bool is_active;
 } DebuginatorLeafData;
 
@@ -195,17 +264,28 @@ typedef enum DebuginatorAnimationType {
 } DebuginatorAnimationType;
 
 typedef struct DebuginatorItemEditorData {
+	// Draws the active value to the right of the item title.
 	void(*quick_draw)(TheDebuginator* debuginator, DebuginatorItem* item_data, DebuginatorVector2* position);
-	float(*expanded_height)(DebuginatorItem* item, void* userdata);
+	
+	// Currently not used
+	// float(*expanded_height)(DebuginatorItem* item, void* userdata);
 	void(*expanded_draw)(TheDebuginator* debuginator, DebuginatorItem* item_data, DebuginatorVector2* position);
+	
+	// If the item should revert to its default value after activation
 	bool forget_state;
+
+	// If the default behaviour should be to insta-activate the item rather than expand it.
 	bool toggle_by_default;
 } DebuginatorItemEditorData;
 
 typedef struct DebuginatorItem {
-	char* title;
+	// The 'name' of the item.
+	const char* title;
+
+	// Gets passed in the on changed callback function
 	void* user_data;
 
+	// Intrinsic linked list to navigate
 	DebuginatorItem* prev_sibling;
 	DebuginatorItem* next_sibling;
 	DebuginatorItem* parent;
@@ -216,34 +296,62 @@ typedef struct DebuginatorItem {
 #pragma warning(suppress: 4201) // Unnamed union
 	};
 
-	int total_height; // Including self and children
+	// For folders: includes own title and children.
+	// For leaves: includes own title, and if expanded, description and values
+	int total_height; 
+
+	// So we know to look in leaf or folder.
 	bool is_folder;
+
+	// If it's filtered out by the search
 	bool is_filtered;
 } DebuginatorItem;
 
-
+// Used for creating an instance of TheDebuginator
+// You can initialize this with good default values by calling debuginator_get_default_config.
+// However, you will always need to set some fields.
 typedef struct TheDebuginatorConfig {
+	// Whether or not to add things like About and Help.
 	bool create_default_debuginator_items;
 
+	// Must be set. Where The Debuginator is allowed to do stuff.
 	char* memory_arena;
 	int memory_arena_capacity;
 
+	// Color and font themes
 	DebuginatorTheme themes[16];
 
+	// Edit types.
 	DebuginatorItemEditorData edit_types[DEBUGINATOR_EditTypeCount];
 
+	// Gets passed to draw functions.
 	void* app_user_data;
+
+	// Must be set. Functions that will get called during the draw step.
 	DebuginatorDrawTextCallback draw_text;
 	DebuginatorDrawRectCallback draw_rect;
 	DebuginatorWordWrapCallback word_wrap;
 	DebuginatorTextSizeCallback text_size;
+
+	// Optional. Gets called when The Debuginator is opened or closed.
 	DebuginatorOnOpenChangedCallback on_opened_changed;
 
+	// The dimensions of the "panel".
 	DebuginatorVector2 size; // Might not be needed in the future
+	
+	// Screen resolution. Kind of redundant but I have an idea for it..
 	DebuginatorVector2 screen_resolution;
+
+	// Whether to draw The Debuginator to the left or right. Not currently supported.
 	bool left_aligned;
+
+	// Not currently supported.
 	int open_direction;
+	
+	// Where the hot item should be, height-wise, on the screen.
 	float focus_height;
+
+	// The height of each item.
 	int item_height;
 } TheDebuginatorConfig;
 
@@ -324,35 +432,8 @@ typedef struct TheDebuginatorConfig {
 #ifndef __cplusplus
 #include <stdbool.h>
 #endif
-//
-//#ifndef DEBUGINATOR_FREE_LIST_CAPACITY
-//#define DEBUGINATOR_FREE_LIST_CAPACITY 256
-//#endif
-//
-//#ifndef DEBUGINATOR_max_title_length
-//#define DEBUGINATOR_max_title_length 20
-//#endif
-//
-//#ifndef DEBUGINATOR_max_themes
-//#define DEBUGINATOR_max_themes 16
-//#endif
 
-#ifndef DEBUGINATOR_debug_print
-#define DEBUGINATOR_debug_print
-#endif
-
-
-typedef struct DebuginatorSlotAllocator DebuginatorSlotAllocator;
 typedef struct DebuginatorBlockAllocator DebuginatorBlockAllocator;
-typedef struct DebuginatorSlotAllocator {
-	char* arena;
-	int size;
-	int capacity;
-	int element_size;
-	void* next_free_slot;
-	void*(*allocate)(DebuginatorSlotAllocator* allocator, int num_bytes);
-	void(*deallocate)(DebuginatorSlotAllocator* allocator, void* ptr);
-} DebuginatorSlotAllocator;
 
 typedef struct DebuginatorBlockAllocatorStaticData {
 	char* arena_end;
@@ -434,32 +515,6 @@ void debuginator__block_deallocate(DebuginatorBlockAllocator* allocator, const v
 	allocator->stat_num_freed++;
 	allocator->stat_num_allocations--;
 }
-
-//
-//void* debuginator__slot_allocate(DebuginatorSlotAllocator* allocator, int num_bytes) {
-//	(void)num_bytes;
-//	if (allocator->next_free_slot == NULL) {
-//		if (allocator->size == allocator->capacity) {
-//			return NULL;
-//		}
-//
-//		void* result = allocator->arena + allocator->size;
-//		allocator->size += allocator->element_size;
-//		return result;
-//	}
-//
-//	void* result = allocator->next_free_slot;
-//	allocator->next_free_slot = result;
-//	return result;
-//}
-//
-//void debuginator__slot_deallocate(DebuginatorSlotAllocator* allocator, void* ptr) {
-//	if (allocator->next_free_slot == NULL) {
-//		int* int_ptr = (int*)ptr;
-//		*int_ptr = 0;
-//		allocator->next_free_slot = int_ptr;
-//	}
-//}
 
 typedef struct DebuginatorAnimation {
 	DebuginatorAnimationType type;
@@ -1297,7 +1352,7 @@ void debuginator_set_filtering_enabled(TheDebuginator* debuginator, bool enabled
 	debuginator->filter_enabled = enabled;
 }
 
-char* debuginator_get_filter(TheDebuginator* debuginator) {
+const char* debuginator_get_filter(TheDebuginator* debuginator) {
 	return debuginator->filter;
 }
 
@@ -1767,22 +1822,6 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 			debuginator_create_array_item(debuginator, NULL, "Debuginator/Theme",
 				"Change color theme of The Debuginator. \nNote that only Classic is currently polished.", debuginator__on_change_theme, debuginator,
 				string_titles, (void*)theme_indices, 4, sizeof(theme_indices[0]));
-		}
-	}
-}
-
-void debuginator_print(DebuginatorItem* item, int indentation) {
-	DEBUGINATOR_debug_print("%*s%s\n", indentation, "", item->title);
-	if (item->is_folder) {
-		item = debuginator__first_visible_child(item);
-		while (item) {
-			debuginator_print(item, indentation + 4);
-			item = debuginator__next_visible_sibling(item);
-		}
-	}
-	else {
-		for (size_t i = 0; i < item->leaf.num_values; i++) {
-			DEBUGINATOR_debug_print("%*s%s\n", indentation + 4, "", item->leaf.value_titles[i]);
 		}
 	}
 }
