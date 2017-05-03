@@ -117,7 +117,7 @@ static void unittest_debug_menu_run() {
 		// Are our expectations after setup correct?
 		DebuginatorItem* expected_hot_item = debuginator_get_item(&debuginator, NULL, "SimpleBool 1", false);
 		ASSERT(expected_hot_item == debuginator.hot_item);
-		ASSERT(expected_hot_item->leaf.is_active == false);
+		ASSERT(expected_hot_item->leaf.is_expanded == false);
 
 		ASSERT(testdata->simplebool_target == false);
 	}
@@ -132,7 +132,7 @@ static void unittest_debug_menu_run() {
 		DebuginatorInput input = {0};
 		input.move_to_child = true;
 		debug_menu_handle_input(&debuginator, &input);
-		ASSERT(debuginator.hot_item->leaf.is_active == true);
+		ASSERT(debuginator.hot_item->leaf.is_expanded == true);
 	}
 	{
 		// Going to child changes SimpleBool 1 bool
@@ -162,7 +162,7 @@ static void unittest_debug_menu_run() {
 		DebuginatorInput input = {0};
 		input.move_to_parent = true;
 		debug_menu_handle_input(&debuginator, &input);
-		ASSERT(debuginator.hot_item->leaf.is_active == false);
+		ASSERT(debuginator.hot_item->leaf.is_expanded == false);
 	}
 	{
 		// Going to parent does nothing
@@ -217,7 +217,7 @@ static void unittest_debug_menu_run() {
 		DebuginatorInput input = {0};
 		input.move_to_child = true;
 		debug_menu_handle_input(&debuginator, &input);
-		ASSERT(debuginator.hot_item->leaf.is_active == true);
+		ASSERT(debuginator.hot_item->leaf.is_expanded == true);
 	}
 	{
 		// Going to child changes SimpleBool 2 bool
@@ -231,7 +231,7 @@ static void unittest_debug_menu_run() {
 		DebuginatorInput input = {0};
 		input.move_to_parent = true;
 		debug_menu_handle_input(&debuginator, &input);
-		ASSERT(debuginator.hot_item->leaf.is_active == false);
+		ASSERT(debuginator.hot_item->leaf.is_expanded == false);
 	}
 	{
 		// Going to sibling works as expected
@@ -271,7 +271,7 @@ static void unittest_debug_menu_run() {
 		DebuginatorInput input = {0};
 		input.move_to_child = true;
 		debug_menu_handle_input(&debuginator, &input);
-		ASSERT(debuginator.hot_item->leaf.is_active == true);
+		ASSERT(debuginator.hot_item->leaf.is_expanded == true);
 	}
 	{
 		// Going to child changes string

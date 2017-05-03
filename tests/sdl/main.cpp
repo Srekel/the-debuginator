@@ -170,12 +170,12 @@ bool handle_debuginator_input(SDL_Event* event, TheDebuginator* debuginator) {
 				return true;
 			}
 			else if (event->key.keysym.sym == SDLK_LEFT || event->key.keysym.sym == SDLK_ESCAPE) {
-				if (debuginator->is_open && !debuginator->hot_item->leaf.is_active) {
+				if (debuginator->is_open && !debuginator->hot_item->leaf.is_expanded) {
 					debuginator_set_open(debuginator, false);
 					save(debuginator);
 					return true;
 				}
-				else if (!debuginator->hot_item->is_folder && debuginator->hot_item->leaf.is_active) {
+				else if (!debuginator->hot_item->is_folder && debuginator->hot_item->leaf.is_expanded) {
 					debuginator_move_to_parent(debuginator);
 					return true;
 				}
@@ -251,8 +251,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	const int NUM_ITEMS = 1024 * 512;
-	int memory_arena_capacity = sizeof(DebuginatorItem) * NUM_ITEMS;
+	int memory_arena_capacity = 1024 * 1024 * 1;
 	char* memory_arena = (char*)malloc(memory_arena_capacity);
 	TheDebuginatorConfig config;
 	debuginator_get_default_config(&config);

@@ -255,8 +255,8 @@ typedef struct DebuginatorLeafData {
 	// The item's default index. Used for saving, and for UI.
 	int default_index;
 
-	// If the item is expanded. TODO: Rename variable.
-	bool is_active;
+	// If the item is expanded (opened). 
+	bool is_expanded;
 } DebuginatorLeafData;
 
 typedef enum DebuginatorAnimationType {
@@ -1322,7 +1322,7 @@ void debuginator_remove_item_by_path(TheDebuginator* debuginator, const char* pa
 
 bool debuginator__distance_to_hot_item(DebuginatorItem* item, DebuginatorItem* hot_item, int item_height, int* distance) {
 	if (item == hot_item) {
-		if (!item->is_folder && item->leaf.is_active) {
+		if (!item->is_folder && item->leaf.is_expanded) {
 			*distance += item_height * (item->leaf.hot_index + 1);
 		}
 		return true;
@@ -1532,7 +1532,7 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 			if (is_filtered && !item->is_filtered) {
 				debuginator__set_total_height(item, 0);
 				debuginator__set_num_visible_children(item->parent, -1);
-				item->leaf.is_active = false;
+				item->leaf.is_expanded = false;
 			}
 			else if (!is_filtered && item->is_filtered) {
 				debuginator__set_total_height(item, debuginator->item_height); //Hacky
@@ -1610,7 +1610,7 @@ int debuginator__set_item_total_height_recursively(DebuginatorItem* item, int it
 		}
 	}
 	else {
-		if (item->leaf.is_active) {
+		if (item->leaf.is_expanded) {
 			item->total_height = item_height + item_height + item_height * (item->leaf.num_values);
 		}
 		else if (item->leaf.hot_index != -2 && !item->is_filtered) {
@@ -1953,7 +1953,7 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 			DebuginatorVector2 end_position;
 			end_position.x = debuginator->openness * 500 - 200;
 			end_position.y = distance_from_root_to_item + debuginator->current_height_offset - debuginator->item_height;
-			if (animation->data.item_activate.item->leaf.is_active) {
+			if (animation->data.item_activate.item->leaf.is_expanded) {
 				end_position.y -= (animation->data.item_activate.item->leaf.hot_index + 1) * debuginator->item_height; // HACK! for description :(
 			}
 
@@ -2055,7 +2055,7 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2 offset, bool hot) {
 	//draw_rect_filled(gui, offset, debuginator__vector2(100, debuginator->item_height), debuginator__color(200, 100, 50, 200));
 	/*
-	if (!debuginator->hot_item->is_folder && debuginator->hot_item->leaf.is_active) {
+	if (!debuginator->hot_item->is_folder && debuginator->hot_item->leaf.is_expanded) {
 	if (debuginator->hot_item == item) {
 	for (size_t i = 0; i < item->leaf.num_values; i++) {
 	draw_rect_filled(gui, debuginator__vector2(0, offset.y + (i+1) * debuginator->item_height), debuginator__vector2(3, 20), debuginator__color(0, 255, 0, 255));
@@ -2088,7 +2088,7 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 		}
 	}
 	else {
-		if (debuginator->hot_item == item && (!item->leaf.is_active || item->leaf.num_values == 0)) {
+		if (debuginator->hot_item == item && (!item->leaf.is_expanded || item->leaf.num_values == 0)) {
 			DebuginatorVector2 line_pos = debuginator__vector2(debuginator->openness * 500 - 500, offset.y - 5);
 			if (!debuginator->left_aligned) {
 				line_pos.x = debuginator->screen_resolution.x - debuginator->openness * debuginator->size.x;
@@ -2099,7 +2099,7 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 
 		bool is_overriden = item->leaf.active_index != item->leaf.default_index && !debuginator->edit_types[item->leaf.edit_type].forget_state;
 		unsigned default_color_index = is_overriden ? DEBUGINATOR_ItemTitleOverridden : DEBUGINATOR_ItemTitle;
-		unsigned color_index = item == debuginator->hot_item && !item->leaf.is_active ? DEBUGINATOR_ItemTitleActive : (hot ? DEBUGINATOR_ItemTitleHot : default_color_index);
+		unsigned color_index = item == debuginator->hot_item && !item->leaf.is_expanded ? DEBUGINATOR_ItemTitleActive : (hot ? DEBUGINATOR_ItemTitleHot : default_color_index);
 		DebuginatorFont* font = &debuginator->theme.fonts[DEBUGINATOR_ItemTitle];
 		debuginator->draw_text(item->title, &offset, &debuginator->theme.colors[color_index], font, debuginator->app_user_data);
 
@@ -2107,7 +2107,7 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 			debuginator->edit_types[item->leaf.edit_type].quick_draw(debuginator, item, &offset);
 		}
 		
-		if (item->leaf.is_active) {
+		if (item->leaf.is_expanded) {
 			offset.x += 20;
 
 			const char* description = item->leaf.description;
@@ -2184,7 +2184,7 @@ void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item) {
 		int y_dist_to_root = 0;
 		debuginator__distance_to_hot_item(debuginator->root, item, debuginator->item_height, &y_dist_to_root);
 		animation->data.item_activate.start_pos.y = y_dist_to_root + debuginator->current_height_offset - debuginator->item_height; // whyyy
-		if (item->leaf.is_active) {
+		if (item->leaf.is_expanded) {
 			animation->data.item_activate.start_pos.y += debuginator->item_height;
 		}
 	}
@@ -2200,7 +2200,7 @@ void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item) {
 void debuginator_move_sibling_previous(TheDebuginator* debuginator) {
 	DebuginatorItem* hot_item = debuginator->hot_item;
 
-	if (!hot_item->is_folder && hot_item->leaf.is_active) {
+	if (!hot_item->is_folder && hot_item->leaf.is_expanded) {
 		if (--hot_item->leaf.hot_index < 0) {
 			hot_item->leaf.hot_index = hot_item->leaf.num_values - 1;
 		}
@@ -2235,7 +2235,7 @@ void debuginator_move_sibling_previous(TheDebuginator* debuginator) {
 void debuginator_move_sibling_next(TheDebuginator* debuginator) {
 	DebuginatorItem* hot_item = debuginator->hot_item;
 
-	if (!hot_item->is_folder && hot_item->leaf.is_active) {
+	if (!hot_item->is_folder && hot_item->leaf.is_expanded) {
 		if (++hot_item->leaf.hot_index == hot_item->leaf.num_values) {
 			hot_item->leaf.hot_index = 0;
 		}
@@ -2259,7 +2259,7 @@ void debuginator_move_sibling_next(TheDebuginator* debuginator) {
 void debuginator_move_to_next(TheDebuginator* debuginator) {
 	DebuginatorItem* hot_item = debuginator->hot_item;
 	DebuginatorItem* hot_item_new = debuginator->hot_item;
-	if (!hot_item->is_folder && hot_item->leaf.is_active) {
+	if (!hot_item->is_folder && hot_item->leaf.is_expanded) {
 		if (++hot_item->leaf.hot_index == hot_item->leaf.num_values) {
 			hot_item->leaf.hot_index = 0;
 		}
@@ -2291,7 +2291,7 @@ void debuginator_move_to_next(TheDebuginator* debuginator) {
 
 void debuginator_move_to_next_leaf(TheDebuginator* debuginator, bool long_move) {
 	DebuginatorItem* hot_item = debuginator->hot_item;
-	if (!hot_item->is_folder && hot_item->leaf.is_active) {
+	if (!hot_item->is_folder && hot_item->leaf.is_expanded) {
 		int steps = 1;
 		if (long_move && hot_item->leaf.num_values > 5) {
 			steps = hot_item->leaf.num_values / 5;
@@ -2327,7 +2327,7 @@ void debuginator_move_to_next_leaf(TheDebuginator* debuginator, bool long_move) 
 
 void debuginator_move_to_prev_leaf(TheDebuginator* debuginator, bool long_move) {
 	DebuginatorItem* hot_item = debuginator->hot_item;
-	if (!hot_item->is_folder && hot_item->leaf.is_active) {
+	if (!hot_item->is_folder && hot_item->leaf.is_expanded) {
 		int steps = 1;
 		if (long_move && hot_item->leaf.num_values > 5) {
 			steps = hot_item->leaf.num_values / 5;
@@ -2365,17 +2365,17 @@ void debuginator_move_to_child(TheDebuginator* debuginator, bool toggle_and_acti
 
 	if (!hot_item->is_folder) {
 		bool toggle_by_default = debuginator->edit_types[hot_item->leaf.edit_type].toggle_by_default;
-		if (toggle_and_activate && !toggle_by_default || !toggle_and_activate && toggle_by_default && !hot_item->leaf.is_active) {
+		if (toggle_and_activate && !toggle_by_default || !toggle_and_activate && toggle_by_default && !hot_item->leaf.is_expanded) {
 			if (++hot_item->leaf.hot_index == hot_item->leaf.num_values) {
 				hot_item->leaf.hot_index = 0;
 			}
 			debuginator_activate(debuginator, debuginator->hot_item);
 		}
-		else if (hot_item->leaf.is_active) {
+		else if (hot_item->leaf.is_expanded) {
 			debuginator_activate(debuginator, debuginator->hot_item);
 		}
 		else {
-			hot_item->leaf.is_active = true;
+			hot_item->leaf.is_expanded = true;
 			debuginator__set_total_height(hot_item, debuginator->item_height * (hot_item->leaf.num_values) + debuginator->item_height); // for description, HACK! :(
 		}
 	}
@@ -2398,8 +2398,8 @@ void debuginator_move_to_child(TheDebuginator* debuginator, bool toggle_and_acti
 void debuginator_move_to_parent(TheDebuginator* debuginator) {
 	DebuginatorItem* hot_item = debuginator->hot_item;
 	DebuginatorItem* hot_item_new = debuginator->hot_item;
-	if (!hot_item->is_folder && hot_item->leaf.is_active) {
-		hot_item->leaf.is_active = false;
+	if (!hot_item->is_folder && hot_item->leaf.is_expanded) {
+		hot_item->leaf.is_expanded = false;
 		debuginator__set_total_height(hot_item, debuginator->item_height);
 	}
 	else if (hot_item->parent != debuginator->root) {
