@@ -1105,10 +1105,6 @@ DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 	item->user_data = user_data;
 	debuginator__set_total_height(item, debuginator->item_height);
 
-#ifndef DEBUGINATOR_own_value_titles
-	// TODO
-#endif
-
 	if (item->leaf.hot_index >= num_values) {
 		item->leaf.hot_index = num_values - 1;
 	}
@@ -1309,6 +1305,8 @@ void debuginator_remove_item(TheDebuginator* debuginator, DebuginatorItem* item)
 	if (!item->is_folder) {
 		debuginator__deallocate(debuginator, item->leaf.description);
 	}
+
+	// TODO deallocate value titles
 
 	debuginator__deallocate(debuginator, item);
 }
