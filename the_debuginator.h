@@ -1130,7 +1130,7 @@ DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 		}
 	}
 
-	item->leaf.description = description;
+	item->leaf.description = description == NULL ? "" : description;
 	debuginator__set_num_visible_children(item->parent, 1);
 
 	//TODO preserve hot item
