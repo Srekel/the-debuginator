@@ -39,7 +39,5 @@ void gui_unregister_font_template(GuiHandle gui_handle, FontTemplateHandle font_
 void gui_draw_text(GuiHandle gui_handle, const char* text, Vector2 position, FontTemplateHandle font, Color color);
 void gui_draw_rect_filled(GuiHandle gui_handle, Vector2 position, Vector2 size, Color color);
 
-const char* gui_word_wrap(GuiHandle gui_handle, FontTemplateHandle font_handle, const char* text, int max_width, char* buffer, int buffer_size);
-void gui_word_wrap2(GuiHandle gui_handle, FontTemplateHandle font_handle, const char* text, int max_width, char** buffer, int buffer_size);
-
+void gui_word_wrap(GuiHandle gui_handle, const char* text, FontTemplateHandle font_handle, float max_width, unsigned* row_count, unsigned* row_lengths, unsigned row_lengths_buffer_size);
 Vector2 gui_text_size(GuiHandle gui_handle, const char* text, FontTemplateHandle font_handle);

@@ -140,98 +140,82 @@ void gui_draw_rect_filled(GuiHandle gui_handle, Vector2 position, Vector2 size, 
 	SDL_RenderFillRect(gui->renderer, &rect);
 }
 
-const char* gui_word_wrap(GuiHandle gui_handle, FontTemplateHandle font_handle, const char* text, int max_width, char* buffer, int buffer_size) {
-	(void)gui_handle;
-
-	// This is really stupid but it works for now.
-	// TODO: Fix dropping words bug.
-	FontTemplate* font_template = (FontTemplate*)font_handle;
-	char temp_buffer[256];
-	const char* next_word = strchr(text, ' ');
-	while (true) {
-		if (next_word) {
-			strncpy_s(temp_buffer, 256, text, next_word - text);
-		}
-		else {
-			strncpy_s(temp_buffer, 256, text, strlen(text));
-		}
-
-		int width;
-		if (TTF_SizeText(font_template->font, temp_buffer, &width, NULL) != 0) {
-			return next_word;
-		}
-
-		if (width >= max_width) {
-			return next_word;
-		}
-
-		strcpy_s(buffer, buffer_size, temp_buffer);
-		if (next_word == NULL) {
-			return NULL;
-		}
-
-		next_word = strchr(next_word + 1, ' ');
-	}
-}
-
-void gui_word_wrap2(GuiHandle gui_handle, FontTemplateHandle font_handle, const char* text, int max_width, char** buffer, int buffer_size) {
+void gui_word_wrap(GuiHandle gui_handle, const char* text, FontTemplateHandle font_handle, float max_width, unsigned* row_count, unsigned* row_lengths, unsigned row_lengths_buffer_size) {
 	(void)gui_handle;
 	FontTemplate* font_template = (FontTemplate*)font_handle;
 
-	// Step until find a word end (' ' '\n')
-	// Is it longer than max_width? If so, copy into buffer, move to next line.
-
-	// "Multiple strings."
-
-	char** pointers = buffer;
-	char* line = (char*)(buffer + (buffer_size / 8 / 2)); // Reserve first half of buffer for the pointers
-	*pointers = line;
-	const char* text_word = text;
-	const char* text_char = text;
-	char* current_line_pos = line;
-	char* current_word_pos = line;
-	while (*text_char != '\0') {
-		while (*text_char != '\0') {
-			*current_line_pos++ = *text_char++;
-			if (*text_char == ' ') {
+	const char* current_line = text;
+	const char* current_word = text;
+	const char* current_char = text;
+	char line[256];
+	while (*current_char != '\0') {
+		bool found_newline = false;
+		while (*current_char != '\0') {
+			if (*current_char == ' ') {
+				// We found a word end.
+				// Include all trailing spaces in this word
+				while (*current_char == ' ') {
+					++current_char;
+				}
 				break;
-				//strncpy_s(line, current_line_pos, text_char - current_line_pos);
 			}
 
+			if (*current_char == '\n') {
+				// We found a new line
+				++current_char;
+				found_newline = true;
+				break;
+			}
+
+			++current_char;
 		}
 
-		// We found a word end.
+		memcpy(line, current_line, current_char - current_line);
+		line[current_char - current_line] = '\0';
 		int width;
 		if (TTF_SizeText(font_template->font, line, &width, NULL) != 0) {
 			break;
 		}
 		
-		if (width >= max_width) 
-		{
-			// Current line is too big
-			if (current_word_pos == line) {
-				// Word is too long to fit on a line
-				*++line = '\0';
-				pointers++;
-				*pointers = ++line;
-				text_word = text_char;
+		bool line_too_long = width >= max_width;
+		if (line_too_long || found_newline) {
+			bool word_longer_than_line = current_word == current_line;
+			if (found_newline) {
+				row_lengths[*row_count] = (int)(current_char - current_line - 1);
+				++*row_count;
+				current_word = current_char;
+				current_line = current_char;
+			}
+			else if (word_longer_than_line) {
+				row_lengths[*row_count] = (int)(current_char - current_line);
+				++*row_count;
+				current_word = current_char;
+				current_line = current_char;
 			}
 			else {
 				// Move current word to next line.
-				*current_word_pos = '\0';
-				line = current_word_pos;
+				row_lengths[*row_count] = (int)(current_word - current_line);
+				++*row_count;
+
+				//current_word = current_char;
+				current_line = current_word;
 			}
 
-			while (*text_char == ' ') {
-				++text_char;
+			if (*row_count == row_lengths_buffer_size) {
+				break;
 			}
 		}
 		else {
 			// Current word fit.
-			text_word = text_char;
+			current_word = current_char;
 		}
 	}
 
+	if (*current_line != '\0') {
+		// Add last line
+		row_lengths[*row_count] = (int)(current_char - current_line);
+		++*row_count;
+	}
 }
 
 Vector2 gui_text_size(GuiHandle gui_handle, const char* text, FontTemplateHandle font_handle) {

@@ -55,14 +55,9 @@ void draw_rect(DebuginatorVector2* position, DebuginatorVector2* size, Debuginat
 	gui_draw_rect_filled((GuiHandle)userdata, *(Vector2*)position, *(Vector2*)size, *(Color*)color);
 }
 
-void word_wrap(const char* text, DebuginatorFont font, float max_width, unsigned* row_count, unsigned* row_lengths, int row_lengths_buffer_size, void* app_userdata) {
+void word_wrap(const char* text, DebuginatorFont font, float max_width, unsigned* row_count, unsigned* row_lengths, unsigned row_lengths_buffer_size, void* app_userdata) {
 	(void)text, font, max_width, row_count, row_lengths, row_lengths_buffer_size, row_lengths_buffer_size, app_userdata;
-	*row_count = 1;
-	row_lengths[0] = (int)strlen(text) - 1;
-}
-
-void word_wrap2(const char* text, DebuginatorFont font, float max_width, char** buffer, int buffer_size, void* userdata) {
-	gui_word_wrap2((GuiHandle)userdata, s_fonts[font.italic ? FONT_ItemDescription : FONT_ItemTitle], text, (int)max_width, buffer, buffer_size);
+	gui_word_wrap((GuiHandle)app_userdata, text, s_fonts[font.italic ? FONT_ItemDescription : FONT_ItemTitle], max_width, row_count, row_lengths, row_lengths_buffer_size);
 }
 
 DebuginatorVector2 text_size(const char* text, DebuginatorFont* font, void* userdata) {

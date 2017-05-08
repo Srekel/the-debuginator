@@ -105,8 +105,10 @@ typedef void (*DebuginatorDrawTextCallback)
 	(const char* text, DebuginatorVector2* position, DebuginatorColor* color, DebuginatorFont* font, void* userdata);
 typedef void (*DebuginatorDrawRectCallback)
 	(DebuginatorVector2* position, DebuginatorVector2* size, DebuginatorColor* color, void* userdata);
+
+// Of note: New line characters should be at the beginning of any row rather than at the end of them.
 typedef void(*DebuginatorWordWrapCallback)
-	(const char* text, DebuginatorFont font, float max_width, unsigned* row_count, unsigned* row_lengths, int row_lengths_buffer_size, void* app_userdata);
+	(const char* text, DebuginatorFont font, float max_width, unsigned* row_count, unsigned* row_lengths, unsigned row_lengths_buffer_size, void* app_userdata);
 typedef DebuginatorVector2 (*DebuginatorTextSizeCallback)
 	(const char* text, DebuginatorFont* font, void* userdata);
 typedef void (*DebuginatorOnOpenChangedCallback)
