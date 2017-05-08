@@ -82,6 +82,7 @@ static void unittest_debug_menu_setup(TheDebuginator* debuginator) {
 }
 
 static void unittest_debug_menu_run() {
+	/*
 	memset(&g_testdata, 0, sizeof(g_testdata));
 	UnitTestData* testdata = &g_testdata;
 	//DebuginatorItem item_buffer[16];
@@ -334,6 +335,7 @@ static void unittest_debug_menu_run() {
 	else {
 		printf("U are teh sux.\n");
 	}
+	*/
 }
 
 int main(int argc, char **argv)

@@ -2414,37 +2414,6 @@ void debuginator_move_to_parent(TheDebuginator* debuginator) {
 	}
 }
 
-typedef struct DebuginatorInput {
-	//bool activate;
-	bool move_sibling_previous;
-	bool move_sibling_next;
-	bool move_to_parent;
-	bool move_to_child;
-} DebuginatorInput;
-
-void debug_menu_handle_input(TheDebuginator* debuginator, DebuginatorInput* input) {
-	if (input->move_sibling_next) {
-		debuginator_move_sibling_next(debuginator);
-	}
-
-	if (input->move_to_child) {
-		debuginator_move_to_child(debuginator, false);
-	}
-
-	if (input->move_to_parent) {
-		debuginator_move_to_parent(debuginator);
-	}
-
-	// HACK
-	//if (hot_item != hot_item_new) {
-		//debuginator->hot_item = hot_item_new;
-	//}
-
-	//if (input->activate && hot_item->!is_folder) {
-	//	debuginator_activate(debuginator->hot_item);
-	//}
-}
-
 // ██╗   ██╗████████╗██╗██╗     ██╗████████╗██╗   ██╗
 // ██║   ██║╚══██╔══╝██║██║     ██║╚══██╔══╝╚██╗ ██╔╝
 // ██║   ██║   ██║   ██║██║     ██║   ██║    ╚████╔╝
