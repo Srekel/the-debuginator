@@ -263,11 +263,10 @@ int main(int argc, char **argv)
 	config.screen_resolution.y = (float)res_y;
 	config.focus_height = 0.3f;
 	config.create_default_debuginator_items = true;
-	config.left_aligned = true;
 
 	TheDebuginator debuginator;
 	debuginator_create(&config, &debuginator);
-	
+
 	char* loaded_data_buffer = (char*)malloc(10 * 1024 * 1024);
 	bool load_result = load(&debuginator, loaded_data_buffer, 10 * 1024 * 1024);
 	if (!load_result) {

@@ -16,10 +16,10 @@ In *ONE* source file, put:
 #define DEBUGINATOR_IMPLEMENTATION
 
 // Define any of these if you wish to override them.
+// (There are more. Find them in the beginning of the code.)
 #define DEBUGINATOR_assert
 #define DEBUGINATOR_memcpy
 #define DEBUGINATOR_fabs
-#define DEBUGINATOR_own_value_titles
 
 #include "the_debuginator.h"
 ```
@@ -29,9 +29,11 @@ Other source files should just include the_debuginator.h
 ## Notes
 
 See the accompanying SDL demo and unit test projects for references on how to use it.
+Or the documentation on the github page.
 
 ## License
 
+Basically Public Domain / MIT.
 See end of file for license information.
 
 */
@@ -45,12 +47,9 @@ extern "C" {
 
 typedef struct DebuginatorItem DebuginatorItem;
 
+// TODO: Remove this
 #ifndef DEBUGINATOR_max_title_length
 #define DEBUGINATOR_max_title_length 20
-#endif
-
-#ifndef DEBUGINATOR_max_themes
-#define DEBUGINATOR_max_themes 16
 #endif
 
 typedef struct DebuginatorVector2 {
@@ -65,6 +64,7 @@ typedef struct DebuginatorColor {
 	unsigned char a;
 } DebuginatorColor;
 
+// TODO: Do something better with this
 typedef struct DebuginatorFont {
 	void* userdata;
 	int size;
@@ -157,10 +157,10 @@ DebuginatorItem* debuginator_create_bool_item(TheDebuginator* debuginator, const
 // paths and value_titles need to be of length num_paths.
 DebuginatorItem* debuginator_create_preset_item(TheDebuginator* debuginator, const char* path, const char** paths, const char** value_titles, int** value_indices, int num_paths);
 
-// If you simply want to create a new folder. 
+// If you simply want to create a new folder.
 DebuginatorItem* debuginator_new_folder_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* title, int title_length);
 
-// Get an item by its path. 
+// Get an item by its path.
 DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* path, bool create_if_not_exist);
 
 // Remove an item by reference
@@ -197,7 +197,7 @@ void debuginator_move_to_next_leaf(TheDebuginator* debuginator, bool long_move);
 void debuginator_move_to_prev_leaf(TheDebuginator* debuginator, bool long_move);
 
 // Expands a leaf item (makes it "active") if it's closed, activates it if it's already opened.
-// If toggle_and_activate is true, it will increase the hot index once and then activate, 
+// If toggle_and_activate is true, it will increase the hot index once and then activate,
 // even if it's not expanded. If the item's edit type's toggle_by_default is true,
 // this behaviour is inverted.
 void debuginator_move_to_child(TheDebuginator* debuginator, bool toggle_and_activate);
@@ -241,14 +241,14 @@ typedef struct DebuginatorLeafData {
 
 	// Gets called when item is activated
 	DebuginatorOnItemChangedCallback on_item_changed_callback;
-	
+
 	// How the item is visualized and how its user interaction works.
 	DebuginatorItemEditorDataType edit_type;
 
 	// For animations.
 	float draw_t;
 
-	// The currently "hovered" value index. 
+	// The currently "hovered" value index.
 	int hot_index;
 
 	// The currently set value index. Will be set to hot_index upon activation.
@@ -257,7 +257,7 @@ typedef struct DebuginatorLeafData {
 	// The item's default index. Used for saving, and for UI.
 	int default_index;
 
-	// If the item is expanded (opened). 
+	// If the item is expanded (opened).
 	bool is_expanded;
 } DebuginatorLeafData;
 
@@ -268,11 +268,13 @@ typedef enum DebuginatorAnimationType {
 typedef struct DebuginatorItemEditorData {
 	// Draws the active value to the right of the item title.
 	void(*quick_draw)(TheDebuginator* debuginator, DebuginatorItem* item_data, DebuginatorVector2* position);
-	
+
 	// Currently not used
 	// float(*expanded_height)(DebuginatorItem* item, void* userdata);
+
+	// Draws stuff under the title when the item is expanded.
 	void(*expanded_draw)(TheDebuginator* debuginator, DebuginatorItem* item_data, DebuginatorVector2* position);
-	
+
 	// If the item should revert to its default value after activation
 	bool forget_state;
 
@@ -300,7 +302,7 @@ typedef struct DebuginatorItem {
 
 	// For folders: includes own title and children.
 	// For leaves: includes own title, and if expanded, description and values
-	int total_height; 
+	int total_height;
 
 	// So we know to look in leaf or folder.
 	bool is_folder;
@@ -340,16 +342,13 @@ typedef struct TheDebuginatorConfig {
 
 	// The dimensions of the "panel".
 	DebuginatorVector2 size; // Might not be needed in the future
-	
+
 	// Screen resolution. Kind of redundant but I have an idea for it..
 	DebuginatorVector2 screen_resolution;
 
-	// Whether to draw The Debuginator to the left or right. Not currently supported.
-	bool left_aligned;
-
 	// Not currently supported.
 	int open_direction;
-	
+
 	// Where the hot item should be, height-wise, on the screen.
 	float focus_height;
 
@@ -461,7 +460,7 @@ void debuginator__block_allocator_init(DebuginatorBlockAllocator* allocator, int
 	DEBUGINATOR_memset(allocator, 0, sizeof(*allocator));
 	allocator->data = data;
 	allocator->element_size = element_size;
-	allocator->current_block = data->next_free_block; 
+	allocator->current_block = data->next_free_block;
 	// We're throwing some memory away here to not have to check if the current block is NULL for every allocate.
 	allocator->current_block_size = sizeof(DebuginatorBlockAllocator*); // Make room for allocator ptr at start of block
 	data->next_free_block += data->block_capacity;
@@ -560,7 +559,6 @@ typedef struct TheDebuginator {
 	DebuginatorVector2 size;
 	DebuginatorVector2 root_position;
 	DebuginatorVector2 screen_resolution;
-	bool left_aligned;
 	int open_direction;
 	float focus_height;
 	float current_height_offset;
@@ -607,13 +605,7 @@ float debuginator__lerp(float a, float b, float t) {
 void debuginator__quick_draw_default(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
 	if (item->leaf.num_values > 0) {
 		DebuginatorVector2 value_offset = *position;
-		if (debuginator->left_aligned) {
-			value_offset.x = debuginator->openness * debuginator->size.x - 200;
-		}
-		else {
-			value_offset.x = debuginator->screen_resolution.x + debuginator->size.x * (1 - debuginator->openness) - 200;
-		}
-
+		value_offset.x = debuginator->openness * debuginator->size.x - 200;
 		bool is_overriden = item->leaf.active_index != item->leaf.default_index;
 		unsigned default_color_index = is_overriden ? DEBUGINATOR_ItemTitleOverridden : DEBUGINATOR_ItemTitle;
 		debuginator->draw_text(item->leaf.value_titles[item->leaf.active_index], &value_offset, &debuginator->theme.colors[default_color_index], &debuginator->theme.fonts[DEBUGINATOR_ItemTitle], debuginator->app_user_data);
@@ -627,9 +619,6 @@ void debuginator__expanded_draw_default(TheDebuginator* debuginator, Debuginator
 		if (debuginator->hot_item == item && item->leaf.hot_index == i) {
 			DebuginatorVector2 pos = debuginator__vector2(0, position->y - 5);
 			DebuginatorVector2 size = debuginator__vector2(500.f, (float)debuginator->item_height);
-			if (!debuginator->left_aligned) {
-				pos.x = debuginator->screen_resolution.x - debuginator->openness * debuginator->size.x;
-			}
 			debuginator->draw_rect(&pos, &size, &debuginator->theme.colors[DEBUGINATOR_LineHighlight], debuginator->app_user_data);
 		}
 
@@ -679,9 +668,6 @@ void debuginator__expanded_draw_boolean(TheDebuginator* debuginator, Debuginator
 		if (debuginator->hot_item == item && item->leaf.hot_index == i) {
 			DebuginatorVector2 pos = debuginator__vector2(0, position->y - 5);
 			DebuginatorVector2 size = debuginator__vector2(500, (float)debuginator->item_height);
-			if (!debuginator->left_aligned) {
-				pos.x = debuginator->screen_resolution.x - debuginator->openness * debuginator->size.x;
-			}
 			debuginator->draw_rect(&pos, &size, &debuginator->theme.colors[DEBUGINATOR_LineHighlight], debuginator->app_user_data);
 		}
 
@@ -700,16 +686,6 @@ void debuginator__quick_draw_preset(TheDebuginator* debuginator, DebuginatorItem
 void debuginator__expanded_draw_preset(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
 	for (size_t i = 0; i < item->leaf.num_values; i++) {
 		position->y += debuginator->item_height;
-
-		//if (debuginator->hot_item == item && item->leaf.hot_index == i) {
-		//	DebuginatorVector2 pos = debuginator__vector2(0, position->y - 5);
-		//	DebuginatorVector2 size = debuginator__vector2(500, debuginator->item_height);
-		//	if (!debuginator->left_aligned) {
-		//		pos.x = debuginator->screen_resolution.x - debuginator->openness * debuginator->size.x;
-		//	}
-		//	debuginator->draw_rect(pos, size, debuginator->theme.colors[DEBUGINATOR_LineHighlight], debuginator->app_user_data);
-		//}
-
 		const char* value_title = item->leaf.value_titles[i];
 		bool value_hot = i == item->leaf.hot_index;
 		bool value_overridden = i == item->leaf.active_index;
@@ -750,12 +726,6 @@ void debuginator__deallocate(TheDebuginator* debuginator, const void* void_ptr) 
 	DebuginatorBlockAllocator* allocator = *(DebuginatorBlockAllocator**)block_address;
 	DEBUGINATOR_memset(ptr, 0xcd, allocator->element_size);
 	debuginator__block_deallocate(allocator, void_ptr);
-/*
-	for (int i = 0; i < 4; i++) {
-		if (ptr < debuginator->allocators[i].arena + debuginator->allocators[i].capacity) {
-			debuginator->allocators[i].deallocate(&debuginator->allocators[i], void_ptr);
-		}
-	}*/
 }
 
 char* debuginator_copy_string(TheDebuginator* debuginator, const char* string, int length) {
@@ -779,27 +749,7 @@ DebuginatorAnimation* debuginator__get_free_animation(TheDebuginator* debuginato
 	return animation;
 }
 
-//DebuginatorItem* debuginator_get_free_item(TheDebuginator* debuginator) {
-	//DebuginatorItem* item;
-	//if (debuginator->free_list_size > 0) {
-	//	size_t free_index = debuginator->free_list[--debuginator->free_list_size];
-	//	DEBUGINATOR_assert(free_index < debuginator->item_buffer_capacity);
-	//	item = &debuginator->item_buffer[free_index];
-	//}
-	//else {
-	//	DEBUGINATOR_assert(debuginator->item_buffer_size < debuginator->item_buffer_capacity);
-	//	item = &debuginator->item_buffer[debuginator->item_buffer_size++];
-	//}
-
-	//DEBUGINATOR_memset(item, 0, sizeof(*item));
-	//return item;
-//}
-
 void debuginator__set_total_height(DebuginatorItem* item, int height) {
-	//if (height == debuginator->item_height && item->is_folder) {
-	//	height = 0;
-	//}
-
 	if (item->total_height == height) {
 		return;
 	}
@@ -884,8 +834,6 @@ DebuginatorItem* debuginator__first_visible_child(DebuginatorItem* item) {
 		if (item->folder.first_child->folder.num_visible_children > 0) {
 			return item->folder.first_child;
 		}
-
-		//return NULL;
 	}
 	else if (item->folder.first_child->leaf.hot_index != -2 && !item->folder.first_child->is_filtered) {
 		return item->folder.first_child;
@@ -1042,7 +990,7 @@ DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, DebuginatorIt
 		DebuginatorItem* parent_child = parent->folder.first_child;
 		while (parent_child) {
 			const char* item_title = parent_child->title;
-			size_t title_length = DEBUGINATOR_strlen(item_title); // strlen :(
+			size_t title_length = DEBUGINATOR_strlen(item_title);
 			if (path_part_length >= DEBUGINATOR_max_title_length
 				&& title_length == DEBUGINATOR_max_title_length - 1
 				&& item_title[DEBUGINATOR_max_title_length - 2] == '.'
@@ -1236,7 +1184,7 @@ void debuginator_set_default_value(TheDebuginator* debuginator, const char* path
 	if (item == NULL || item->is_folder) {
 		return;
 	}
-	
+
 	if (value_title != NULL) {
 		for (int i = 0; i < item->leaf.num_values; i++) {
 			if (strcmp(value_title, item->leaf.value_titles[i]) == 0) {
@@ -1430,7 +1378,7 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 			DEBUGINATOR_strcpy_s(current_full_path + path_indices[current_path_index], 50, item->title);
 			path_indices[current_path_index + 1] = path_indices[current_path_index] + (int)DEBUGINATOR_strlen(item->title);
 			int current_path_length = path_indices[current_path_index + 1];
-			
+
 			//if (!exact_search) {
 				for (size_t i = path_indices[current_path_index]; i < current_path_length; i++) {
 					current_full_path[i] = (char)DEBUGINATOR_tolower(current_full_path[i]);
@@ -1439,7 +1387,7 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 
 			int score = -1;
 			bool is_filtered = false;
-			
+
 			// LOL1010
 			// 100
 			int filter_part = 0;
@@ -1498,7 +1446,7 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 				for (int i = 0; i < match_count; i += 2) {
 					int match_index = matches[i];
 					int match_length = matches[i + 1];
-					int is_word_break_start = match_index == 0 
+					int is_word_break_start = match_index == 0
 						|| current_full_path[match_index - 1] == ' '
 						|| (!DEBUGINATOR_isalpha(current_full_path[match_index - 1]) && DEBUGINATOR_isalpha(current_full_path[match_index]))
 						|| (!DEBUGINATOR_isdigit(current_full_path[match_index - 1]) && DEBUGINATOR_isdigit(current_full_path[match_index]));
@@ -1649,7 +1597,6 @@ void debuginator_get_default_config(TheDebuginatorConfig* config) {
 	config->create_default_debuginator_items = true;
 	config->open_direction = 1;
 	config->focus_height = 0.3f;
-	config->left_aligned = true;
 	config->item_height = 30;
 
 	// Initialize default themes
@@ -1774,17 +1721,10 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 	debuginator->open_direction = config->open_direction;
 	debuginator->focus_height = config->focus_height;
 	debuginator->screen_resolution = config->screen_resolution;
-	debuginator->left_aligned= config->left_aligned;
 	debuginator->item_height = config->item_height;
 
-	if (debuginator->left_aligned) {
-		debuginator->open_direction = 1;
-		debuginator->root_position.x = -debuginator->size.x;
-	}
-	else {
-		debuginator->open_direction = -1;
-		debuginator->root_position.x = debuginator->screen_resolution.x;
-	}
+	debuginator->open_direction = 1;
+	debuginator->root_position.x = -debuginator->size.x;
 
 	memcpy(debuginator->edit_types, config->edit_types, sizeof(debuginator->edit_types));
 	memcpy(debuginator->themes, config->themes, sizeof(debuginator->themes));
@@ -1924,7 +1864,7 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 			offset.x -= 20;
 			item_to_draw = item_to_draw->parent;
 		}
-		
+
 		if (item_to_draw == NULL) {
 			break;
 		}
@@ -1948,7 +1888,7 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 		if (animation->type == DEBUGINATOR_ItemActivate) {
 			int distance_from_root_to_item = 0;
 			debuginator__distance_to_hot_item(debuginator->root, animation->data.item_activate.item, debuginator->item_height, &distance_from_root_to_item);
-			
+
 			DebuginatorVector2 start_position = animation->data.item_activate.start_pos;
 			DebuginatorVector2 end_position;
 			end_position.x = debuginator->openness * 500 - 200;
@@ -2053,19 +1993,6 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 }
 
 float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2 offset, bool hot) {
-	//draw_rect_filled(gui, offset, debuginator__vector2(100, debuginator->item_height), debuginator__color(200, 100, 50, 200));
-	/*
-	if (!debuginator->hot_item->is_folder && debuginator->hot_item->leaf.is_expanded) {
-	if (debuginator->hot_item == item) {
-	for (size_t i = 0; i < item->leaf.num_values; i++) {
-	draw_rect_filled(gui, debuginator__vector2(0, offset.y + (i+1) * debuginator->item_height), debuginator__vector2(3, 20), debuginator__color(0, 255, 0, 255));
-	}
-	}
-	}
-	else if (debuginator->hot_item->parent == item->parent) {
-	draw_rect_filled(gui, debuginator__vector2(0, offset.y), debuginator__vector2(3, 20), debuginator__color(0, 255, 0, 255));
-	}*/
-
 	if (item->is_folder) {
 		if (debuginator->hot_item == item) {
 			DebuginatorVector2 highlight_pos = debuginator__vector2(0, offset.y - 5);
@@ -2090,9 +2017,6 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 	else {
 		if (debuginator->hot_item == item && (!item->leaf.is_expanded || item->leaf.num_values == 0)) {
 			DebuginatorVector2 line_pos = debuginator__vector2(debuginator->openness * 500 - 500, offset.y - 5);
-			if (!debuginator->left_aligned) {
-				line_pos.x = debuginator->screen_resolution.x - debuginator->openness * debuginator->size.x;
-			}
 			DebuginatorVector2 highlight_size = debuginator__vector2(500, (float)debuginator->item_height);
 			debuginator->draw_rect(&line_pos, &highlight_size, &debuginator->theme.colors[DEBUGINATOR_LineHighlight], debuginator->app_user_data);
 		}
@@ -2106,16 +2030,12 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 		if (debuginator->edit_types[item->leaf.edit_type].quick_draw != NULL) {
 			debuginator->edit_types[item->leaf.edit_type].quick_draw(debuginator, item, &offset);
 		}
-		
+
 		if (item->leaf.is_expanded) {
 			offset.x += 20;
 
 			const char* description = item->leaf.description;
 			float description_width = debuginator->size.x - 50 - offset.x;
-			if (!debuginator->left_aligned) {
-				description_width = debuginator->screen_resolution.x - offset.x;
-			}
-
 			char description_line_to_draw[64];
 			int description_height = 0;
 			unsigned row_lengths[32];
@@ -2319,7 +2239,7 @@ void debuginator_move_to_next_leaf(TheDebuginator* debuginator, bool long_move) 
 	if (hot_item_new == NULL) {
 		hot_item_new = debuginator__find_first_leaf(debuginator->root);
 	}
-	
+
 	hot_item_new->parent->folder.hot_child = hot_item_new;
 	debuginator->hot_item = hot_item_new;
 }
@@ -2354,7 +2274,7 @@ void debuginator_move_to_prev_leaf(TheDebuginator* debuginator, bool long_move) 
 	if (hot_item_new == NULL) {
 		hot_item_new = debuginator__find_last_leaf(debuginator->root);
 	}
-	
+
 	hot_item_new->parent->folder.hot_child = hot_item_new;
 	debuginator->hot_item = hot_item_new;
 }
@@ -2473,7 +2393,7 @@ void debuginator_activate_preset(DebuginatorItem* item, void* value, const char*
 
 DebuginatorItem* debuginator_create_preset_item(TheDebuginator* debuginator, const char* path, const char** paths, const char** value_titles, int** value_indices, int num_paths) {
 	(void)value_indices; // TODO
-	
+
 	char description[1024] = { 0 };
 	DEBUGINATOR_strcpy_s(description, 1000, "Preset: \n");
 	char* description_end = description + DEBUGINATOR_strlen(description);
