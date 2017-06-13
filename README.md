@@ -8,13 +8,12 @@ Gifs will be added once project is slightly more complete.
 
 ## Current status
 
-- **Highly work in progress.**
-- Simple unit testing. Currently a bunch of them fails due to heavy refactoring.
 - Reference implementation in SDL kept up to par with all features.
 - Performs well enough in terms of CPU speed. 10k - 200k items is a breeze on my work station.
-- Memory wise it's a bit worse. It's not designed to be cheap on memory (about 110 bytes + item title length per item), but I believe there's a bug in my allocator (design) that makes it fairly wasteful, so... I'll need to look into that.
+- Memory wise it's a bit worse. It's not designed to be super cheap on memory (100-200 bytes per item depending on usage).
 - Only built and tested with VS2015 & VS2017.
-- A small amount of technical debt stacked up. Will do a pass once things are more final.
+- A small amount of minor code TODOs stacked up.
+- Simple unit testing. Small coverage at the moment.
 
 ## Features
 
@@ -29,11 +28,11 @@ These are subject to change and in various level of implementedness (including c
 
 See documentation further down.
 
-Or check out the SDL demo for information on how to initialize the debuginator and for more advanced uses. 
+Or check out the SDL demo for information on how to initialize the debuginator and for more advanced uses.
 
 ### :heavy_check_mark: C99 compatible
 
-So it's easy to add to any project. In one case I use an anonymous union (I pragma away the warning), so if your compiler doesn't support that, I recommend forking and fixing. I just like the convenience. 
+So it's easy to add to any project. In one case I use an anonymous union (I pragma away the warning), so if your compiler doesn't support that, I recommend forking and fixing. I just like the convenience.
 
 ### :heavy_check_mark: Built using maximum warning levels and warnings as errors, tested with Cppcheck
 
@@ -47,7 +46,7 @@ Only the memory buffer passed in at creation.
 
 ### :heavy_check_mark: No dependencies
 
-For the library that is.
+For the library that is. It will include some headers but only if you don't provide overrides.
 
 A font is included, and to build the SDL demo you need SDL 2 and SDL TTF.
 
@@ -63,21 +62,23 @@ Can handle any number of items, the "hot" one will be centered (ish) smoothly.
 
 Tested with 10000 menu items with no noticable hit on my laptop running a debug build. That's good enough for me! Hey, it's a debug menu.
 
-Though I will likely do some proper profiling and optimization later on.
-
 ### :heavy_check_mark: Search filter
 
 Quickly and easily filter the items to find the one you want. Uses a fuzzy search mechanism to allow a user who isn't entirely sure what something is called to find it quickly. Adding a space to the search makes the filter run in "exact" mode; each part of the filter must be matched as-is.
 
 Check my post on this for a bit of details about it: https://medium.com/@Srekel/implementing-a-fuzzy-search-algorithm-for-the-debuginator-cacc349e6c55
 
-### :small_blue_diamond: Hierarchical
-
-Put things in folders in folders. Support for expanding and collapsing folders.
-
-### :small_blue_diamond: Save/Load of settings
+### :heavy_check_mark: Save/Load of settings
 
 So you start up with the settings you had when you exited. Simple interface, application needs to do most of the work.
+
+### :heavy_check_mark: Dynamic add and remove of items
+
+So you could, for example, have items that are only available when you are in the game's menu, or have one item for each enemy in the game.
+
+### :small_blue_diamond: Hierarchical
+
+Put things in folders in folders. TODO: Support for expanding and collapsing folders.
 
 ### :small_blue_diamond: Input
 
@@ -89,6 +90,14 @@ Mouse input coming later.
 
 Different editors for different types of items, and support for users adding their own.
 
+### :small_blue_diamond: Autodesk Stingray plugin available
+
+Only builds as a static library for now, and it doesn't have a Lua API (just a C API).
+
+### :small_blue_diamond: Presets
+
+Activate one item to activate a number of other ones.
+
 ### :factory: Nice look & feel
 
 Nice default color scheme, multiple themes to choose from, unique "editors" for different types of data, smooth animations, juicy feedback.
@@ -98,10 +107,6 @@ Yes, it's important.
 ### :factory: Reference implementation
 
 Written in near-C C++ and SDL.
-
-### :factory: Presets
-
-Activate one item to activate a number of other ones.
 
 ### :red_circle: Accordiony
 
@@ -117,7 +122,7 @@ Press a key when debug menu is active to assign the current item/value. Press it
 
 ## Can I help?
 
-Sure. This is my first public single-header C library. Any helpful comments appreciated. PRs are not welcome yet as it's still early in development.
+Sure. This is my first public single-header C library. Any helpful comments appreciated.
 
 ## License
 
@@ -171,7 +176,7 @@ DebuginatorVector2 text_size(const char* text, DebuginatorFont* font, void* user
 int main(...) {
     TheDebuginatorConfig config;
     debuginator_get_default_config(&config);
-    
+
     config.memory_arena_capacity = 1024 * 512;
     config.memory_arena = (char*)malloc(config.memory_arena_capacity);
 
@@ -179,21 +184,21 @@ int main(...) {
     config.draw_text = draw_text;
     config.word_wrap = word_wrap;
     config.text_size = text_size;
-    
+
     config.size.x = 500;
     config.size.y = GetMyScreenResolution().y; // You need to calculate this.
-    
+
     config.screen_resolution.x = config.size.x; // Yes these are temporary and will be removed.
     config.screen_resolution.y = config.size.y;
-    
+
     // There's a bunch of other things you CAN change in the config, but these things
     // are the necessary stuff.
-    
+
     config.create_default_debuginator_items = true; // I recommend this
-    
+
     TheDebuginator debuginator;
     debuginator_create(&config, &debuginator);
-    
+
     // debuginator is now the thing that you pass into the API functions to update/change/draw The Debuginator.
 }
 ```
@@ -202,23 +207,23 @@ Actual usage, such as adding items or modifying settings, can be done from any c
 
 ## How to use
 
-### The gist of it 
+### The gist of it
 This is the core for creating an item:
 
 ```C
 DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 	DebuginatorItem* parent, const char* path, const char* description,
 	DebuginatorOnItemChangedCallback on_item_changed_callback, void* user_data,
-	const char** value_titles, void* values, int num_values, int value_size) 
+	const char** value_titles, void* values, int num_values, int value_size)
 ```
 
-Each *item* is defined by its path. If you create two items with the same path, only one will actually exist - with the data from the last call. 
+Each *item* is defined by its path. If you create two items with the same path, only one will actually exist - with the data from the last call.
 
 An *leaf item* has a list of *values*. A value has a title and a... value. The Debuginator doesn't care about what the values are, it just sees them as an array; a pointer and an element size. When you activate a value on an item, you'll get a callback with the value pointing to the correct place in that array. For bools, you don't really need to care about that stuff, it's handled by the wrapper function.
 
 The leaf item also has a userdata field that you will use in your callbacks.
 
-In addition to leaf items, there are folder items which currently doesn't really do anything in particular except be there. You don't need to create folder items before items, they'll be created implicitly if they don't already exist. You can pass NULL to the *parent* parameter, in fact, it's the most common use case. It's mainly there as an optimization. 
+In addition to leaf items, there are folder items which currently doesn't really do anything in particular except be there. You don't need to create folder items before items, they'll be created implicitly if they don't already exist. You can pass NULL to the *parent* parameter, in fact, it's the most common use case. It's mainly there as an optimization.
 
 ### Saving and loading
 
@@ -237,11 +242,11 @@ Here's how to add a boolean item that toggles god mode for the player:
         int health;
         bool godmode;
     }
-    
+
     Player my_player;
     my_player.health = 100;
     my_player.godmode = false;
-    
+
     debuginator_create_bool_item(
       &debuginator,
       "Player Mechanics/God Mode",
@@ -254,8 +259,8 @@ Here's how to create a preset item - it'll toggle multiple things.
 ```C
     const char* preset_paths[2] = { "Workflow/Skip intro", "Player Mechanics/God Mode" };
     const char* preset_value_titles[2] = { "True", "True" };
-    debuginator_create_preset_item(&debuginator, 
-    		"My Presets/Good workflow", 
+    debuginator_create_preset_item(&debuginator,
+    		"My Presets/Good workflow",
 		preset_paths, preset_value_titles, NULL, 2);
 ```
 
@@ -264,7 +269,7 @@ Here's how to create a generic item with a few strings and no callback (not sure
 ```C
 	{
 		static const char* string_titles[5] = { "String A", "String B", "String C", "String D", "String E" };
-		debuginator_create_array_item(&debuginator, 
+		debuginator_create_array_item(&debuginator,
 			NULL, "My Game/String Test",
 			"Multiple strings.", NULL, NULL,
 			string_titles, NULL, 5, 0);
@@ -296,11 +301,19 @@ Here's how to create a generic item with multiple things WITH a callback.
 
 		static const char* uisize_titles[4] = { "Small", "Medium", "Large", "ULTRA LARGE" };
 		static int uisizes[4] = { 0, 1, 2, 3 };
-		DebuginatorItem* uisize_item = debuginator_create_array_item(debuginator, 
+		DebuginatorItem* uisize_item = debuginator_create_array_item(debuginator,
 			NULL, "Debuginator/UI size",
 			"Change font and item size.", on_change_ui_size, wrapper,
 			uisize_titles, uisizes, 4, sizeof(uisizes[0]));
 ```
+
+## A note on memory
+
+The Debuginator uses (what I call) a block allocator. It's slightly wasteful in terms of memory but should be pretty efficient for allocating and deallocating.
+
+You provide a buffer for The Debuginator to use, and it'll use that. When there's no more memory.. it'll probably crash or something.
+
+If want to give The Debuginator a string for it to own, you can do that. Why would you want to? Here's an example:
 
 ## How to configure
 
@@ -362,11 +375,11 @@ Somewhere in your project's code:
 	PluginManagerApi *plugin_manager_api = (PluginManagerApi*)get_engine_api(PLUGIN_MANAGER_API_ID);
 	TheDebuginatorApi* debuginator_api = (TheDebuginatorApi*)plugin_manager_api->get_next_plugin_api(THE_DEBUGINATOR_API_ID, NULL);
 	ScriptApi* script_api = (ScriptApi*)get_engine_api(C_API_ID);
-	
+
 	TheDebuginatorConfig config;
 	ASSERT(debuginator_api->get_default_config != NULL, "Debugintor plugin not loaded.");
 	debuginator_api->get_default_config(&config);
-	
+
 	config.memory_arena_capacity = 1024 * 32;
 	config.size.x = 500;
 

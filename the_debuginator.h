@@ -761,15 +761,15 @@ void debuginator__set_total_height(DebuginatorItem* item, int height) {
 	}
 }
 
-void debuginator__set_num_visible_children(DebuginatorItem* item, int diff) {
+void debuginator__adjust_num_visible_children(DebuginatorItem* item, int diff) {
 	DEBUGINATOR_assert(item->is_folder);
 	DEBUGINATOR_assert(diff != 0 && item->folder.num_visible_children + diff >= 0);
 	item->folder.num_visible_children += diff;
 	if (item->folder.num_visible_children == 0 && item->parent != NULL) {
-		debuginator__set_num_visible_children(item->parent, -1);
+		debuginator__adjust_num_visible_children(item->parent, -1);
 	}
 	else if (item->folder.num_visible_children == diff && item->parent != NULL) {
-		debuginator__set_num_visible_children(item->parent, 1);
+		debuginator__adjust_num_visible_children(item->parent, 1);
 	}
 }
 
@@ -1075,7 +1075,7 @@ DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 	}
 
 	item->leaf.description = description == NULL ? "" : description;
-	debuginator__set_num_visible_children(item->parent, 1);
+	debuginator__adjust_num_visible_children(item->parent, 1);
 
 	//TODO preserve hot item
 	return item;
@@ -1148,7 +1148,7 @@ void debuginator_load_item(TheDebuginator* debuginator, const char* path, const 
 		item->leaf.description = value_title; // Temporarily reuse description field
 		item->leaf.hot_index = -2;
 		debuginator__set_total_height(item, 0);
-		debuginator__set_num_visible_children(item->parent, -1);
+		debuginator__adjust_num_visible_children(item->parent, -1);
 	}
 	else if (item->is_folder) {
 	}
@@ -1247,7 +1247,11 @@ void debuginator_remove_item(TheDebuginator* debuginator, DebuginatorItem* item)
 	}
 
 	debuginator__set_total_height(item->parent, item->parent->total_height - item->total_height);
-	debuginator__set_num_visible_children(item->parent, -1);
+
+	if (!item->is_folder) {
+		// If it's a folder we've already adjusted the parent's count when we removed the item's children above.
+		debuginator__adjust_num_visible_children(item->parent, -1);
+	}
 
 	debuginator__deallocate(debuginator, item->title);
 	if (!item->is_folder) {
@@ -1479,12 +1483,12 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 
 			if (is_filtered && !item->is_filtered) {
 				debuginator__set_total_height(item, 0);
-				debuginator__set_num_visible_children(item->parent, -1);
+				debuginator__adjust_num_visible_children(item->parent, -1);
 				item->leaf.is_expanded = false;
 			}
 			else if (!is_filtered && item->is_filtered) {
 				debuginator__set_total_height(item, debuginator->item_height); //Hacky
-				debuginator__set_num_visible_children(item->parent, 1);
+				debuginator__adjust_num_visible_children(item->parent, 1);
 			}
 
 			item->is_filtered = is_filtered;
