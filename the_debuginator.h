@@ -151,6 +151,9 @@ DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 // Wraps create_array_item. user_data should point to a single byte. It'll get 1 or 0 written to it.
 DebuginatorItem* debuginator_create_bool_item(TheDebuginator* debuginator, const char* path, const char* description, void* user_data);
 
+// Useful simple callback function for setting a small value
+void debuginator_copy_1byte(DebuginatorItem* item, void* value, const char* value_title, void* app_userdata);
+
 // Wraps create_array_item. Creates an item which, upon activation, sets the value of all items referenced to by paths, to
 // have the value from the corresponding index in value_titles.
 // value_indices is currently not used
@@ -216,6 +219,12 @@ void debuginator_set_item_height(TheDebuginator* debuginator, int item_height);
 
 // Sets width and height of The Debuginator
 void debuginator_set_size(TheDebuginator* debuginator, int width, int height);
+
+// Sets screen resolution for The Debuginator. Only used for right-aligned mode.
+void debuginator_set_screen_resolution(TheDebuginator* debuginator, int width, int height);
+
+// True for left, false for right. Use in conjunction with screen resolution.
+void debuginator_set_left_aligned(TheDebuginator* debuginator, bool left_aligned);
 
 // Copies a string and returns a pointer to one that the debuginator owns and will
 // free if assigned as the description. (TODO: Add for value_titles)
@@ -343,10 +352,11 @@ typedef struct TheDebuginatorConfig {
 	// The dimensions of the "panel".
 	DebuginatorVector2 size; // Might not be needed in the future
 
-	// Screen resolution. Kind of redundant but I have an idea for it..
+	// Screen resolution. Used when setting open_direction to -1.
 	DebuginatorVector2 screen_resolution;
 
-	// Not currently supported.
+	// Set to -1 to put The Debuginator on the right side of the screen.
+	// Remember to keep screen_resolution up to date.
 	int open_direction;
 
 	// Where the hot item should be, height-wise, on the screen.
@@ -559,7 +569,7 @@ typedef struct TheDebuginator {
 	DebuginatorVector2 size;
 	DebuginatorVector2 root_position;
 	DebuginatorVector2 screen_resolution;
-	int open_direction;
+	char open_direction; // char so I can be lazy and use copy_1_byte.
 	float focus_height;
 	float current_height_offset;
 
@@ -604,11 +614,13 @@ float debuginator__lerp(float a, float b, float t) {
 
 void debuginator__quick_draw_default(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
 	if (item->leaf.num_values > 0) {
-		DebuginatorVector2 value_offset = *position;
-		value_offset.x = debuginator->openness * debuginator->size.x - 200;
+		DebuginatorVector2 pos = debuginator__vector2(debuginator->root_position.x + debuginator->size.x + debuginator->size.x * debuginator->openness * debuginator->open_direction - 200, position->y);
+
+		//DebuginatorVector2 value_offset = *position;
+		//value_offset.x = debuginator->openness * debuginator->size.x - 200;
 		bool is_overriden = item->leaf.active_index != item->leaf.default_index;
 		unsigned default_color_index = is_overriden ? DEBUGINATOR_ItemTitleOverridden : DEBUGINATOR_ItemTitle;
-		debuginator->draw_text(item->leaf.value_titles[item->leaf.active_index], &value_offset, &debuginator->theme.colors[default_color_index], &debuginator->theme.fonts[DEBUGINATOR_ItemTitle], debuginator->app_user_data);
+		debuginator->draw_text(item->leaf.value_titles[item->leaf.active_index], &pos, &debuginator->theme.colors[default_color_index], &debuginator->theme.fonts[DEBUGINATOR_ItemTitle], debuginator->app_user_data);
 	}
 }
 
@@ -631,7 +643,7 @@ void debuginator__expanded_draw_default(TheDebuginator* debuginator, Debuginator
 }
 
 void debuginator__quick_draw_boolean(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
-	DebuginatorVector2 pos = debuginator__vector2(debuginator->size.x * debuginator->openness - 200, position->y);
+	DebuginatorVector2 pos = debuginator__vector2(debuginator->root_position.x + debuginator->size.x + debuginator->size.x * debuginator->openness * debuginator->open_direction- 200, position->y);
 	DebuginatorVector2 size = debuginator__vector2(50, 20);
 	DebuginatorColor background = debuginator__color(0, 0, 0, 100);
 	debuginator->draw_rect(&pos, &size, &background, debuginator->app_user_data);
@@ -1359,7 +1371,7 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 	while (item != NULL) {
 		if (item->is_folder) {
 			if (item->folder.first_child != NULL) {
-				DEBUGINATOR_strcpy_s(current_full_path + path_indices[current_path_index], 20, item->title);
+				DEBUGINATOR_strcpy_s(current_full_path + path_indices[current_path_index], sizeof(current_full_path) - path_indices[current_path_index], item->title);
 
 				path_indices[current_path_index+1] = path_indices[current_path_index] + (int)DEBUGINATOR_strlen(item->title);
 				*(current_full_path + path_indices[current_path_index + 1]) = ' ';
@@ -1588,11 +1600,17 @@ void debuginator_set_item_height(TheDebuginator* debuginator, int item_height) {
 }
 
 void debuginator_set_size(TheDebuginator* debuginator, int width, int height) {
-	// TODO: Remove one of these.
-	debuginator->screen_resolution.x = (float)width;
-	debuginator->screen_resolution.y = (float)height;
 	debuginator->size.x = (float)width;
 	debuginator->size.y = (float)height;
+}
+
+void debuginator_set_screen_resolution(TheDebuginator* debuginator, int width, int height) {
+	debuginator->screen_resolution.x = (float)width;
+	debuginator->screen_resolution.y = (float)height;
+}
+
+void debuginator_set_left_aligned(TheDebuginator* debuginator, bool left_aligned) {
+	debuginator->open_direction = left_aligned ? 1 : -1;
 }
 
 void debuginator_get_default_config(TheDebuginatorConfig* config) {
@@ -1694,7 +1712,7 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 	DEBUGINATOR_assert(config->word_wrap != NULL);
 	DEBUGINATOR_assert(config->memory_arena != NULL);
 	DEBUGINATOR_assert(config->memory_arena_capacity > 0);
-	//DEBUGINATOR_assert(config->open_direction == -1 || config->open_direction == 1);
+	DEBUGINATOR_assert(config->open_direction == -1 || config->open_direction == 1);
 	DEBUGINATOR_assert(config->size.x > 0 && config->size.y > 0);
 	DEBUGINATOR_assert(config->screen_resolution.x > 0 && config->screen_resolution.y > 0);
 
@@ -1722,12 +1740,11 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 	debuginator->app_user_data = config->app_user_data;
 
 	debuginator->size = config->size;
-	debuginator->open_direction = config->open_direction;
+	debuginator->open_direction = (char)config->open_direction;
 	debuginator->focus_height = config->focus_height;
 	debuginator->screen_resolution = config->screen_resolution;
 	debuginator->item_height = config->item_height;
 
-	debuginator->open_direction = 1;
 	debuginator->root_position.x = -debuginator->size.x;
 
 	memcpy(debuginator->edit_types, config->edit_types, sizeof(debuginator->edit_types));
@@ -1759,6 +1776,13 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/Gamepad default advanced usage",
 				"Use the corresponding AXBY buttons to do the same things as the D-Pad, but faster!", NULL, NULL,
 				NULL, NULL, 0, 0);
+		}
+		{
+			static char directions[2] = { 1, -1 };
+			static const char* string_titles[2] = { "Left", "Right" };
+			debuginator_create_array_item(debuginator, NULL, "Debuginator/Alignment",
+				"Right alignment is not fully tested and has some visual glitches.", debuginator_copy_1byte, &debuginator->open_direction,
+				string_titles, directions, 2, sizeof(directions[0]));
 		}
 		{
 			static int theme_indices[4] = { 0, 1, 2, 3 };
@@ -1810,6 +1834,14 @@ void debuginator_update(TheDebuginator* debuginator, float dt) {
 	debuginator->current_height_offset = debuginator__lerp(debuginator->current_height_offset, distance_to_wanted_y, DEBUGINATOR_min(1, dt * 10));
 	if (DEBUGINATOR_fabs(debuginator->current_height_offset - distance_to_wanted_y) < 0.1f) {
 		debuginator->current_height_offset = distance_to_wanted_y;
+	}
+
+	// Update left vs right
+	if (debuginator->open_direction == 1) {
+		debuginator->root_position.x = -debuginator->size.x;
+	}
+	else {
+		debuginator->root_position.x = debuginator->screen_resolution.x;
 	}
 }
 
@@ -1999,7 +2031,8 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2 offset, bool hot) {
 	if (item->is_folder) {
 		if (debuginator->hot_item == item) {
-			DebuginatorVector2 highlight_pos = debuginator__vector2(0, offset.y - 5);
+			DebuginatorVector2 highlight_pos = debuginator__vector2(debuginator->root_position.x + debuginator->size.x * debuginator->openness * debuginator->open_direction, offset.y - 5);
+			//DebuginatorVector2 highlight_pos = debuginator__vector2(debuginator, offset.y - 5);
 			DebuginatorVector2 highlight_size = debuginator__vector2(500, (float)debuginator->item_height);
 			debuginator->draw_rect(&highlight_pos, &highlight_size, &debuginator->theme.colors[DEBUGINATOR_LineHighlight], debuginator->app_user_data);
 		}
@@ -2020,9 +2053,10 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 	}
 	else {
 		if (debuginator->hot_item == item && (!item->leaf.is_expanded || item->leaf.num_values == 0)) {
-			DebuginatorVector2 line_pos = debuginator__vector2(debuginator->openness * 500 - 500, offset.y - 5);
+			DebuginatorVector2 highlight_pos = debuginator__vector2(debuginator->root_position.x + debuginator->size.x * debuginator->openness * debuginator->open_direction, offset.y - 5);
+			//DebuginatorVector2 line_pos = debuginator__vector2(debuginator->openness * 500 - 500, offset.y - 5);
 			DebuginatorVector2 highlight_size = debuginator__vector2(500, (float)debuginator->item_height);
-			debuginator->draw_rect(&line_pos, &highlight_size, &debuginator->theme.colors[DEBUGINATOR_LineHighlight], debuginator->app_user_data);
+			debuginator->draw_rect(&highlight_pos, &highlight_size, &debuginator->theme.colors[DEBUGINATOR_LineHighlight], debuginator->app_user_data);
 		}
 
 		bool is_overriden = item->leaf.active_index != item->leaf.default_index && !debuginator->edit_types[item->leaf.edit_type].forget_state;

@@ -233,8 +233,8 @@ int main(int argc, char **argv)
 {
 	(void)(argc, argv);
 
-	int res_x = 800;
-	int res_y = 600;
+	int res_x = 1280;
+	int res_y = 720;
 	bool vsync_on = true;
 	GuiHandle gui = gui_create_gui(res_x, res_y, "Debuginator SDL demo", vsync_on);
 	if (gui == 0) {
@@ -254,13 +254,14 @@ int main(int argc, char **argv)
 	config.memory_arena_capacity = memory_arena_capacity;
 	config.draw_rect = draw_rect;
 	config.draw_text = draw_text;
-	config.app_user_data = (void*)gui;
 	config.word_wrap = word_wrap;
 	config.text_size = text_size;
+	config.app_user_data = (void*)gui;
 	config.size.x = 500;
 	config.size.y = (float)res_y;
 	config.screen_resolution.x = (float)res_x;
 	config.screen_resolution.y = (float)res_y;
+	//config.open_direction = -1; // To show it on the right side of the screen
 	config.focus_height = 0.3f;
 	config.create_default_debuginator_items = true;
 
