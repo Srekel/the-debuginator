@@ -76,6 +76,10 @@ So you start up with the settings you had when you exited. Simple interface, app
 
 So you could, for example, have items that are only available when you are in the game's menu, or have one item for each enemy in the game.
 
+### :heavy_check_mark: Left or right aligned
+
+Because some games already have other important stuff on the left side of the screen.
+
 ### :small_blue_diamond: Hierarchical
 
 Put things in folders in folders. TODO: Support for expanding and collapsing folders.
@@ -313,11 +317,14 @@ The Debuginator uses (what I call) a block allocator. It's slightly wasteful in 
 
 You provide a buffer for The Debuginator to use, and it'll use that. When there's no more memory.. it'll probably crash or something.
 
-If want to give The Debuginator a string for it to own, you can do that. Why would you want to? Here's an example:
+If you want to give The Debuginator a string for it to own (and deallocate), you can do that. Look at:
+```C
+char* debuginator_copy_string(TheDebuginator* debuginator, const char* string, int length);
+```
 
 ## How to configure
 
-You know, it's best to just look in the header file and see which functions are exposed, but... here's the API such as it is currently.
+You know, it's best to just look in the header file and see which functions are exposed, but... here's the API such as it is currently. There's additional information in the code.
 
 ```C
 bool debuginator_is_open(TheDebuginator* debuginator);
@@ -359,7 +366,17 @@ void debuginator_set_item_height(TheDebuginator* debuginator, int item_height);
 void debuginator_set_size(TheDebuginator* debuginator, int width, int height);
 
 ```
+# How to run the Unit Test
 
+Open the Visual Studio solution. Build it. Set the *unittest* project as the StartUp project. Run.
+
+Note: The SDL demo project won't build until you fix the dependencies.
+
+# How to run the SDL demo
+
+Open the Visual Studio solution. Build it. Set the *sdl* project as the StartUp project. Run.
+
+You'll need dependencies to build it. Get SDL 2 and SDLTTF 2. I'll update this with better instructions at some point. :)
 
 # How to use Stingray Plugin
 

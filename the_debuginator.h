@@ -567,7 +567,8 @@ typedef struct TheDebuginator {
 	int item_height;
 
 	DebuginatorVector2 size;
-	DebuginatorVector2 root_position;
+	DebuginatorVector2 root_position; // The fixed position where The Debuginator is when it's closed
+	DebuginatorVector2 top_left; // The top-left position where The Debuginator currently is
 	DebuginatorVector2 screen_resolution;
 	char open_direction; // char so I can be lazy and use copy_1_byte.
 	float focus_height;
@@ -614,7 +615,7 @@ float debuginator__lerp(float a, float b, float t) {
 
 void debuginator__quick_draw_default(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
 	if (item->leaf.num_values > 0) {
-		DebuginatorVector2 pos = debuginator__vector2(debuginator->root_position.x + debuginator->size.x + debuginator->size.x * debuginator->openness * debuginator->open_direction - 200, position->y);
+		DebuginatorVector2 pos = debuginator__vector2(debuginator->top_left.x + debuginator->size.x - 200, position->y);
 
 		//DebuginatorVector2 value_offset = *position;
 		//value_offset.x = debuginator->openness * debuginator->size.x - 200;
@@ -629,7 +630,7 @@ void debuginator__expanded_draw_default(TheDebuginator* debuginator, Debuginator
 		position->y += debuginator->item_height;
 
 		if (debuginator->hot_item == item && item->leaf.hot_index == i) {
-			DebuginatorVector2 pos = debuginator__vector2(0, position->y - 5);
+			DebuginatorVector2 pos = debuginator__vector2(debuginator->top_left.x, position->y - 5);
 			DebuginatorVector2 size = debuginator__vector2(500.f, (float)debuginator->item_height);
 			debuginator->draw_rect(&pos, &size, &debuginator->theme.colors[DEBUGINATOR_LineHighlight], debuginator->app_user_data);
 		}
@@ -643,7 +644,7 @@ void debuginator__expanded_draw_default(TheDebuginator* debuginator, Debuginator
 }
 
 void debuginator__quick_draw_boolean(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
-	DebuginatorVector2 pos = debuginator__vector2(debuginator->root_position.x + debuginator->size.x + debuginator->size.x * debuginator->openness * debuginator->open_direction- 200, position->y);
+	DebuginatorVector2 pos = debuginator__vector2(debuginator->top_left.x + debuginator->size.x - 200, position->y);
 	DebuginatorVector2 size = debuginator__vector2(50, 20);
 	DebuginatorColor background = debuginator__color(0, 0, 0, 100);
 	debuginator->draw_rect(&pos, &size, &background, debuginator->app_user_data);
@@ -678,7 +679,7 @@ void debuginator__expanded_draw_boolean(TheDebuginator* debuginator, Debuginator
 		position->y += debuginator->item_height;
 
 		if (debuginator->hot_item == item && item->leaf.hot_index == i) {
-			DebuginatorVector2 pos = debuginator__vector2(0, position->y - 5);
+			DebuginatorVector2 pos = debuginator__vector2(debuginator->top_left.x, position->y - 5);
 			DebuginatorVector2 size = debuginator__vector2(500, (float)debuginator->item_height);
 			debuginator->draw_rect(&pos, &size, &debuginator->theme.colors[DEBUGINATOR_LineHighlight], debuginator->app_user_data);
 		}
@@ -1746,6 +1747,7 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 	debuginator->item_height = config->item_height;
 
 	debuginator->root_position.x = -debuginator->size.x;
+	debuginator->top_left = debuginator__vector2(debuginator->root_position.x + debuginator->size.x * debuginator->openness * debuginator->open_direction, 0);
 
 	memcpy(debuginator->edit_types, config->edit_types, sizeof(debuginator->edit_types));
 	memcpy(debuginator->themes, config->themes, sizeof(debuginator->themes));
@@ -1756,6 +1758,7 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 	DebuginatorItem* item = debuginator_new_folder_item(debuginator, NULL, "Menu Root", 0);
 	debuginator->root = item;
 
+	// TODO: Don't use static variables
 	if (config->create_default_debuginator_items) {
 		{
 			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/About",
@@ -1778,6 +1781,7 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 				NULL, NULL, 0, 0);
 		}
 		{
+			// TODO: Use a special callback instead of copy 1 byte in order to fix startup wonky animations.
 			static char directions[2] = { 1, -1 };
 			static const char* string_titles[2] = { "Left", "Right" };
 			debuginator_create_array_item(debuginator, NULL, "Debuginator/Alignment",
@@ -1843,6 +1847,9 @@ void debuginator_update(TheDebuginator* debuginator, float dt) {
 	else {
 		debuginator->root_position.x = debuginator->screen_resolution.x;
 	}
+
+	// Update "origin" position
+	debuginator->top_left = debuginator__vector2(debuginator->root_position.x + debuginator->size.x * debuginator->openness * debuginator->open_direction, 0);
 }
 
 
@@ -1866,8 +1873,7 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 	debuginator->theme.colors[DEBUGINATOR_ItemTitleActive].b = (unsigned char)debuginator__lerp((float)debuginator->theme.colors[DEBUGINATOR_ItemTitleActive1].b, (float)debuginator->theme.colors[DEBUGINATOR_ItemTitleActive2].b, lerp_t);
 
 	// Background
-	DebuginatorVector2 offset = debuginator->root_position;
-	offset.x += debuginator__lerp(0, debuginator->open_direction * debuginator->size.x, debuginator->openness);
+	DebuginatorVector2 offset = debuginator->top_left;
 	debuginator->draw_rect(&offset, &debuginator->size, &debuginator->theme.colors[DEBUGINATOR_Background], debuginator->app_user_data);
 
 	offset.y = debuginator->current_height_offset;
@@ -1927,7 +1933,7 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 
 			DebuginatorVector2 start_position = animation->data.item_activate.start_pos;
 			DebuginatorVector2 end_position;
-			end_position.x = debuginator->openness * 500 - 200;
+			end_position.x = debuginator->top_left.x + debuginator->size.x - 200;
 			end_position.y = distance_from_root_to_item + debuginator->current_height_offset - debuginator->item_height;
 			if (animation->data.item_activate.item->leaf.is_expanded) {
 				end_position.y -= (animation->data.item_activate.item->leaf.hot_index + 1) * debuginator->item_height; // HACK! for description :(
@@ -1969,7 +1975,7 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 
 	if (debuginator->filter_timer > 0) {
 		float alpha = debuginator->filter_timer * (filter_hint_mode ? 0.5f : 1);
-		DebuginatorVector2 filter_pos = debuginator__vector2(debuginator->openness * debuginator->size.x - 450, 25);
+		DebuginatorVector2 filter_pos = debuginator__vector2(debuginator->top_left.x + debuginator->size.x - 450, 25);
 		DebuginatorVector2 filter_size = debuginator__vector2(150 + (debuginator->size.x - 250) * debuginator->filter_timer, 50);
 		DebuginatorColor filter_color = debuginator__color(50, 100, 50, (int)(200 * debuginator->filter_timer * alpha));
 		debuginator->draw_rect(&filter_pos, &filter_size, &filter_color, debuginator->app_user_data);
@@ -2031,7 +2037,7 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2 offset, bool hot) {
 	if (item->is_folder) {
 		if (debuginator->hot_item == item) {
-			DebuginatorVector2 highlight_pos = debuginator__vector2(debuginator->root_position.x + debuginator->size.x * debuginator->openness * debuginator->open_direction, offset.y - 5);
+			DebuginatorVector2 highlight_pos = debuginator__vector2(debuginator->top_left.x, offset.y - 5);
 			//DebuginatorVector2 highlight_pos = debuginator__vector2(debuginator, offset.y - 5);
 			DebuginatorVector2 highlight_size = debuginator__vector2(500, (float)debuginator->item_height);
 			debuginator->draw_rect(&highlight_pos, &highlight_size, &debuginator->theme.colors[DEBUGINATOR_LineHighlight], debuginator->app_user_data);
@@ -2053,7 +2059,7 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 	}
 	else {
 		if (debuginator->hot_item == item && (!item->leaf.is_expanded || item->leaf.num_values == 0)) {
-			DebuginatorVector2 highlight_pos = debuginator__vector2(debuginator->root_position.x + debuginator->size.x * debuginator->openness * debuginator->open_direction, offset.y - 5);
+			DebuginatorVector2 highlight_pos = debuginator__vector2(debuginator->top_left.x, offset.y - 5);
 			//DebuginatorVector2 line_pos = debuginator__vector2(debuginator->openness * 500 - 500, offset.y - 5);
 			DebuginatorVector2 highlight_size = debuginator__vector2(500, (float)debuginator->item_height);
 			debuginator->draw_rect(&highlight_pos, &highlight_size, &debuginator->theme.colors[DEBUGINATOR_LineHighlight], debuginator->app_user_data);
@@ -2073,7 +2079,7 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 			offset.x += 20;
 
 			const char* description = item->leaf.description;
-			float description_width = debuginator->size.x - 50 - offset.x;
+			float description_width = debuginator->top_left.x + debuginator->size.x - 50 - offset.x;
 			char description_line_to_draw[64];
 			int description_height = 0;
 			unsigned row_lengths[32];
@@ -2131,6 +2137,7 @@ void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item) {
 		animation->type = DEBUGINATOR_ItemActivate;
 		animation->data.item_activate.item = item;
 		animation->data.item_activate.value_index = item->leaf.hot_index;
+		animation->data.item_activate.start_pos.x = debuginator->top_left.x;
 		animation->duration = 0.5f;
 
 		DebuginatorItem* parent = item->parent;
