@@ -1361,8 +1361,8 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 		}
 	//}
 
-	char current_full_path[128] = { 0 };
-	int path_indices[8] = { 0 };
+	char current_full_path[512] = { 0 };
+	int path_indices[16] = { 0 };
 	int current_path_index = 0;
 
 	int best_score = -1;
@@ -1377,6 +1377,7 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 				path_indices[current_path_index+1] = path_indices[current_path_index] + (int)DEBUGINATOR_strlen(item->title);
 				*(current_full_path + path_indices[current_path_index + 1]) = ' ';
 				path_indices[current_path_index + 1]++;
+				DEBUGINATOR_assert(path_indices[current_path_index + 1] < sizeof(current_full_path));
 
 				//if (!exact_search) {
 					for (int i = path_indices[current_path_index]; i < path_indices[current_path_index + 1]; i++) {
@@ -1385,15 +1386,18 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 				//}
 
 				++current_path_index;
+				DEBUGINATOR_assert(current_path_index + 1 < sizeof(path_indices) / sizeof(path_indices[0]));
 				item = item->folder.first_child;
 
 				continue;
 			}
 		}
 		else {
-			bool taken_chars[128] = { 0 };
+			bool taken_chars[512] = { 0 };
+			DEBUGINATOR_assert(sizeof(taken_chars) == sizeof(current_full_path)); // Should probably be a static assert but whatevs
 			DEBUGINATOR_strcpy_s(current_full_path + path_indices[current_path_index], 50, item->title);
 			path_indices[current_path_index + 1] = path_indices[current_path_index] + (int)DEBUGINATOR_strlen(item->title);
+			DEBUGINATOR_assert(path_indices[current_path_index + 1] < sizeof(current_full_path));
 			int current_path_length = path_indices[current_path_index + 1];
 
 			//if (!exact_search) {
@@ -1405,8 +1409,6 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 			int score = -1;
 			bool is_filtered = false;
 
-			// LOL1010
-			// 100
 			int filter_part = 0;
 			while (filter[filter_part] != '\0') {
 				if (filter[filter_part] == ' ') {
@@ -1428,7 +1430,6 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 					}
 
 					if (!filter_part_found) {
-						//match_count = 0;
 						break;
 					}
 
@@ -1487,7 +1488,6 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 				else {
 					filter_part += matches[best_match_index + 1];
 					score += best_match_score;
-					//is_filtered = false;
 					for (int match_i = 0; match_i < matches[best_match_index + 1]; match_i++) {
 						taken_chars[matches[best_match_index] + match_i] = true;
 					}
