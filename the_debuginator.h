@@ -1347,7 +1347,7 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 	// "aa aa" doesn't match "Cars/Saab and Volvo"
 	// "aa aa" matches "Caars/Saab"
 	bool exact_search = false;
-	for (size_t i = 0; i < DEBUGINATOR_strlen(wanted_filter); i++) {
+	for (size_t i = 0; i < filter_length; i++) {
 		if (wanted_filter[i] == ' ') {
 			exact_search = true;
 			break;
