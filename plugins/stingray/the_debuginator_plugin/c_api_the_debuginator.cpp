@@ -22,6 +22,9 @@ struct TheDebuginatorWrapper {
 	MaterialPtr font_material;
 	bool memory_owned_by_this_plugin;
 	int font_size;
+	bool axis_selected_repeat;
+	bool axis_scroll_repeat;
+	float scroll_repeat_timer;
 };
 
 struct InputWrapper {
@@ -60,6 +63,11 @@ struct InputWrapper {
 
 		return false;
 	}
+
+	CApiVector3 axis(const char *axis) {
+		using namespace stingray_plugin_foundation;
+		return api->axis(controller, api->axis_id(controller, hash32(axis)), 0);
+	}
 };
 
 struct PluginMemory {
@@ -94,9 +102,9 @@ namespace {
 		script_api->Gui->rect(wrapper->gui, &gui_position, 100, (ConstVector2Ptr)size, &gui_color);
 	}
 
-	void word_wrap(const char* text, DebuginatorFont font, float max_width, unsigned* row_count, unsigned* row_lengths, int row_lengths_buffer_size, void* app_userdata) {
+	void word_wrap(const char* text, DebuginatorFont font, float max_width, unsigned* row_count, unsigned* row_lengths, unsigned row_lengths_buffer_size, void* app_userdata) {
 		TheDebuginatorWrapper* wrapper = (TheDebuginatorWrapper*)app_userdata;
-		*row_count = script_api->Gui->word_wrap(wrapper->gui, text, wrapper->font, wrapper->font_size, max_width, " ", "-+&/", "\n", 0, row_lengths, 16);
+		*row_count = script_api->Gui->word_wrap(wrapper->gui, text, wrapper->font, wrapper->font_size, max_width, " ", "-+&/", "\n", 0, row_lengths, row_lengths_buffer_size);
 	}
 
 	DebuginatorVector2 text_size(const char* text, DebuginatorFont* font, void* app_userdata) {
@@ -320,32 +328,36 @@ void handle_default_input(TheDebuginator* debuginator, unsigned devices) {
 			bool long_move = ctrl_pressed;
 			debuginator_move_to_next_leaf(debuginator, long_move);
 		}
+		else if (input_wrapper.pressed_repeat("home")) {
+			debuginator_move_to_root(debuginator);
+			debuginator->focus_height = default_focus_height;
+		}
+		else if (input_wrapper.pressed_repeat("end")) {
+			debuginator_move_to_root(debuginator);
+			debuginator_move_sibling_previous(debuginator);
+			debuginator->focus_height = default_focus_height;
+		}
 		else if (input_wrapper.pressed("left")) {
 			DebuginatorItem* hot_item = debuginator_get_hot_item(debuginator);
-			if (debuginator_is_open(debuginator) && !hot_item->leaf.is_active) {
-				debuginator_set_open(debuginator, false);
-			}
-			else if (!hot_item->is_folder && hot_item->leaf.is_active) {
+			if (debuginator_is_open(debuginator) && (hot_item->is_folder || (!hot_item->is_folder && hot_item->leaf.is_expanded))) {
 				debuginator_move_to_parent(debuginator);
 			}
 		}
-		else if (input_wrapper.pressed("escape")) {
+		else if (input_wrapper.pressed("escape") || input_wrapper.pressed("delete")) {
 			debuginator_set_open(debuginator, false);
 		}
-		else if (input_wrapper.pressed("right")) {
-			bool direct_activate = ctrl_pressed;
-			debuginator_move_to_child(debuginator, direct_activate);
+		else if (input_wrapper.pressed("enter")) {
+			debuginator_move_to_child(debuginator, false);	
 		}
 
-		// This code looks pretty janky but it feels good.
 		if (input_wrapper.pressed_repeat("backspace")) {
-			char* filter = debuginator_get_filter(debuginator);
+			const char* filter = debuginator_get_filter(debuginator);
 			int filter_length = (int)strlen(filter);
 
 			if (filter_length > 0) {
 				char new_filter[64] = { 0 };
 				memcpy(new_filter, filter, filter_length);
-				char* filter = debuginator_get_filter(debuginator);
+				const char* filter = debuginator_get_filter(debuginator);
 				int filter_length = (int)strlen(filter);
 				if (filter_length > 0) {
 					new_filter[--filter_length] = '\0';
@@ -355,29 +367,77 @@ void handle_default_input(TheDebuginator* debuginator, unsigned devices) {
 			else if (debuginator_is_filtering_enabled(debuginator)) {
 				debuginator_set_filtering_enabled(debuginator, false);
 			}
-			else if (input_wrapper.pressed("backspace")) {
-				debuginator_set_filtering_enabled(debuginator, true);
-			}
 		}
 
-		unsigned int num_key_strokes;
-		const int* keystrokes = script_api->Input->Keyboard->keystrokes(keyboard, &num_key_strokes);
-		if (debuginator_is_filtering_enabled(debuginator) && num_key_strokes > 0) {
-			char* filter = debuginator_get_filter(debuginator);
-			int filter_length = (int)strlen(filter);
-			if (filter_length + (int)num_key_strokes < wrapper->font_size) {
-				char new_filter[64] = { 0 };
-				memcpy(new_filter, filter, filter_length);
-				int real_strokes = 0;
-				for (unsigned int i = 0; i < num_key_strokes; ++i) {
-					if (32 <= keystrokes[i] && keystrokes[i] <= 125) {
-						new_filter[filter_length++] = (char)keystrokes[i];
-						++real_strokes;
+		if (ctrl_pressed && input_wrapper.pressed_repeat("w")) {
+			debuginator_update_filter(debuginator, "");
+		} else {
+			unsigned int num_key_strokes;
+			const int* keystrokes = script_api->Input->Keyboard->keystrokes(keyboard, &num_key_strokes);
+			if (num_key_strokes > 0) {
+				const char* filter = debuginator_get_filter(debuginator);
+				int filter_length = (int)strlen(filter);
+				if (filter_length + (int)num_key_strokes < wrapper->font_size) {
+					char new_filter[64] = { 0 };
+					memcpy(new_filter, filter, filter_length);
+					int real_strokes = 0;
+					for (unsigned int i = 0; i < num_key_strokes; ++i) {
+						if (32 <= keystrokes[i] && keystrokes[i] <= 125) {
+							new_filter[filter_length++] = (char)keystrokes[i];
+							++real_strokes;
+						}
+					}
+
+					if (real_strokes > 0) {
+						if (!debuginator_is_filtering_enabled(debuginator)) {
+							debuginator_set_filtering_enabled(debuginator, true);
+						}
+						debuginator_update_filter(debuginator, new_filter);
+						// Update focus height to match new hot item
+						float max_height = debuginator_total_height(debuginator);
+						int active_height = 0;
+						debuginator__distance_to_hot_item(debuginator->root, debuginator->hot_item, debuginator->item_height, &active_height);
+						float height_pixels = debuginator->focus_height * debuginator->size.y - active_height;
+						if (height_pixels < -(max_height - (1.f - default_focus_height) * debuginator->size.y)) {
+							debuginator->focus_height = -(max_height - (1.f - default_focus_height) * debuginator->size.y - active_height) / debuginator->size.y;
+						} else if (height_pixels > default_focus_height * debuginator->size.y) {
+							debuginator->focus_height = (default_focus_height * debuginator->size.y + active_height) / debuginator->size.y;
+						}
 					}
 				}
+			}
+		}
+	}
 
-				if (real_strokes > 0) {
-					debuginator_update_filter(debuginator, new_filter);
+	if (devices & Debuginator_Mouse) {
+		CApiInputControllerPtr mouse = script_api->Input->mouse();
+		input_wrapper.controller = mouse;
+
+		if (api->any_released(input_wrapper.controller) != UINT_MAX) {
+			input_wrapper.time_since_pressed = -1;
+		}
+
+
+		if (debuginator_is_open(debuginator)) {
+			CApiVector3 scroll = input_wrapper.axis("wheel");
+			if (scroll.y != 0) {
+				debuginator->focus_height += scroll.y * 0.05f;
+				float max_height = debuginator_total_height(debuginator);
+				int active_height = 0;
+				debuginator__distance_to_hot_item(debuginator->root, debuginator->hot_item, debuginator->item_height, &active_height);
+				float height_pixels = debuginator->focus_height * debuginator->size.y - active_height;
+				if (height_pixels < -(max_height - (1.f - default_focus_height) * debuginator->size.y)) {
+					debuginator->focus_height = -(max_height - (1.f - default_focus_height) * debuginator->size.y - active_height) / debuginator->size.y;
+				} else if (height_pixels > default_focus_height * debuginator->size.y) {
+					debuginator->focus_height = (default_focus_height * debuginator->size.y + active_height) / debuginator->size.y;
+				}
+			}
+
+			if (input_wrapper.pressed_repeat("left")) {
+				CApiVector3 pos = input_wrapper.axis("cursor");
+				float y = debuginator->screen_resolution.y - pos.y;
+				if (pos.x > debuginator->top_left.x && pos.x < debuginator->top_left.x + debuginator->size.x) {
+					debuginator_activate_closest_by_height(debuginator, y);
 				}
 			}
 		}
@@ -386,9 +446,9 @@ void handle_default_input(TheDebuginator* debuginator, unsigned devices) {
 	if (devices & Debuginator_Gamepad) {
 		int xbox_style_pads = 0;
 
-		#if !defined(PS4)
+#if !defined(PS4)
 		xbox_style_pads = script_api->Input->num_pads();
-		#endif
+#endif
 		for (int i = 0; i < xbox_style_pads; i++) {
 			input_wrapper.controller = script_api->Input->pad(i);
 
@@ -402,68 +462,90 @@ void handle_default_input(TheDebuginator* debuginator, unsigned devices) {
 
 			if (!debuginator_is_open(debuginator)) {
 				if (input_wrapper.pressed("start")) {
-					// Temporarily disabled - probably the gam should control this for
-					// the gamepad.
-					// debuginator_set_open(debuginator, true);
+					debuginator_set_open(debuginator, true);
 				}
 
 				continue;
 			}
 
-			if (input_wrapper.pressed_repeat("d_up")) {
+			CApiVector3 left_stick = input_wrapper.axis("left");
+			float DEADZONE = 0.4f;
+			if (fabs(left_stick.x) > DEADZONE) {
+				if (wrapper->axis_selected_repeat) {
+					left_stick.x = 0.f;
+				} else {
+					wrapper->axis_selected_repeat = true;
+				}
+			} else {
+				wrapper->axis_selected_repeat = false;
+			}
+			float SCROLL_TIMEOUT = 0.25f;
+			float SCROLL_REPEAT_TIMEOUT = 0.05f;
+			if (fabs(left_stick.y) > DEADZONE) {
+				if (wrapper->axis_scroll_repeat && wrapper->scroll_repeat_timer < 0.f) {
+					left_stick.y = 0.f;
+				} else if (!wrapper->axis_scroll_repeat) {
+					wrapper->scroll_repeat_timer = -SCROLL_TIMEOUT;
+					wrapper->axis_scroll_repeat = true;
+				} else {
+					wrapper->scroll_repeat_timer = -SCROLL_REPEAT_TIMEOUT;
+					wrapper->axis_scroll_repeat = true;
+				}
+			} else {
+				wrapper->axis_scroll_repeat = false;
+			}
+
+			if (input_wrapper.pressed_repeat("d_up") || left_stick.y > DEADZONE) {
 				bool long_move = false;
 				debuginator_move_to_prev_leaf(debuginator, long_move);
 			}
-			else if (input_wrapper.pressed_repeat("d_down")) {
+			else if (input_wrapper.pressed_repeat("d_down") || left_stick.y < -DEADZONE) {
 				bool long_move = false;
 				debuginator_move_to_next_leaf(debuginator, long_move);
 			}
-			else if (input_wrapper.pressed("d_left")) {
+			else if (input_wrapper.pressed("d_left") || input_wrapper.pressed("b")) {
 				DebuginatorItem* hot_item = debuginator_get_hot_item(debuginator);
-				if (debuginator_is_open(debuginator) && !hot_item->leaf.is_active) {
+				if (debuginator_is_open(debuginator) && !hot_item->leaf.is_expanded) {
 					debuginator_set_open(debuginator, false);
 				}
-				else if (!hot_item->is_folder && hot_item->leaf.is_active) {
+				else if (!hot_item->is_folder && hot_item->leaf.is_expanded) {
 					debuginator_move_to_parent(debuginator);
 				}
 			}
 			else if (input_wrapper.pressed("start")) {
 				debuginator_set_open(debuginator, false);
 			}
-			else if (input_wrapper.pressed("d_right")) {
-				bool direct_activate = false;
-				debuginator_move_to_child(debuginator, direct_activate);
+			else if (input_wrapper.pressed("d_right") || input_wrapper.pressed("a") || fabs(left_stick.x) > DEADZONE) {
+				debuginator_move_to_child(debuginator, false);
 			}
-			else if (input_wrapper.pressed_repeat("y")) {
+			else if (input_wrapper.pressed_repeat("left_shoulder")) {
 				bool long_move = true;
 				debuginator_move_to_prev_leaf(debuginator, long_move);
+				debuginator->focus_height = default_focus_height;
 			}
-			else if (input_wrapper.pressed_repeat("a")) {
+			else if (input_wrapper.pressed_repeat("right_shoulder")) {
 				bool long_move = true;
 				debuginator_move_to_next_leaf(debuginator, long_move);
-			}
-			else if (input_wrapper.pressed("b")) {
-				bool direct_activate = true;
-				debuginator_move_to_child(debuginator, direct_activate);
+				debuginator->focus_height = default_focus_height;
 			}
 			else if (input_wrapper.pressed("x")) {
-				debuginator_set_open(debuginator, false);
+				debuginator_move_to_child(debuginator, true);
 			}
 		}
 
 		// Todo generalize this
 		int num_ps4_pads = 0;
-		#if defined(WINDOWSPC)
+#if defined(WINDOWSPC)
 		num_ps4_pads = script_api->Input->num_windows_ps4_pads();
-		#elif defined(PS4)
+#elif defined(PS4)
 		num_ps4_pads = script_api->Input->num_pads();
-		#endif
+#endif
 		for (int i = 0; i < num_ps4_pads; i++) {
-			#if defined(WINDOWSPC)
+#if defined(WINDOWSPC)
 			input_wrapper.controller = script_api->Input->windows_ps4_pad(i);
-			#else
+#else
 			input_wrapper.controller = script_api->Input->pad(i);
-			#endif
+#endif
 
 			if (!api->active(input_wrapper.controller)) {
 				continue;
@@ -474,53 +556,73 @@ void handle_default_input(TheDebuginator* debuginator, unsigned devices) {
 			}
 
 			if (!debuginator_is_open(debuginator)) {
-				//if (input_wrapper.pressed("back")) {
-					// Temporarily disabled - probably the gam should control this for
-					// the gamepad.
-					// debuginator_set_open(debuginator, true);
-				//}
+				if (input_wrapper.pressed("options")) {
+					debuginator_set_open(debuginator, true);
+				}
 
 				continue;
 			}
+			
+			CApiVector3 left_stick = input_wrapper.axis("left");
+			float DEADZONE = 0.4f;
+			if (fabs(left_stick.x) > DEADZONE) {
+				if (wrapper->axis_selected_repeat) {
+					left_stick.x = 0.f;
+				} else {
+					wrapper->axis_selected_repeat = true;
+				}
+			} else {
+				wrapper->axis_selected_repeat = false;
+			}
+			float SCROLL_TIMEOUT = 0.25f;
+			float SCROLL_REPEAT_TIMEOUT = 0.05f;
+			if (fabs(left_stick.y) > DEADZONE) {
+				if (wrapper->axis_scroll_repeat && wrapper->scroll_repeat_timer < 0.f) {
+					left_stick.y = 0.f;
+				} else if (!wrapper->axis_scroll_repeat) {
+					wrapper->scroll_repeat_timer = -SCROLL_TIMEOUT;
+					wrapper->axis_scroll_repeat = true;
+				} else {
+					wrapper->scroll_repeat_timer = -SCROLL_REPEAT_TIMEOUT;
+					wrapper->axis_scroll_repeat = true;
+				}
+			} else {
+				wrapper->axis_scroll_repeat = false;
+			}
 
-			if (input_wrapper.pressed_repeat("up")) {
+			if (input_wrapper.pressed_repeat("up") || left_stick.y > DEADZONE) {
 				bool long_move = false;
 				debuginator_move_to_prev_leaf(debuginator, long_move);
 			}
-			else if (input_wrapper.pressed_repeat("down")) {
+			else if (input_wrapper.pressed_repeat("down") || left_stick.y < -DEADZONE) {
 				bool long_move = false;
 				debuginator_move_to_next_leaf(debuginator, long_move);
 			}
-			else if (input_wrapper.pressed("left")) {
+			else if (input_wrapper.pressed("left") || input_wrapper.pressed("circle")) {
 				DebuginatorItem* hot_item = debuginator_get_hot_item(debuginator);
-				if (debuginator_is_open(debuginator) && !hot_item->leaf.is_active) {
+				if (debuginator_is_open(debuginator) && !hot_item->leaf.is_expanded) {
 					debuginator_set_open(debuginator, false);
 				}
-				else if (!hot_item->is_folder && hot_item->leaf.is_active) {
+				else if (!hot_item->is_folder && hot_item->leaf.is_expanded) {
 					debuginator_move_to_parent(debuginator);
 				}
 			}
 			else if (input_wrapper.pressed("options")) {
 				debuginator_set_open(debuginator, false);
 			}
-			else if (input_wrapper.pressed("right")) {
-				bool direct_activate = false;
-				debuginator_move_to_child(debuginator, direct_activate);
+			else if (input_wrapper.pressed("right") || input_wrapper.pressed("cross") || fabs(left_stick.x) > DEADZONE) {
+				debuginator_move_to_child(debuginator, false);
 			}
-			else if (input_wrapper.pressed_repeat("triangle")) {
+			else if (input_wrapper.pressed_repeat("l1")) {
 				bool long_move = true;
 				debuginator_move_to_prev_leaf(debuginator, long_move);
 			}
-			else if (input_wrapper.pressed_repeat("cross")) {
+			else if (input_wrapper.pressed_repeat("r1")) {
 				bool long_move = true;
 				debuginator_move_to_next_leaf(debuginator, long_move);
 			}
-			else if (input_wrapper.pressed("circle")) {
-				bool direct_activate = true;
-				debuginator_move_to_child(debuginator, direct_activate);
-			}
 			else if (input_wrapper.pressed("square")) {
-				debuginator_set_open(debuginator, false);
+				debuginator_move_to_child(debuginator, true);
 			}
 		}
 	}
