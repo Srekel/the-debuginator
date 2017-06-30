@@ -237,7 +237,7 @@ TheDebuginator* create_debuginator(const char* id, DebuginatorPluginCreateContex
 		uisize_item->leaf.default_index = 1;
 		uisize_item->leaf.hot_index = 1;
 		uisize_item->leaf.active_index = 1;
-		debuginator_activate(debuginator, uisize_item);
+		debuginator_activate(debuginator, uisize_item, false);
 	}
 
 	plugin_memory->num_debuginators++;

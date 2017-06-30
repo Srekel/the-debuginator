@@ -65,7 +65,7 @@ extern "C" {
 		void(*set_default_value)(TheDebuginator* debuginator, const char* path, const char* value_title, int value_index); // value index is used if value_title == NULL
 		void(*set_edit_type)(TheDebuginator* debuginator, const char* path, DebuginatorItemEditorDataType edit_type);
 
-		void(*activate)(TheDebuginator* debuginator, DebuginatorItem* item);
+		void(*activate)(TheDebuginator* debuginator, DebuginatorItem* item, bool animate);
 		void(*move_to_next_leaf)(TheDebuginator* debuginator, bool long_move);
 		void(*move_to_prev_leaf)(TheDebuginator* debuginator, bool long_move);
 		void(*move_to_child)(TheDebuginator* debuginator, bool toggle_and_activate);
