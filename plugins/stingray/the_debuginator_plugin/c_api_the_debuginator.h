@@ -73,7 +73,7 @@ extern "C" {
 
 		bool(*is_filtering_enabled)(TheDebuginator* debuginator);
 		void(*set_filtering_enabled)(TheDebuginator* debuginator, bool enabled);
-		char*(*get_filter)(TheDebuginator* debuginator);
+		const char*(*get_filter)(TheDebuginator* debuginator);
 		void(*update_filter)(TheDebuginator* debuginator, const char* wanted_filter);
 
 		void(*set_item_height)(TheDebuginator* debuginator, int item_height);
