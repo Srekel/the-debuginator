@@ -239,6 +239,7 @@ typedef struct DebuginatorFolderData {
 typedef struct DebuginatorLeafData {
 	// A helpful text for the user
 	const char* description;
+	int description_line_count;
 
 	// The values and the UI titles
 	const char** value_titles;
@@ -1090,6 +1091,17 @@ DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 	item->leaf.description = description == NULL ? "" : description;
 	debuginator__adjust_num_visible_children(item->parent, 1);
 
+	if (description && !item->is_folder) {
+		float description_width = debuginator->size.x - 50;
+		int description_height = 0;
+		unsigned row_lengths[32];
+		unsigned row_count = 0;
+		debuginator->word_wrap(item->leaf.description, debuginator->theme.fonts[DEBUGINATOR_ItemDescription], description_width, &row_count, row_lengths, 32, debuginator->app_user_data);
+		item->leaf.description_line_count = row_count;
+	} else if (!item->is_folder) {
+		item->leaf.description_line_count = 0;
+	}
+
 	//TODO preserve hot item
 	return item;
 }
@@ -1261,7 +1273,7 @@ void debuginator_remove_item(TheDebuginator* debuginator, DebuginatorItem* item)
 
 	debuginator__set_total_height(item->parent, item->parent->total_height - item->total_height);
 
-	if (!item->is_folder) {
+	if (!item->is_folder && !item->is_filtered) {
 		// If it's a folder we've already adjusted the parent's count when we removed the item's children above.
 		debuginator__adjust_num_visible_children(item->parent, -1);
 	}
@@ -1287,14 +1299,14 @@ void debuginator_remove_item_by_path(TheDebuginator* debuginator, const char* pa
 
 bool debuginator__distance_to_hot_item(DebuginatorItem* item, DebuginatorItem* hot_item, int item_height, int* distance) {
 	if (item == hot_item) {
-		if (!item->is_folder && item->leaf.is_expanded) {
+		if (!item->is_folder && item->leaf.is_expanded && !item->is_filtered) {
 			*distance += item_height * (item->leaf.hot_index + 1);
 		}
 		return true;
 	}
 
 	*distance += item_height;
-	if (item->is_folder) {
+	if (item->is_folder && !item->is_filtered) {
 		DebuginatorItem* child = debuginator__first_visible_child(item);
 		while (child) {
 			bool found = debuginator__distance_to_hot_item(child, hot_item, item_height, distance);
@@ -1304,9 +1316,15 @@ bool debuginator__distance_to_hot_item(DebuginatorItem* item, DebuginatorItem* h
 
 			child = debuginator__next_visible_sibling(child);
 		}
+	} else if (item->leaf.is_expanded && !item->is_filtered) {
+		*distance += item_height * item->leaf.num_values;
+		*distance += item->leaf.description_line_count * item_height;
 	}
-
 	return false;
+}
+
+int debuginator_total_height(TheDebuginator* debuginator) {
+	return debuginator->root->total_height;
 }
 
 bool debuginator_is_filtering_enabled(TheDebuginator* debuginator) {
