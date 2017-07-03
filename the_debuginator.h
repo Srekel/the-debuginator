@@ -2392,13 +2392,14 @@ void debuginator_move_to_root(TheDebuginator* debuginator) {
 		if (hot_item != hot_item_new) {
 			hot_item_new->parent->folder.hot_child = hot_item_new;
 			debuginator->hot_item = hot_item_new;
-		} else {
+		}
+		else {
 			hot_item_new = hot_item->parent;
 		}
 		hot_item = hot_item_new;
 	}
 	// We're now in the root, select the first child
-	debuginator->hot_item = hot_item->folder.first_child;
+	debuginator->hot_item = debuginator__first_visible_child(hot_item);
 }
 
 // ██╗   ██╗████████╗██╗██╗     ██╗████████╗██╗   ██╗
