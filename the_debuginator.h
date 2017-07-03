@@ -789,7 +789,7 @@ int debuginator__set_item_total_height_recursively(DebuginatorItem* item, int it
 	}
 	else {
 		if (item->leaf.is_expanded) {
-			item->total_height = item_height + item_height + item_height * (item->leaf.num_values);
+			item->total_height = item_height + item_height * item->leaf.description_line_count + item_height * item->leaf.num_values;
 		}
 		else if (item->leaf.hot_index != -2 && !item->is_filtered) {
 			item->total_height = item_height;
