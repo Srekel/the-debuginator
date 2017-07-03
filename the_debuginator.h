@@ -1092,12 +1092,11 @@ DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 	debuginator__adjust_num_visible_children(item->parent, 1);
 
 	if (description && !item->is_folder) {
-		const char* description = item->leaf.description;
 		float description_width = debuginator->size.x - 50;
 		int description_height = 0;
 		unsigned row_lengths[32];
 		unsigned row_count = 0;
-		debuginator->word_wrap(description, debuginator->theme.fonts[DEBUGINATOR_ItemDescription], description_width, &row_count, row_lengths, 32, debuginator->app_user_data);
+		debuginator->word_wrap(item->leaf.description, debuginator->theme.fonts[DEBUGINATOR_ItemDescription], description_width, &row_count, row_lengths, 32, debuginator->app_user_data);
 		item->leaf.description_line_count = row_count;
 	} else if (!item->is_folder) {
 		item->leaf.description_line_count = 0;
@@ -1325,28 +1324,7 @@ bool debuginator__distance_to_hot_item(DebuginatorItem* item, DebuginatorItem* h
 }
 
 int debuginator_total_height(TheDebuginator* debuginator) {
-	int height = 0;
-	DebuginatorItem *last_item = debuginator__first_visible_child(debuginator->root);
-	while (last_item && (last_item->next_sibling || last_item->is_folder)) {
-		if (last_item->next_sibling) {
-			last_item = debuginator__next_visible_sibling(last_item);
-		} else {
-			if (last_item->folder.num_visible_children == 0) {
-				break;
-			} else {
-				last_item = debuginator__first_visible_child(last_item);
-			}
-		}
-	}
-	debuginator__distance_to_hot_item(debuginator->root, last_item, debuginator->item_height, &height);
-
-	if (last_item && !last_item->is_folder && last_item->leaf.is_expanded) {
-		for (int i = 0; i < last_item->leaf.num_values; ++i) {
-			height += debuginator->item_height;
-		}
-	}
-
-	return height;
+	return debuginator->root->total_height;
 }
 
 bool debuginator_is_filtering_enabled(TheDebuginator* debuginator) {
