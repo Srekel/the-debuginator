@@ -2379,27 +2379,13 @@ void debuginator_move_to_parent(TheDebuginator* debuginator) {
 
 void debuginator_move_to_root(TheDebuginator* debuginator) {
 	DebuginatorItem* hot_item = debuginator->hot_item;
-	while (hot_item && hot_item != debuginator->root) {
-		DebuginatorItem* hot_item_new = debuginator->hot_item;
-		if (!hot_item->is_folder && hot_item->leaf.is_expanded) {
-			hot_item->leaf.is_expanded = false;
-			debuginator__set_total_height(hot_item, debuginator->item_height);
-		}
-		else if (hot_item->parent != debuginator->root) {
-			hot_item_new = debuginator->hot_item->parent;
-		}
+   if (!hot_item->is_folder && hot_item->leaf.is_expanded) {
+      hot_item->leaf.is_expanded = false;
+      debuginator__set_total_height(hot_item, debuginator->item_height);
+   }
 
-		if (hot_item != hot_item_new) {
-			hot_item_new->parent->folder.hot_child = hot_item_new;
-			debuginator->hot_item = hot_item_new;
-		}
-		else {
-			hot_item_new = hot_item->parent;
-		}
-		hot_item = hot_item_new;
-	}
 	// We're now in the root, select the first child
-	debuginator->hot_item = debuginator__first_visible_child(hot_item);
+	debuginator->hot_item = debuginator__first_visible_child(debuginator->root);
 }
 
 // ██╗   ██╗████████╗██╗██╗     ██╗████████╗██╗   ██╗
