@@ -194,7 +194,7 @@ void debuginator_set_default_value(TheDebuginator* debuginator, const char* path
 void debuginator_set_edit_type(TheDebuginator* debuginator, const char* path, DebuginatorItemEditorDataType edit_type);
 
 // Change an item's active index to its hot index, and trigger an activation - callbacks and animations and all.
-void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item);
+void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item, bool animate);
 
 // Collapsability (for folders)
 bool debuginator_is_collapsed(DebuginatorItem* item);
@@ -248,6 +248,7 @@ typedef struct DebuginatorFolderData {
 typedef struct DebuginatorLeafData {
 	// A helpful text for the user
 	const char* description;
+	int description_line_count;
 
 	// The values and the UI titles
 	const char** value_titles;
@@ -796,11 +797,40 @@ void debuginator__set_total_height(DebuginatorItem* item, int height) {
 	}
 }
 
+int debuginator__set_item_total_height_recursively(DebuginatorItem* item, int item_height) {
+	if (item->is_folder) {
+		item->total_height = 0;
+		DebuginatorItem* child = item->folder.first_child;
+		while (child != NULL) {
+			item->total_height += debuginator__set_item_total_height_recursively(child, item_height);
+			child = child->next_sibling;
+		}
+
+		if (item->total_height > 0) {
+			item->total_height += item_height;
+		}
+	}
+	else {
+		if (item->leaf.is_expanded) {
+			item->total_height = item_height + item_height * item->leaf.description_line_count + item_height * item->leaf.num_values;
+		}
+		else if (item->leaf.hot_index != -2 && !item->is_filtered) {
+			item->total_height = item_height;
+		}
+		else {
+			item->total_height = 0;
+		}
+	}
+
+	return item->total_height;
+}
+
 void debuginator__adjust_num_visible_children(DebuginatorItem* item, int diff) {
 	DEBUGINATOR_assert(item->is_folder);
 	DEBUGINATOR_assert(diff != 0 && item->folder.num_visible_children + diff >= 0);
 	item->folder.num_visible_children += diff;
 	if (item->folder.num_visible_children == 0 && item->parent != NULL) {
+		// Hide us as well
 		debuginator__adjust_num_visible_children(item->parent, -1);
 	}
 	else if (item->folder.num_visible_children == diff && item->parent != NULL) {
@@ -1226,7 +1256,7 @@ DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 		for (int i = 0; i < item->leaf.num_values; i++) {
 			if (DEBUGINATOR_strcmp(item->leaf.value_titles[i], item_setting) == 0) {
 				item->leaf.hot_index = i;
-				debuginator_activate(debuginator, item);
+				debuginator_activate(debuginator, item, false);
 				break;
 			}
 		}
@@ -1234,6 +1264,16 @@ DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 
 	item->leaf.description = description == NULL ? "" : description;
 	debuginator__adjust_num_visible_children(item->parent, 1);
+
+	if (description && !item->is_folder) {
+		float description_width = debuginator->size.x - 50;
+		unsigned row_lengths[32];
+		unsigned row_count = 0;
+		debuginator->word_wrap(item->leaf.description, debuginator->theme.fonts[DEBUGINATOR_ItemDescription], description_width, &row_count, row_lengths, 32, debuginator->app_user_data);
+		item->leaf.description_line_count = row_count;
+	} else if (!item->is_folder) {
+		item->leaf.description_line_count = 0;
+	}
 
 	return item;
 }
@@ -1328,7 +1368,7 @@ void debuginator_load_item(TheDebuginator* debuginator, const char* path, const 
 			if (DEBUGINATOR_strcmp(item->leaf.value_titles[i], value_title) == 0) {
 				item->leaf.hot_index = i;
 				if (!debuginator->edit_types[item->leaf.edit_type].forget_state) {
-					debuginator_activate(debuginator, item);
+					debuginator_activate(debuginator, item, false);
 				}
 				break;
 			}
@@ -1418,7 +1458,7 @@ void debuginator_remove_item(TheDebuginator* debuginator, DebuginatorItem* item)
 
 	debuginator__set_total_height(item->parent, item->parent->total_height - item->total_height);
 
-	if (!item->is_folder) {
+	if (!item->is_folder && !item->is_filtered) {
 		// If it's a folder we've already adjusted the parent's count when we removed the item's children above.
 		debuginator__adjust_num_visible_children(item->parent, -1);
 	}
@@ -1444,14 +1484,14 @@ void debuginator_remove_item_by_path(TheDebuginator* debuginator, const char* pa
 
 bool debuginator__distance_to_hot_item(DebuginatorItem* item, DebuginatorItem* hot_item, int item_height, int* distance) {
 	if (item == hot_item) {
-		if (!item->is_folder && item->leaf.is_expanded) {
+		if (!item->is_folder && item->leaf.is_expanded && !item->is_filtered) {
 			*distance += item_height * (item->leaf.hot_index + 1);
 		}
 		return true;
 	}
 
 	*distance += item_height;
-	if (item->is_folder) {
+	if (item->is_folder && !item->is_filtered) {
 		DebuginatorItem* child = debuginator__first_visible_child(item);
 		while (child) {
 			bool found = debuginator__distance_to_hot_item(child, hot_item, item_height, distance);
@@ -1461,9 +1501,15 @@ bool debuginator__distance_to_hot_item(DebuginatorItem* item, DebuginatorItem* h
 
 			child = debuginator__next_visible_sibling(child);
 		}
+	} else if (item->leaf.is_expanded && !item->is_filtered) {
+		*distance += item_height * item->leaf.num_values;
+		*distance += item->leaf.description_line_count * item_height;
 	}
-
 	return false;
+}
+
+int debuginator_total_height(TheDebuginator* debuginator) {
+	return debuginator->root->total_height;
 }
 
 bool debuginator_is_filtering_enabled(TheDebuginator* debuginator) {
@@ -1504,7 +1550,7 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 	// "aa aa" doesn't match "Cars/Saab and Volvo"
 	// "aa aa" matches "Caars/Saab"
 	bool exact_search = false;
-	for (size_t i = 0; i < DEBUGINATOR_strlen(wanted_filter); i++) {
+	for (size_t i = 0; i < filter_length; i++) {
 		if (wanted_filter[i] == ' ') {
 			exact_search = true;
 			break;
@@ -1518,8 +1564,8 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 		}
 	//}
 
-	char current_full_path[128] = { 0 };
-	int path_indices[8] = { 0 };
+	char current_full_path[512] = { 0 };
+	int path_indices[16] = { 0 };
 	int current_path_index = 0;
 
 	int best_score = -1;
@@ -1534,6 +1580,7 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 				path_indices[current_path_index+1] = path_indices[current_path_index] + (int)DEBUGINATOR_strlen(item->title);
 				*(current_full_path + path_indices[current_path_index + 1]) = ' ';
 				path_indices[current_path_index + 1]++;
+				DEBUGINATOR_assert(path_indices[current_path_index + 1] < sizeof(current_full_path));
 
 				//if (!exact_search) {
 					for (int i = path_indices[current_path_index]; i < path_indices[current_path_index + 1]; i++) {
@@ -1542,15 +1589,18 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 				//}
 
 				++current_path_index;
+				DEBUGINATOR_assert(current_path_index + 1 < sizeof(path_indices) / sizeof(path_indices[0]));
 				item = item->folder.first_child;
 
 				continue;
 			}
 		}
 		else {
-			bool taken_chars[128] = { 0 };
+			bool taken_chars[512] = { 0 };
+			DEBUGINATOR_assert(sizeof(taken_chars) == sizeof(current_full_path)); // Should probably be a static assert but whatevs
 			DEBUGINATOR_strcpy_s(current_full_path + path_indices[current_path_index], 50, item->title);
 			path_indices[current_path_index + 1] = path_indices[current_path_index] + (int)DEBUGINATOR_strlen(item->title);
+			DEBUGINATOR_assert(path_indices[current_path_index + 1] < sizeof(current_full_path));
 			int current_path_length = path_indices[current_path_index + 1];
 
 			//if (!exact_search) {
@@ -1562,8 +1612,6 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 			int score = -1;
 			bool is_filtered = false;
 
-			// LOL1010
-			// 100
 			int filter_part = 0;
 			while (filter[filter_part] != '\0') {
 				if (filter[filter_part] == ' ') {
@@ -1585,7 +1633,6 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 					}
 
 					if (!filter_part_found) {
-						//match_count = 0;
 						break;
 					}
 
@@ -1644,7 +1691,6 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 				else {
 					filter_part += matches[best_match_index + 1];
 					score += best_match_score;
-					//is_filtered = false;
 					for (int match_i = 0; match_i < matches[best_match_index + 1]; match_i++) {
 						taken_chars[matches[best_match_index] + match_i] = true;
 					}
@@ -1709,6 +1755,8 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 		fallback->parent->folder.hot_child = fallback;
 	}
 
+	debuginator__set_item_total_height_recursively(debuginator->root, debuginator->item_height);
+
 	int distance_from_root_to_hot_item = 0;
 	debuginator__distance_to_hot_item(debuginator->root, debuginator->hot_item, debuginator->item_height, &distance_from_root_to_hot_item);
 	float wanted_y = debuginator->size.y * debuginator->focus_height;
@@ -1716,34 +1764,6 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 	debuginator->current_height_offset = distance_to_wanted_y;
 
 	DEBUGINATOR_strcpy_s(debuginator->filter, sizeof(debuginator->filter), filter);
-}
-
-int debuginator__set_item_total_height_recursively(DebuginatorItem* item, int item_height) {
-	if (item->is_folder) {
-		item->total_height = 0;
-		DebuginatorItem* child = item->folder.first_child;
-		while (child != NULL) {
-			item->total_height += debuginator__set_item_total_height_recursively(child, item_height);
-			child = child->next_sibling;
-		}
-
-		if (item->total_height > 0) {
-			item->total_height += item_height;
-		}
-	}
-	else {
-		if (item->leaf.is_expanded) {
-			item->total_height = item_height + item_height + item_height * (item->leaf.num_values);
-		}
-		else if (item->leaf.hot_index != -2 && !item->is_filtered) {
-			item->total_height = item_height;
-		}
-		else {
-			item->total_height = 0;
-		}
-	}
-
-	return item->total_height;
 }
 
 void debuginator_set_item_height(TheDebuginator* debuginator, int item_height) {
@@ -2287,7 +2307,7 @@ void debuginator_set_open(TheDebuginator* debuginator, bool is_open) {
 	}
 }
 
-void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item) {
+void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item, bool animate) {
 	item->leaf.draw_t = 0;
 	if (item->leaf.num_values == 0) {
 		if (item->leaf.on_item_changed_callback != NULL) {
@@ -2298,25 +2318,27 @@ void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item) {
 
 	item->leaf.active_index = item->leaf.hot_index;
 
-	DebuginatorAnimation* animation = debuginator__get_free_animation(debuginator);
-	if (animation != NULL) {
-		animation->type = DEBUGINATOR_ItemActivate;
-		animation->data.item_activate.item = item;
-		animation->data.item_activate.value_index = item->leaf.hot_index;
-		animation->data.item_activate.start_pos.x = debuginator->top_left.x;
-		animation->duration = 0.5f;
+	if (animate) {
+		DebuginatorAnimation* animation = debuginator__get_free_animation(debuginator);
+		if (animation != NULL) {
+			animation->type = DEBUGINATOR_ItemActivate;
+			animation->data.item_activate.item = item;
+			animation->data.item_activate.value_index = item->leaf.hot_index;
+			animation->data.item_activate.start_pos.x = debuginator->top_left.x;
+			animation->duration = 0.5f;
 
-		DebuginatorItem* parent = item->parent;
-		while (parent) {
-			animation->data.item_activate.start_pos.x += 20;
-			parent = parent->parent;
-		}
+			DebuginatorItem* parent = item->parent;
+			while (parent) {
+				animation->data.item_activate.start_pos.x += 20;
+				parent = parent->parent;
+			}
 
-		int y_dist_to_root = 0;
-		debuginator__distance_to_hot_item(debuginator->root, item, debuginator->item_height, &y_dist_to_root);
-		animation->data.item_activate.start_pos.y = y_dist_to_root + debuginator->current_height_offset - debuginator->item_height; // whyyy
-		if (item->leaf.is_expanded) {
-			animation->data.item_activate.start_pos.y += debuginator->item_height;
+			int y_dist_to_root = 0;
+			debuginator__distance_to_hot_item(debuginator->root, item, debuginator->item_height, &y_dist_to_root);
+			animation->data.item_activate.start_pos.y = y_dist_to_root + debuginator->current_height_offset - debuginator->item_height; // whyyy
+			if (item->leaf.is_expanded) {
+				animation->data.item_activate.start_pos.y += debuginator->item_height;
+			}
 		}
 	}
 
@@ -2540,10 +2562,10 @@ void debuginator_move_to_child(TheDebuginator* debuginator, bool toggle_and_acti
 			if (++hot_item->leaf.hot_index == hot_item->leaf.num_values) {
 				hot_item->leaf.hot_index = 0;
 			}
-			debuginator_activate(debuginator, debuginator->hot_item);
+			debuginator_activate(debuginator, debuginator->hot_item, true);
 		}
 		else if (hot_item->leaf.is_expanded) {
-			debuginator_activate(debuginator, debuginator->hot_item);
+			debuginator_activate(debuginator, debuginator->hot_item, true);
 		}
 		else {
 			hot_item->leaf.is_expanded = true;
@@ -2637,7 +2659,7 @@ void debuginator_activate_preset(DebuginatorItem* item, void* value, const char*
 		for (int value_i = 0; value_i < item_to_activate->leaf.num_values; value_i++) {
 			if (DEBUGINATOR_strcmp(item_to_activate->leaf.value_titles[value_i], preset_value_title) == 0) {
 				item_to_activate->leaf.hot_index = value_i;
-				debuginator_activate(debuginator, item_to_activate);
+				debuginator_activate(debuginator, item_to_activate, true);
 				break;
 			}
 		}
