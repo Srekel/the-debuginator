@@ -47,11 +47,6 @@ extern "C" {
 
 typedef struct DebuginatorItem DebuginatorItem;
 
-// TODO: Remove this
-#ifndef DEBUGINATOR_max_title_length
-#define DEBUGINATOR_max_title_length 20
-#endif
-
 typedef struct DebuginatorVector2 {
 	float x;
 	float y;
@@ -160,7 +155,8 @@ void debuginator_copy_1byte(DebuginatorItem* item, void* value, const char* valu
 // paths and value_titles need to be of length num_paths.
 DebuginatorItem* debuginator_create_preset_item(TheDebuginator* debuginator, const char* path, const char** paths, const char** value_titles, int** value_indices, int num_paths);
 
-// If you simply want to create a new folder.
+// If you want to create a new empty folder. 
+DebuginatorItem* debuginator_create_folder_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* path);
 DebuginatorItem* debuginator_new_folder_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* title, int title_length);
 
 // Get an item by its path.
@@ -172,11 +168,19 @@ void debuginator_remove_item(TheDebuginator* debuginator, DebuginatorItem* item)
 // Remove an item by its path
 void debuginator_remove_item_by_path(TheDebuginator* debuginator, const char* path);
 
-void debuginator_set_hot_item(TheDebuginator* debuginator, const char* path);
+void debuginator_set_hot_item(TheDebuginator* debuginator, DebuginatorItem* item);
 DebuginatorItem* debuginator_get_hot_item(TheDebuginator* debuginator);
+
+// Get item's parent
+DebuginatorItem* debuginator_get_parent(DebuginatorItem* item);
+
+// Is folder
+bool debuginator_is_folder(DebuginatorItem* item);
+
 
 // Save the state. Each item whose current active_index is different from its default_index will be saved, by a call to the
 // callback you pass in.
+// TODO: This API is slightly odd... I should change it.
 int debuginator_save(TheDebuginator* debuginator, DebuginatorSaveItemCallback callback, char* save_buffer, int save_buffer_size);
 
 // Preload an item. If the item doesn't exist, it will be created but be hidden until properly created later.
@@ -191,6 +195,10 @@ void debuginator_set_edit_type(TheDebuginator* debuginator, const char* path, De
 
 // Change an item's active index to its hot index, and trigger an activation - callbacks and animations and all.
 void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item);
+
+// Collapsability (for folders)
+bool debuginator_is_collapsed(DebuginatorItem* item);
+void debuginator_set_collapsed(TheDebuginator* debuginator, DebuginatorItem* item, bool collapsed);
 
 // Navigation functions
 // Moves the hot item or hot index to the next/previous visible item or index.
@@ -234,6 +242,7 @@ typedef struct DebuginatorFolderData {
 	DebuginatorItem* first_child;
 	DebuginatorItem* hot_child;
 	int num_visible_children;
+	bool is_collapsed; // Note collapsed as opposed to expanded - because I want false/0 to be default
 } DebuginatorFolderData;
 
 typedef struct DebuginatorLeafData {
@@ -414,6 +423,11 @@ typedef struct TheDebuginatorConfig {
 #define DEBUGINATOR_strncpy_s strncpy_s
 #endif
 
+#ifndef DEBUGINATOR_strcmp
+#include <string.h>
+#define DEBUGINATOR_strcmp strcmp
+#endif
+
 #ifndef DEBUGINATOR_tolower
 #include <ctype.h>
 #define DEBUGINATOR_tolower tolower
@@ -440,6 +454,9 @@ typedef struct TheDebuginatorConfig {
 #define DEBUGINATOR_sin sin
 #endif
 
+#ifndef DEBUGINATOR_FOLDER_COLLAPSED_STRING
+#define DEBUGINATOR_FOLDER_COLLAPSED_STRING "folder_collapsed"
+#endif
 #ifndef __cplusplus
 #include <stdbool.h>
 #endif
@@ -585,6 +602,10 @@ typedef struct TheDebuginator {
 	int memory_arena_capacity;
 	DebuginatorBlockAllocatorStaticData allocator_data;
 	DebuginatorBlockAllocator allocators[6];
+
+	const char** loaded_settings;
+	int num_loaded_settings;
+	int loaded_settings_capacity;
 
 } TheDebuginator;
 
@@ -769,7 +790,8 @@ void debuginator__set_total_height(DebuginatorItem* item, int height) {
 
 	int diff = height - item->total_height;
 	item->total_height = height;
-	if (item->parent) {
+	DEBUGINATOR_assert(item->total_height >= 0);
+	if (item->parent && !item->parent->folder.is_collapsed) {
 		debuginator__set_total_height(item->parent, item->parent->total_height + diff);
 	}
 }
@@ -843,6 +865,10 @@ DebuginatorItem* debuginator__first_visible_child(DebuginatorItem* item) {
 		return NULL;
 	}
 
+	if (item->folder.is_collapsed) {
+		return NULL;
+	}
+
 	if (item->folder.first_child->is_folder) {
 		if (item->folder.first_child->folder.num_visible_children > 0) {
 			return item->folder.first_child;
@@ -860,6 +886,10 @@ DebuginatorItem* debuginator__find_first_leaf(DebuginatorItem* item) {
 		if (item->leaf.hot_index != -2 && !item->is_filtered) {
 			return item;
 		}
+	}
+	else if (item->folder.num_visible_children > 0 && item->parent != NULL) {
+		// Checking parent is a minor hack to never return the menu root item.
+		return item;
 	}
 	else {
 		DebuginatorItem* child = debuginator__first_visible_child(item);
@@ -887,6 +917,9 @@ DebuginatorItem* debuginator__find_last_leaf(DebuginatorItem* item) {
 			return item;
 		}
 	}
+	else if (item->folder.is_collapsed) {
+		return item;
+	}
 	else {
 		DebuginatorItem* child = debuginator__first_visible_child(item);
 		while (debuginator__next_visible_sibling(child) != NULL) {
@@ -913,7 +946,15 @@ DebuginatorItem* debuginator__find_last_leaf(DebuginatorItem* item) {
 	return NULL;
 }
 
-DebuginatorItem* debuginator__next_item(DebuginatorItem* item) {
+// Returns the very first visible item below item
+DebuginatorItem* debuginator__next_visible_item(DebuginatorItem* item) {
+	if (item->is_folder) {
+		DebuginatorItem* child = debuginator__first_visible_child(item);
+		if (child != NULL) {
+			return child;
+		}
+	}
+
 	while (item != NULL) {
 		DebuginatorItem* sibling = debuginator__next_visible_sibling(item);
 		DebuginatorItem* item_new = sibling == NULL ? NULL : debuginator__find_first_leaf(sibling);
@@ -927,7 +968,8 @@ DebuginatorItem* debuginator__next_item(DebuginatorItem* item) {
 	return NULL;
 }
 
-DebuginatorItem* debuginator__prev_item(DebuginatorItem* item) {
+// Returns the very first visible item above item
+DebuginatorItem* debuginator__prev_visible_item(DebuginatorItem* item) {
 	while (item != NULL) {
 		DebuginatorItem* sibling = debuginator__prev_visible_sibling(item);
 		DebuginatorItem* item_new = sibling == NULL ? NULL : debuginator__find_last_leaf(sibling);
@@ -936,15 +978,20 @@ DebuginatorItem* debuginator__prev_item(DebuginatorItem* item) {
 		}
 
 		item = item->parent;
+		if (item->parent == NULL) {
+			return NULL;
+		}
+
+		return item;
 	}
 
 	return NULL;
 }
 
 DebuginatorItem* debuginator_nearest_visible_item(DebuginatorItem* item) {
-	DebuginatorItem* found_item = debuginator__next_item(item);
+	DebuginatorItem* found_item = debuginator__next_visible_item(item);
 	if (found_item == NULL) {
-		found_item = debuginator__prev_item(item);
+		found_item = debuginator__prev_visible_item(item);
 	}
 
 	return found_item;
@@ -982,6 +1029,79 @@ void debuginator_set_parent(DebuginatorItem* item, DebuginatorItem* parent) {
 	}
 }
 
+void debuginator__store_item_setting(TheDebuginator* debuginator, const char* path, const char* value_title) {
+	// If it already exists, we override the value
+	for (int i = 0; i < debuginator->num_loaded_settings; ++i) {
+		int setting_index = i * 2;
+		if (DEBUGINATOR_strcmp(debuginator->loaded_settings[setting_index], path) == 0) {
+			debuginator__deallocate(debuginator, debuginator->loaded_settings[setting_index + 1]);
+			debuginator->loaded_settings[setting_index + 1] = debuginator_copy_string(debuginator, value_title, 0);
+			return;
+		}
+	}
+
+	if (debuginator->num_loaded_settings == debuginator->loaded_settings_capacity) {
+		int current_size = debuginator->num_loaded_settings * 2 * sizeof(char*);
+		int grow_factor = 4;
+		int initial_size = sizeof(char*) * 2 * 8;
+		int new_size = current_size == 0 ? initial_size : current_size * grow_factor;
+		void* buffer = debuginator__allocate(debuginator, new_size);
+		DEBUGINATOR_assert(buffer); // TODO: This will hit if new_size is too large.
+		DEBUGINATOR_memcpy(buffer, debuginator->loaded_settings, current_size);
+		debuginator__deallocate(debuginator, debuginator->loaded_settings);
+		debuginator->loaded_settings = (const char**)buffer;
+		debuginator->loaded_settings_capacity = new_size / 2;
+	}
+
+	int setting_index = debuginator->num_loaded_settings * 2;
+	debuginator->loaded_settings[setting_index + 0] = debuginator_copy_string(debuginator, path, 0);
+	debuginator->loaded_settings[setting_index + 1] = debuginator_copy_string(debuginator, value_title, 0);
+	debuginator->num_loaded_settings++;
+}
+
+const char* debuginator__get_item_setting(TheDebuginator* debuginator, const char* path) {
+	for (int i = 0; i < debuginator->num_loaded_settings; ++i) {
+		int setting_index = i * 2;
+		if (DEBUGINATOR_strcmp(debuginator->loaded_settings[setting_index], path) == 0) {
+			return debuginator->loaded_settings[setting_index + 1];
+		}
+	}
+
+	return "";
+}
+
+// Note: This will allocate a string and return it. I'm ok with that since it's an internal function.
+const char* debuginator__compute_path(TheDebuginator* debuginator, DebuginatorItem* parent, const char* path, int path_length) {
+	if (path_length == 0) {
+		path_length = (int)DEBUGINATOR_strlen(path);
+	}
+
+	// Find first parent that is not the root
+	DebuginatorItem* parents[8];
+	int num_parents = 0;
+	while (parent && parent->parent) {
+		parents[num_parents++] = parent;
+		parent = parent->parent;
+	}
+
+	char full_path[128];
+	char* curr_path_pos = full_path;
+	for (int i = 0; i < num_parents; i++) {
+		int title_length = (int)DEBUGINATOR_strlen(parents[i]->title);
+		DEBUGINATOR_strcpy_s(curr_path_pos, title_length + 1, parents[i]->title);
+		curr_path_pos += title_length;
+		*curr_path_pos = '/';
+		++curr_path_pos;
+	}
+
+	DEBUGINATOR_strncpy_s(curr_path_pos, sizeof(full_path) - (int)(curr_path_pos - full_path), path, path_length + 1);
+	curr_path_pos += path_length;
+	*curr_path_pos = '\0';
+	++curr_path_pos;
+	const char* result = debuginator_copy_string(debuginator, full_path, (int)(curr_path_pos - full_path) + 1);
+	return result;
+}
+
 DebuginatorItem* debuginator_new_folder_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* title, int title_length) {
 	DebuginatorItem* folder_item = (DebuginatorItem*)debuginator__allocate(debuginator, sizeof(DebuginatorItem));
 	folder_item->is_folder = true;
@@ -989,6 +1109,29 @@ DebuginatorItem* debuginator_new_folder_item(TheDebuginator* debuginator, Debugi
 	debuginator_set_title(debuginator, folder_item, title, title_length);
 	debuginator_set_parent(folder_item, parent);
 	debuginator__set_total_height(folder_item, debuginator->item_height);
+
+	const char* full_path = debuginator__compute_path(debuginator, parent, title, title_length);
+	const char* item_setting = debuginator__get_item_setting(debuginator, full_path);
+	if (DEBUGINATOR_strcmp(item_setting, DEBUGINATOR_FOLDER_COLLAPSED_STRING) == 0) {
+		folder_item->folder.is_collapsed = true;
+	}
+	debuginator__deallocate(debuginator, item_setting);
+
+	return folder_item;
+}
+
+DebuginatorItem* debuginator_create_folder_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* path) {
+	DebuginatorItem* folder_item = debuginator_get_item(debuginator, parent, path, true);
+	folder_item->is_folder = true;
+	debuginator__set_total_height(folder_item, debuginator->item_height);
+
+	const char* full_path = debuginator__compute_path(debuginator, parent, path, 0);
+	const char* item_setting = debuginator__get_item_setting(debuginator, full_path);
+	if (DEBUGINATOR_strcmp(item_setting, DEBUGINATOR_FOLDER_COLLAPSED_STRING) == 0) {
+		folder_item->folder.is_collapsed = true;
+	}
+	debuginator__deallocate(debuginator, item_setting);
+	
 	return folder_item;
 }
 
@@ -1004,13 +1147,7 @@ DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, DebuginatorIt
 		while (parent_child) {
 			const char* item_title = parent_child->title;
 			size_t title_length = DEBUGINATOR_strlen(item_title);
-			if (path_part_length >= DEBUGINATOR_max_title_length
-				&& title_length == DEBUGINATOR_max_title_length - 1
-				&& item_title[DEBUGINATOR_max_title_length - 2] == '.'
-				&& item_title[DEBUGINATOR_max_title_length - 3] == '.') {
-				path_part_length = title_length = DEBUGINATOR_max_title_length - 3;
-			}
-
+			
 			if (title_length == path_part_length && memcmp(parent_child->title, temp_path, title_length * sizeof(char)) == 0) {
 				current_item = parent_child;
 				break;
@@ -1051,6 +1188,14 @@ DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, DebuginatorIt
 	return NULL;
 }
 
+DebuginatorItem* debuginator_get_parent(DebuginatorItem* item) {
+	return item->parent;
+}
+
+bool debuginator_is_folder(DebuginatorItem* item) {
+	return item->is_folder;
+}
+
 DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 	DebuginatorItem* parent, const char* path, const char* description,
 	DebuginatorOnItemChangedCallback on_item_changed_callback, void* user_data,
@@ -1075,11 +1220,11 @@ DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 		debuginator->hot_item = item;
 	}
 
-	// In case the item existed previously from a load.
-	if (item->leaf.description != NULL) {
-		const char* loaded_value_title = item->leaf.description;
+	const char* full_path = debuginator__compute_path(debuginator, parent, path, 0);
+	const char* item_setting = debuginator__get_item_setting(debuginator, full_path);
+	if (DEBUGINATOR_strcmp(item_setting, "") != 0) {
 		for (int i = 0; i < item->leaf.num_values; i++) {
-			if (strcmp(item->leaf.value_titles[i], loaded_value_title) == 0) {
+			if (DEBUGINATOR_strcmp(item->leaf.value_titles[i], item_setting) == 0) {
 				item->leaf.hot_index = i;
 				debuginator_activate(debuginator, item);
 				break;
@@ -1090,26 +1235,36 @@ DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 	item->leaf.description = description == NULL ? "" : description;
 	debuginator__adjust_num_visible_children(item->parent, 1);
 
-	//TODO preserve hot item
 	return item;
 }
 
 int debuginator_save(TheDebuginator* debuginator, DebuginatorSaveItemCallback callback, char* save_buffer, int save_buffer_size) {
-	char current_full_path[256] = { 0 };
-	int path_indices[8] = { 0 };
+	char current_full_path[1024] = { 0 };
+	int path_indices[16] = { 0 };
 	int current_path_index = 0;
 
 	DebuginatorItem* item = debuginator->root->folder.first_child;
 	while (item != NULL) {
 		if (item->is_folder) {
 			if (item->folder.first_child != NULL) {
-				DEBUGINATOR_strcpy_s(current_full_path + path_indices[current_path_index], 50, item->title); // HACK
+				int folder_title_length = (int)DEBUGINATOR_strlen(item->title);
+				DEBUGINATOR_strcpy_s(current_full_path + path_indices[current_path_index], folder_title_length + 1, item->title); // HACK
 
-				path_indices[current_path_index + 1] = path_indices[current_path_index] + (int)DEBUGINATOR_strlen(item->title);
+				if (item->folder.is_collapsed) {
+					int saved = callback(current_full_path, DEBUGINATOR_FOLDER_COLLAPSED_STRING, save_buffer, save_buffer_size);
+					if (saved < 0) {
+						return -1;
+					}
+
+					save_buffer += saved;
+					save_buffer_size -= saved;
+				}
+
+				path_indices[current_path_index + 1] = path_indices[current_path_index] + folder_title_length;
 				*(current_full_path + path_indices[current_path_index + 1]) = '/';
 				path_indices[current_path_index + 1]++;
-
 				++current_path_index;
+				
 				item = item->folder.first_child;
 
 				continue;
@@ -1153,21 +1308,24 @@ int debuginator_save(TheDebuginator* debuginator, DebuginatorSaveItemCallback ca
 	return save_buffer_size;
 }
 
-
 void debuginator_load_item(TheDebuginator* debuginator, const char* path, const char* value_title) {
+	// First we store path + value so that we can use it later when  (re)creating the item.
+	debuginator__store_item_setting(debuginator, path, value_title);
+
+	// Then we check if the item already existed, and if so, update its state.
 	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, false);
 	if (item == NULL) {
-		item = debuginator_create_array_item(debuginator, NULL, path, NULL, NULL, NULL, NULL, NULL, 0, 0);
-		item->leaf.description = value_title; // Temporarily reuse description field
-		item->leaf.hot_index = -2;
-		debuginator__set_total_height(item, 0);
-		debuginator__adjust_num_visible_children(item->parent, -1);
+		// Pass
 	}
 	else if (item->is_folder) {
+		bool is_folder_collapsed_title = DEBUGINATOR_strcmp(value_title, DEBUGINATOR_FOLDER_COLLAPSED_STRING) == 0;
+		if (is_folder_collapsed_title) {
+			debuginator_set_collapsed(debuginator, item, true);
+		}
 	}
 	else {
 		for (int i = 0; i < item->leaf.num_values; i++) {
-			if (strcmp(item->leaf.value_titles[i], value_title) == 0) {
+			if (DEBUGINATOR_strcmp(item->leaf.value_titles[i], value_title) == 0) {
 				item->leaf.hot_index = i;
 				if (!debuginator->edit_types[item->leaf.edit_type].forget_state) {
 					debuginator_activate(debuginator, item);
@@ -1182,9 +1340,8 @@ DebuginatorItem* debuginator_get_hot_item(TheDebuginator* debuginator) {
 	return debuginator->hot_item;
 }
 
-void debuginator_set_hot_item(TheDebuginator* debuginator, const char* path) {
-	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, false);
-	if (item == NULL) {
+void debuginator_set_hot_item(TheDebuginator* debuginator, DebuginatorItem* item) {
+	if (item == debuginator->root) {
 		return;
 	}
 
@@ -1200,7 +1357,7 @@ void debuginator_set_default_value(TheDebuginator* debuginator, const char* path
 
 	if (value_title != NULL) {
 		for (int i = 0; i < item->leaf.num_values; i++) {
-			if (strcmp(value_title, item->leaf.value_titles[i]) == 0) {
+			if (DEBUGINATOR_strcmp(value_title, item->leaf.value_titles[i]) == 0) {
 				value_index = i;
 				break;
 			}
@@ -2045,6 +2202,15 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 
 		unsigned color_index = item == debuginator->hot_item ? DEBUGINATOR_ItemTitleActive : (hot ? DEBUGINATOR_ItemTitleHot : DEBUGINATOR_FolderTitle);
 		debuginator->draw_text(item->title, &offset, &debuginator->theme.colors[color_index], &debuginator->theme.fonts[DEBUGINATOR_ItemTitle], debuginator->app_user_data);
+		if (item->folder.is_collapsed) {
+			DebuginatorVector2 collapsed_box_pos1 = debuginator__vector2(offset.x - debuginator->item_height / 2.0f , offset.y + debuginator->item_height / 4.0f);
+			DebuginatorVector2 collapsed_box_size1 = debuginator__vector2(debuginator->item_height / 2.0f, debuginator->item_height / 4.0f);
+			DebuginatorVector2 collapsed_box_pos2 = debuginator__vector2(offset.x - debuginator->item_height / 4.0f, offset.y + debuginator->item_height / 8.0f);
+			DebuginatorVector2 collapsed_box_size2 = debuginator__vector2(debuginator->item_height / 4.0f, debuginator->item_height / 8.0f);
+			debuginator->draw_rect(&collapsed_box_pos1, &collapsed_box_size1, &debuginator->theme.colors[color_index], debuginator->app_user_data);
+			debuginator->draw_rect(&collapsed_box_pos2, &collapsed_box_size2, &debuginator->theme.colors[color_index], debuginator->app_user_data);
+		}
+
 		offset.x += 20;
 		DebuginatorItem* child = debuginator__first_visible_child(item);
 		while (child) {
@@ -2162,6 +2328,46 @@ void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item) {
 	item->leaf.on_item_changed_callback(item, value, item->leaf.value_titles[item->leaf.hot_index], debuginator->app_user_data);
 }
 
+bool debuginator_is_collapsed(DebuginatorItem* item) {
+	return item->is_folder && item->folder.is_collapsed;
+}
+
+void debuginator_set_collapsed(TheDebuginator* debuginator, DebuginatorItem* item, bool collapsed) {
+	if (!item->is_folder) {
+		return;
+	}
+
+	if (item == debuginator->root) {
+		return;
+	}
+
+	item->folder.is_collapsed = collapsed;
+	if (collapsed) {
+		debuginator__set_total_height(item, debuginator->item_height);
+		if (item->folder.hot_child == debuginator->hot_item) {
+			DebuginatorItem* temp_item = item;
+			while (temp_item->folder.is_collapsed) {
+				temp_item = temp_item->parent;
+			}
+			if (temp_item == debuginator->root) {
+				debuginator_set_hot_item(debuginator, debuginator__first_visible_child(temp_item));
+			}
+			else {
+				debuginator_set_hot_item(debuginator, temp_item);
+			}
+		}
+	}
+	else {
+		int height = debuginator->item_height;
+		DebuginatorItem* child = debuginator__first_visible_child(item);
+		while (child != NULL) {
+			height += child->total_height;
+			child = debuginator__next_visible_sibling(child);
+		}
+		debuginator__set_total_height(item, height);
+	}
+}
+
 void debuginator_move_sibling_previous(TheDebuginator* debuginator) {
 	DebuginatorItem* hot_item = debuginator->hot_item;
 
@@ -2270,10 +2476,10 @@ void debuginator_move_to_next_leaf(TheDebuginator* debuginator, bool long_move) 
 		return;
 	}
 
-	DebuginatorItem* hot_item_new = debuginator__next_item(hot_item);
+	DebuginatorItem* hot_item_new = debuginator__next_visible_item(hot_item);
 	if (long_move && hot_item_new != NULL) {
 		while (hot_item_new != NULL && hot_item_new->parent == hot_item->parent && (hot_item_new->is_folder || hot_item_new->leaf.active_index == hot_item_new->leaf.default_index)) {
-			hot_item_new = debuginator__next_item(hot_item_new);
+			hot_item_new = debuginator__next_visible_item(hot_item_new);
 		}
 
 		if (hot_item_new == NULL) {
@@ -2306,10 +2512,10 @@ void debuginator_move_to_prev_leaf(TheDebuginator* debuginator, bool long_move) 
 		return;
 	}
 
-	DebuginatorItem* hot_item_new = debuginator__prev_item(hot_item);
+	DebuginatorItem* hot_item_new = debuginator__prev_visible_item(hot_item);
 	if (long_move && hot_item_new != NULL) {
 		while (hot_item_new != NULL && hot_item_new->parent == hot_item->parent && (hot_item_new->is_folder || hot_item_new->leaf.active_index == hot_item_new->leaf.default_index)) {
-			hot_item_new = debuginator__prev_item(hot_item_new);
+			hot_item_new = debuginator__prev_visible_item(hot_item_new);
 		}
 
 		if (hot_item_new == NULL) {
@@ -2345,6 +2551,10 @@ void debuginator_move_to_child(TheDebuginator* debuginator, bool toggle_and_acti
 		}
 	}
 	else {
+		if (hot_item->folder.is_collapsed) {
+			debuginator_set_collapsed(debuginator, hot_item, false);
+		}
+		
 		if (hot_item->folder.hot_child != NULL) {
 			hot_item_new = hot_item->folder.hot_child;
 		}
@@ -2425,7 +2635,7 @@ void debuginator_activate_preset(DebuginatorItem* item, void* value, const char*
 
 		const char* preset_value_title = preset_value_titles[i];
 		for (int value_i = 0; value_i < item_to_activate->leaf.num_values; value_i++) {
-			if (strcmp(item_to_activate->leaf.value_titles[value_i], preset_value_title) == 0) {
+			if (DEBUGINATOR_strcmp(item_to_activate->leaf.value_titles[value_i], preset_value_title) == 0) {
 				item_to_activate->leaf.hot_index = value_i;
 				debuginator_activate(debuginator, item_to_activate);
 				break;

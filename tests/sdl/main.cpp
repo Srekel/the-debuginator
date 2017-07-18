@@ -151,9 +151,20 @@ bool load(TheDebuginator* debuginator, char* loaded_data_buffer, int loaded_buff
 }
 
 bool handle_debuginator_input(SDL_Event* event, TheDebuginator* debuginator) {
+	if (!debuginator_is_open(debuginator)) {
+		if (event->type != SDL_KEYDOWN || event->key.keysym.sym != SDLK_RIGHT) {
+			return false;
+		}
+
+		debuginator_set_open(debuginator, true);
+		return true;
+	}
+
+	DebuginatorItem* hot_item = debuginator_get_hot_item(debuginator);
 	switch (event->type) {
 		case SDL_KEYDOWN:
 		{
+
 			if (event->key.keysym.sym == SDLK_UP) {
 				bool long_move = (event->key.keysym.mod & SDLK_LCTRL) > 0;
 				debuginator_move_to_prev_leaf(debuginator, long_move);
@@ -165,19 +176,19 @@ bool handle_debuginator_input(SDL_Event* event, TheDebuginator* debuginator) {
 				return true;
 			}
 			else if (event->key.keysym.sym == SDLK_LEFT || event->key.keysym.sym == SDLK_ESCAPE) {
-				if (debuginator->is_open && !debuginator->hot_item->leaf.is_expanded) {
+				if (debuginator->is_open && (debuginator_is_folder(hot_item) || !hot_item->leaf.is_expanded)) {
 					debuginator_set_open(debuginator, false);
 					save(debuginator);
 					return true;
 				}
-				else if (!debuginator->hot_item->is_folder && debuginator->hot_item->leaf.is_expanded) {
+				else if (!debuginator_is_folder(hot_item) && hot_item->leaf.is_expanded) {
 					debuginator_move_to_parent(debuginator);
 					return true;
 				}
 			}
 			else if (event->key.keysym.sym == SDLK_RIGHT) {
-				if (!debuginator->is_open) {
-					debuginator_set_open(debuginator, true);
+				if (debuginator_is_folder(hot_item)) {
+					debuginator_set_collapsed(debuginator, hot_item, !debuginator_is_collapsed(hot_item));
 					return true;
 				}
 				else {
