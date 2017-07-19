@@ -814,7 +814,7 @@ int debuginator__set_item_total_height_recursively(DebuginatorItem* item, int it
 		if (item->leaf.is_expanded) {
 			item->total_height = item_height + item_height * item->leaf.description_line_count + item_height * item->leaf.num_values;
 		}
-		else if (item->leaf.hot_index != -2 && !item->is_filtered) {
+		else if (!item->is_filtered) {
 			item->total_height = item_height;
 		}
 		else {
@@ -862,7 +862,7 @@ DebuginatorItem* debuginator__next_visible_sibling(DebuginatorItem* item) {
 				return sibling;
 			}
 		}
-		else if (sibling->leaf.hot_index != -2 && !sibling->is_filtered) {
+		else if (!sibling->is_filtered) {
 			return sibling;
 		}
 
@@ -880,7 +880,7 @@ DebuginatorItem* debuginator__prev_visible_sibling(DebuginatorItem* item) {
 				return sibling;
 			}
 		}
-		else if (sibling->leaf.hot_index != -2 && !sibling->is_filtered) {
+		else if (!sibling->is_filtered) {
 			return sibling;
 		}
 
@@ -904,7 +904,7 @@ DebuginatorItem* debuginator__first_visible_child(DebuginatorItem* item) {
 			return item->folder.first_child;
 		}
 	}
-	else if (item->folder.first_child->leaf.hot_index != -2 && !item->folder.first_child->is_filtered) {
+	else if (!item->folder.first_child->is_filtered) {
 		return item->folder.first_child;
 	}
 
@@ -913,7 +913,7 @@ DebuginatorItem* debuginator__first_visible_child(DebuginatorItem* item) {
 
 DebuginatorItem* debuginator__find_first_leaf(DebuginatorItem* item) {
 	if (!item->is_folder) {
-		if (item->leaf.hot_index != -2 && !item->is_filtered) {
+		if (!item->is_filtered) {
 			return item;
 		}
 	}
@@ -943,7 +943,7 @@ DebuginatorItem* debuginator__find_first_leaf(DebuginatorItem* item) {
 
 DebuginatorItem* debuginator__find_last_leaf(DebuginatorItem* item) {
 	if (!item->is_folder) {
-		if (item->leaf.hot_index != -2 && !item->is_filtered) {
+		if (!item->is_filtered) {
 			return item;
 		}
 	}
@@ -1161,7 +1161,7 @@ DebuginatorItem* debuginator_create_folder_item(TheDebuginator* debuginator, Deb
 		folder_item->folder.is_collapsed = true;
 	}
 	debuginator__deallocate(debuginator, item_setting);
-	
+
 	return folder_item;
 }
 
