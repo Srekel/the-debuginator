@@ -96,11 +96,11 @@ I'll add more customizability on request.
 
 Only builds as a static library for now, and it doesn't have a Lua API (just a C API). Supports the majority of the features but it's not done. I'm not likely to work further on it unless I start working on a Stingray project again.
 
-### :small_blue_diamond: Input
+### :heavy_check_mark: Input
 
-The API for manouvering the menu is agnostic regarding keyboard/gamepad. It's handled at application layer, though guidelines for how to bind keys exist.
+The API for manouvering the menu is agnostic regarding keyboard/gamepad. It's handled at application layer, though guidelines for how to bind keys exist - see the demo.
 
-Support for mouse input coming later. Touch input will likely use the mouse API too.
+Also supports mouse and touch input.
 
 ### :small_blue_diamond: Presets
 
