@@ -164,6 +164,7 @@ bool handle_debuginator_input(SDL_Event* event, TheDebuginator* debuginator) {
 	switch (event->type) {
 		case SDL_KEYDOWN:
 		{
+			debuginator_reset_scrolling(debuginator);
 
 			if (event->key.keysym.sym == SDLK_UP) {
 				bool long_move = (event->key.keysym.mod & SDLK_LCTRL) > 0;
@@ -234,6 +235,31 @@ bool handle_debuginator_input(SDL_Event* event, TheDebuginator* debuginator) {
 			strcat_s(filter, sizeof(debuginator->filter), event->text.text);
 			debuginator->filter_length = (int)strlen(filter);
 			debuginator_update_filter(debuginator, filter);
+
+			break;
+		}
+		case SDL_MOUSEMOTION: {
+			DebuginatorVector2 mouse_cursor_pos = { (float)event->motion.x, (float)event->motion.y };
+			debuginator_set_mouse_cursor_pos(debuginator, &mouse_cursor_pos);
+
+			break;
+		}
+		case SDL_MOUSEWHEEL: {
+			debuginator_apply_scroll(debuginator, event->wheel.y * 100);
+
+			break;
+		}
+		case SDL_MOUSEBUTTONDOWN: {
+			DebuginatorVector2 mouse_cursor_pos = { (float)event->button.x, (float)event->button.y };
+			debuginator_set_mouse_cursor_pos(debuginator, &mouse_cursor_pos);
+			if (event->button.button == SDL_BUTTON_LEFT && event->button.state == SDL_PRESSED) {
+				debuginator_activate_item_at_mouse_cursor(debuginator);
+			}
+			else if (event->button.button == SDL_BUTTON_RIGHT && event->button.state == SDL_PRESSED) {
+				debuginator_expand_item_at_mouse_cursor(debuginator, DEBUGINATOR_Toggle);
+			}
+
+			break;
 		}
 	}
 
