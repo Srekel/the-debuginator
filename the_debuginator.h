@@ -797,8 +797,8 @@ void debuginator__deallocate(TheDebuginator* debuginator, const void* void_ptr) 
 	// and if not, then we don't do anything (see right below). It makes the API a bit nicer.
 	char* ptr = (char*)void_ptr;
 	if (!(debuginator->memory_arena <= ptr && ptr < debuginator->memory_arena + debuginator->memory_arena_capacity)) {
-		// Yes, to simplify other code we do this check here. That way we can always attempt to deallocate a string
-		// even though we don't have ownership of it.
+		// Yes, to simplify other code we do this check here. That way we can always attempt to 
+		// deallocate a piece of memory even though we don't have ownership of it.
 		return;
 	}
 
@@ -1521,10 +1521,13 @@ void debuginator_remove_item(TheDebuginator* debuginator, DebuginatorItem* item)
 
 	debuginator__deallocate(debuginator, item->title);
 	if (!item->is_folder) {
+		// Deallocate things in case The Debuginator owns these things.
 		debuginator__deallocate(debuginator, item->leaf.description);
+		for (int i = 0; i < item->leaf.num_values; ++i) {
+			debuginator__deallocate(debuginator, item->leaf.value_titles[i]);
+		}
+		debuginator__deallocate(debuginator, item->leaf.value_titles);
 	}
-
-	// TODO deallocate value titles
 
 	debuginator__deallocate(debuginator, item);
 }
