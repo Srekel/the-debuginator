@@ -854,15 +854,20 @@ void debuginator__set_total_height(DebuginatorItem* item, int height) {
 
 int debuginator__set_item_total_height_recursively(DebuginatorItem* item, int item_height) {
 	if (item->is_folder) {
-		item->total_height = 0;
-		DebuginatorItem* child = item->folder.first_child;
-		while (child != NULL) {
-			item->total_height += debuginator__set_item_total_height_recursively(child, item_height);
-			child = child->next_sibling;
+		if (item->folder.is_collapsed) {
+			item->total_height = 30;
 		}
+		else {
+			item->total_height = 0;
+			DebuginatorItem* child = item->folder.first_child;
+			while (child != NULL) {
+				item->total_height += debuginator__set_item_total_height_recursively(child, item_height);
+				child = child->next_sibling;
+			}
 
-		if (item->total_height > 0) {
-			item->total_height += item_height;
+			if (item->total_height > 0) {
+				item->total_height += item_height;
+			}
 		}
 	}
 	else {
