@@ -2289,7 +2289,7 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 			if (anim_item->leaf.is_expanded) {
 				//end_position.y -= (anim_item->leaf.hot_index + 1) * debuginator->item_height; // HACK! for description :(
 				//end_position.y -= (anim_item->leaf.hot_index) * debuginator->item_height + anim_item->leaf.description_line_count;
-				end_position.y -= (anim_item->leaf.hot_index + anim_item->leaf.description_line_count) * debuginator->item_height; // HACK! for description :(
+				end_position.y -= (anim_item->leaf.hot_index + anim_item->leaf.description_line_count) * debuginator->item_height;
 			}
 
 			DebuginatorVector2 position;
@@ -2449,7 +2449,7 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 			offset.x += DEBUGINATOR_INDENT;
 
 			const char* description = item->leaf.description;
-			float description_width = debuginator->size.x - 50 - offset.x;
+			float description_width = debuginator->size.x - 50 + debuginator->top_left.x - offset.x;
 			char description_line_to_draw[64];
 			int description_height = 0;
 			unsigned row_lengths[32];
