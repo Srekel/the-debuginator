@@ -489,6 +489,12 @@ typedef struct TheDebuginatorConfig {
 #define DEBUGINATOR_INDENT 20
 #endif
 
+#ifndef DEBUGINATOR_SCORE_OVERRIDE
+#define DEBUGINATOR_SCORE_WORD_BREAK_START 10
+#define DEBUGINATOR_SCORE_WORD_BREAK_END 5
+#define DEBUGINATOR_SCORE_ITEM_TITLE_MATCH 10
+#endif
+
 typedef struct DebuginatorBlockAllocator DebuginatorBlockAllocator;
 
 typedef struct DebuginatorBlockAllocatorStaticData {
@@ -1735,7 +1741,11 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 						|| (!DEBUGINATOR_isalpha(current_full_path[match_index + match_length]) && DEBUGINATOR_isalpha(current_full_path[match_index]))
 						|| (!DEBUGINATOR_isdigit(current_full_path[match_index + match_length]) && DEBUGINATOR_isdigit(current_full_path[match_index]));
 					int is_match_in_item_title = match_index >= path_indices[current_path_index];
-					int match_score = (is_word_break_start * 10 + is_word_break_end * 5 + is_match_in_item_title * 10 + match_length) * match_length;
+					int match_score = 
+						(is_word_break_start * DEBUGINATOR_SCORE_WORD_BREAK_START 
+						+ is_word_break_end * DEBUGINATOR_SCORE_WORD_BREAK_END 
+						+ is_match_in_item_title * DEBUGINATOR_SCORE_ITEM_TITLE_MATCH 
+						+ match_length) * match_length;
 					if (match_score > best_match_score) {
 						best_match_score = match_score;
 						best_match_index = i;
