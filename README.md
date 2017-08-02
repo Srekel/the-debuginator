@@ -38,9 +38,11 @@ Or check out the SDL demo for information on how to initialize the debuginator a
 
 So it's easy to add to any project. In one case I use an anonymous union (I pragma away the warning), so if your compiler doesn't support that, I recommend forking and fixing. I just like the convenience.
 
-### :heavy_check_mark: Built using maximum warning levels and warnings as errors, tested with Cppcheck
+### :heavy_check_mark: Politely coded
 
-Because that's just polite to anyone who wants to use it.
+No globals or static variables, in case you want to have it in a plugin and reload (or instantiate more than one).
+
+Built using maximum warning levels and warnings as errors, tested with Cppcheck.
 
 I do use #pragma to ignore a silly warning (see above).
 
@@ -57,6 +59,8 @@ A font is included, and to build the SDL demo you need SDL 2 and SDL TTF.
 ### :heavy_check_mark: Scrollable
 
 Can handle any number of items, the "hot" one will be centered (ish) smoothly.
+
+Also supports scrolling with for example mouse wheel.
 
 ### :heavy_check_mark: Performant
 
@@ -79,6 +83,8 @@ So you could, for example, have items that are only available when you are in th
 ### :heavy_check_mark: Left or right aligned
 
 Because some games already have other important stuff on the left side of the screen.
+
+Hey, you could even have one instance of The Debuginator on the left and another on the right.
 
 ### :heavy_check_mark: Hierarchical
 

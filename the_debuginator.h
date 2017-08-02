@@ -641,6 +641,9 @@ typedef struct TheDebuginator {
 	int num_loaded_settings;
 	int loaded_settings_capacity;
 
+	bool bool_values[2];
+	const char* bool_titles[2];
+
 } TheDebuginator;
 
 DebuginatorVector2 debuginator__vector2(float x, float y) {
@@ -2089,11 +2092,15 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 	debuginator->theme_index = 0;
 	debuginator->theme = debuginator->themes[0];
 
+	debuginator->bool_values[0] = false;
+	debuginator->bool_values[1] = true;
+	debuginator->bool_titles[0] = "False";
+	debuginator->bool_titles[1] = "True";
+
 	// Create root
 	DebuginatorItem* item = debuginator_new_folder_item(debuginator, NULL, "Menu Root", 0);
 	debuginator->root = item;
 
-	// TODO: Don't use static variables
 	if (config->create_default_debuginator_items) {
 		{
 			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/About",
@@ -2115,17 +2122,30 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 				"Use the corresponding AXBY buttons to do the same things as the D-Pad, but faster!", NULL, NULL,
 				NULL, NULL, 0, 0);
 		}
+
 		{
 			// TODO: Use a special callback instead of copy 1 byte in order to fix startup wonky animations.
-			static char directions[2] = { 1, -1 };
-			static const char* string_titles[2] = { "Left", "Right" };
+			char* directions = (char*)debuginator__allocate(debuginator, 2); // char as in byte
+			directions[0] = 1;
+			directions[1] = -1;
+			const char** string_titles = (const char**)debuginator__allocate(debuginator, sizeof(char*) * 2);
+			string_titles[0] = "Left";
+			string_titles[1] = "Right";
 			debuginator_create_array_item(debuginator, NULL, "Debuginator/Alignment",
 				"Right alignment is not fully tested and has some visual glitches.", debuginator_copy_1byte, &debuginator->open_direction,
 				string_titles, directions, 2, sizeof(directions[0]));
 		}
 		{
-			static int theme_indices[4] = { 0, 1, 2, 3 };
-			static const char* string_titles[4] = { "Classic", "Blue", "High Contrast Dark", "High Contrast Light" };
+			int* theme_indices = (int*)debuginator__allocate(debuginator, 4 * sizeof(int)); // 
+			theme_indices[0] = 0;
+			theme_indices[1] = 1;
+			theme_indices[2] = 2;
+			theme_indices[3] = 3;
+			const char** string_titles = (const char**)debuginator__allocate(debuginator, sizeof(char*) * 4);
+			string_titles[0] = "Classic";
+			string_titles[1] = "Blue";
+			string_titles[2] = "High Contrast Dark";
+			string_titles[3] = "High Contrast Light";
 			debuginator_create_array_item(debuginator, NULL, "Debuginator/Theme",
 				"Change color theme of The Debuginator. \nNote that only Classic is currently polished.", debuginator__on_change_theme, debuginator,
 				string_titles, (void*)theme_indices, 4, sizeof(theme_indices[0]));
@@ -2816,12 +2836,10 @@ void debuginator_copy_1byte(DebuginatorItem* item, void* value, const char* valu
 
 DebuginatorItem* debuginator_create_bool_item(TheDebuginator* debuginator, const char* path, const char* description, void* user_data) {
 	bool value_before_creation = *(bool*)user_data;
-	static bool bool_values[2] = { false, true };
-	static const char* bool_titles[2] = { "False", "True" };
-	DEBUGINATOR_assert(sizeof(bool_values[0]) == 1);
+	DEBUGINATOR_assert(sizeof(debuginator->bool_values[0]) == 1);
 	DebuginatorItem* item = debuginator_create_array_item(debuginator, NULL, path,
 		description, debuginator_copy_1byte, user_data,
-		bool_titles, bool_values, 2, sizeof(bool_values[0]));
+		debuginator->bool_titles, debuginator->bool_values, 2, sizeof(debuginator->bool_values[0]));
 	item->leaf.edit_type = DEBUGINATOR_EditTypeBoolean;
 
 	if (value_before_creation == true) {
