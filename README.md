@@ -108,9 +108,9 @@ The API for manouvering the menu is agnostic regarding keyboard/gamepad. It's ha
 
 Also supports mouse and touch input.
 
-### :small_blue_diamond: Presets
+### :heavy_check_mark: Presets
 
-Activate one item to activate a number of other ones. It works but the automated descriptions are not very good.
+Activate one item to activate a number of other ones. Useful for if a user tends to reset her debug settings but has a lot of them she often wants to enable. Or if your QA should play under certain circumstances. Or if you have a few settings that is just really nice to always have enabled, for new devs.
 
 ### :small_blue_diamond: Nice look & feel
 

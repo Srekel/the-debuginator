@@ -2899,8 +2899,8 @@ void debuginator_activate_preset(DebuginatorItem* item, void* value, const char*
 DebuginatorItem* debuginator_create_preset_item(TheDebuginator* debuginator, const char* path, const char** paths, const char** value_titles, int** value_indices, int num_paths) {
 	(void)value_indices; // TODO
 
-	char description[1024] = { 0 };
-	DEBUGINATOR_strcpy_s(description, 1000, "Preset: \n");
+	char description[2048] = { 0 };
+	DEBUGINATOR_strcpy_s(description, 16, "Preset: \n");
 	char* description_end = description + DEBUGINATOR_strlen(description);
 	const char** path_part = paths;
 	const char** value_title_part = value_titles;
@@ -2917,12 +2917,18 @@ DebuginatorItem* debuginator_create_preset_item(TheDebuginator* debuginator, con
 
 		++path_part;
 		++value_title_part;
+
+		if ((int)(description_end - description) < 128) {
+			DEBUGINATOR_strcpy_s(description_end, 32, "[Preset description cropped]\n");
+			description_end += 28;
+			break;
+		}
 	}
 
 	DEBUGINATOR_assert(description_end < description + sizeof(description));
-
+	const char* owned_description = debuginator_copy_string(debuginator, description, (int)(description_end - description));
 	DebuginatorItem* item = debuginator_create_array_item(debuginator, NULL, path,
-		description, debuginator_activate_preset, debuginator,
+		owned_description, debuginator_activate_preset, debuginator,
 		paths, (void*)value_titles, num_paths, 0);
 
 	item->leaf.edit_type = DEBUGINATOR_EditTypePreset;
