@@ -267,18 +267,15 @@ bool handle_debuginator_keyboard_input_event(SDL_Event* event, TheDebuginator* d
 	return false;
 }
 
-bool handle_debuginator_gamepad_input_event(SDL_Event* event, TheDebuginator* debuginator, SDL_GameControllerButton& current_button, double& time_since_button_pressed) {
-	//static SDL_GameControllerButton current_button = SDL_CONTROLLER_BUTTON_INVALID;
-	//static bool in_repeat_mode = false;
-	//static double repeat_time = 0;
-	//repeat_time += dt;
-	
+bool handle_debuginator_gamepad_input_event(SDL_Event* event, TheDebuginator* debuginator, SDL_GameControllerButton& current_button, double& time_since_button_pressed, float& scroll_speed) {
 	switch (event->type) {
 		case SDL_CONTROLLERBUTTONDOWN:
 		{
 			SDL_ControllerButtonEvent& button_ev = event->cbutton;
 			current_button = (SDL_GameControllerButton)button_ev.button;
 			time_since_button_pressed = 0;
+
+			debuginator_reset_scrolling(debuginator);
 
 			if (button_ev.button == SDL_CONTROLLER_BUTTON_DPAD_UP) {
 				bool long_move = (event->key.keysym.mod & SDLK_LCTRL) > 0;
@@ -334,6 +331,17 @@ bool handle_debuginator_gamepad_input_event(SDL_Event* event, TheDebuginator* de
 		{
 			current_button = SDL_CONTROLLER_BUTTON_INVALID;
 			//in_repeat_mode = false;
+		}
+		break;
+		case SDL_CONTROLLERAXISMOTION:
+		{
+			SDL_ControllerAxisEvent& motion_ev = event->caxis;
+			if (motion_ev.axis == SDL_CONTROLLER_AXIS_LEFTY) {
+				scroll_speed = 0;
+				if (motion_ev.value < -5000 || motion_ev.value > 5000) {
+					scroll_speed = (float)(-3000 * (motion_ev.value / 32767.0) * (motion_ev.value / 32767.0) * (motion_ev.value / 32767.0));
+				}
+			}
 		}
 		break;
 	}
@@ -438,6 +446,7 @@ int main(int argc, char **argv)
 	bool quit = false;
 	double time_since_button_pressed = 0;
 	SDL_GameControllerButton current_button = SDL_CONTROLLER_BUTTON_INVALID;
+	float gamepad_scroll_speed = 0;
 	while (!quit) {
 		LAST = NOW;
 		NOW = SDL_GetPerformanceCounter();
@@ -451,7 +460,7 @@ int main(int argc, char **argv)
 				continue;
 			}
 
-			if (handle_debuginator_gamepad_input_event(&event, &debuginator, current_button, time_since_button_pressed)) {
+			if (handle_debuginator_gamepad_input_event(&event, &debuginator, current_button, time_since_button_pressed, gamepad_scroll_speed)) {
 				continue;
 			}
 			
@@ -472,6 +481,7 @@ int main(int argc, char **argv)
 		}
 
 		handle_debuginator_gamepad_input(&debuginator, current_button, time_since_button_pressed);
+		debuginator_apply_scroll(&debuginator, (int)(gamepad_scroll_speed * dt));
 
 		debuginator_update(&debuginator, (float)dt);
 
