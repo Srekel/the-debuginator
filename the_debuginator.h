@@ -427,11 +427,6 @@ typedef struct TheDebuginatorConfig {
 #define DEBUGINATOR_strlen strlen
 #endif
 
-#ifndef DEBUGINATOR_strstr
-#include <string.h>
-#define DEBUGINATOR_strstr strstr
-#endif
-
 #ifndef DEBUGINATOR_strcpy_s
 #include <string.h>
 #define DEBUGINATOR_strcpy_s strcpy_s
@@ -477,8 +472,11 @@ typedef struct TheDebuginatorConfig {
 #ifndef DEBUGINATOR_FOLDER_COLLAPSED_STRING
 #define DEBUGINATOR_FOLDER_COLLAPSED_STRING "folder_collapsed"
 #endif
+
+#ifndef DEBUGINATOR_BOOL_OVERRIDE
 #ifndef __cplusplus
 #include <stdbool.h>
+#endif
 #endif
 
 #ifndef DEBUGINATOR_LEFT_MARGIN
@@ -824,7 +822,7 @@ char* debuginator_copy_string(TheDebuginator* debuginator, const char* string, i
 	}
 
 	char* memory = (char*)debuginator__allocate(debuginator, length + 1);
-	memcpy(memory, string, length);
+	DEBUGINATOR_memcpy(memory, string, length);
 	memory[length] = '\0';
 	return memory;
 }
@@ -2109,8 +2107,8 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 	debuginator->root_position.x = -debuginator->size.x;
 	debuginator->top_left = debuginator__vector2(debuginator->root_position.x + debuginator->size.x * debuginator->openness * debuginator->open_direction, 0);
 
-	memcpy(debuginator->edit_types, config->edit_types, sizeof(debuginator->edit_types));
-	memcpy(debuginator->themes, config->themes, sizeof(debuginator->themes));
+	DEBUGINATOR_memcpy(debuginator->edit_types, config->edit_types, sizeof(debuginator->edit_types));
+	DEBUGINATOR_memcpy(debuginator->themes, config->themes, sizeof(debuginator->themes));
 	debuginator->theme_index = 0;
 	debuginator->theme = debuginator->themes[0];
 
@@ -2387,7 +2385,7 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 
 		filter_pos.x += 40;
 		filter_pos.x += header_text_size.x;
-		if (strchr(debuginator->filter, ' ')) {
+		if (DEBUGINATOR_strchr(debuginator->filter, ' ')) {
 			// Exact search mode
 			DebuginatorVector2 underline_size;
 			underline_size.y = 1;
@@ -2864,7 +2862,7 @@ void debuginator_move_to_root(TheDebuginator* debuginator) {
 void debuginator_copy_1byte(DebuginatorItem* item, void* value, const char* value_title, void* app_userdata) {
 	(void)value_title;
 	(void)app_userdata;
-	memcpy(item->user_data, value, 1);
+	DEBUGINATOR_memcpy(item->user_data, value, 1);
 }
 
 DebuginatorItem* debuginator_create_bool_item(TheDebuginator* debuginator, const char* path, const char* description, void* user_data) {
