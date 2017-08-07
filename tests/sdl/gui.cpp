@@ -14,6 +14,7 @@ struct FontTemplate {
 struct Gui {
 	SDL_Window* window;
 	SDL_Renderer* renderer;
+	SDL_GameController* game_controllers[8];
 
 	FontTemplate font_templates[8];
 	int font_template_count;
@@ -28,7 +29,7 @@ GuiHandle gui_create_gui(int resx, int resy, const char* window_title, bool vsyn
 		return (GuiHandle)nullptr;
 	}
 
-	if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) != 0) {
 		SDL_Quit();
 		return (GuiHandle)nullptr;
 	}
@@ -57,6 +58,17 @@ GuiHandle gui_create_gui(int resx, int resy, const char* window_title, bool vsyn
 	SDL_memset(gui, 0, sizeof(*gui));
 	gui->renderer = renderer;
 	gui->window = window;
+
+	// Set up gamepads. Note: Doesn't handle adding while running.
+	// If you don't have this file, make sure it gets copied from 3rdparty\SDL_GameControllerDB-master
+	SDL_GameControllerAddMappingsFromFile("gamecontrollerdb.txt");
+    SDL_JoystickEventState(SDL_ENABLE);
+	int num_joysticks = SDL_NumJoysticks();
+	for( int i=0; i < num_joysticks; i++ ) {
+		if (SDL_IsGameController(i)) {
+			gui->game_controllers[i] = SDL_GameControllerOpen(i);
+		}
+	}
 
 	return (GuiHandle)gui;
 }

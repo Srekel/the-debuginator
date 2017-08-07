@@ -150,7 +150,7 @@ bool load(TheDebuginator* debuginator, char* loaded_data_buffer, int loaded_buff
 	return result;
 }
 
-bool handle_debuginator_input(SDL_Event* event, TheDebuginator* debuginator) {
+bool handle_debuginator_keyboard_input_event(SDL_Event* event, TheDebuginator* debuginator) {
 	switch (event->type) {
 		case SDL_KEYDOWN:
 		{
@@ -226,7 +226,114 @@ bool handle_debuginator_input(SDL_Event* event, TheDebuginator* debuginator) {
 		}
 	}
 
+
 	return false;
+}
+
+bool handle_debuginator_gamepad_input_event(SDL_Event* event, TheDebuginator* debuginator, SDL_GameControllerButton& current_button, double& time_since_button_pressed) {
+	//static SDL_GameControllerButton current_button = SDL_CONTROLLER_BUTTON_INVALID;
+	//static bool in_repeat_mode = false;
+	//static double repeat_time = 0;
+	//repeat_time += dt;
+	
+	switch (event->type) {
+		case SDL_CONTROLLERBUTTONDOWN:
+		{
+			SDL_ControllerButtonEvent& button_ev = event->cbutton;
+			current_button = (SDL_GameControllerButton)button_ev.button;
+			time_since_button_pressed = 0;
+
+			if (button_ev.button == SDL_CONTROLLER_BUTTON_DPAD_UP) {
+				bool long_move = (event->key.keysym.mod & SDLK_LCTRL) > 0;
+				debuginator_move_to_prev_leaf(debuginator, long_move);
+				return true;
+			}
+			else if (button_ev.button == SDL_CONTROLLER_BUTTON_DPAD_DOWN) {
+				bool long_move = (event->key.keysym.mod & SDLK_LCTRL) > 0;
+				debuginator_move_to_next_leaf(debuginator, long_move);
+				return true;
+			}
+			else if (current_button == SDL_CONTROLLER_BUTTON_LEFTSHOULDER) {
+				bool long_move = true;
+				debuginator_move_to_prev_leaf(debuginator, long_move);
+				return true;
+			}
+			else if (current_button == SDL_CONTROLLER_BUTTON_RIGHTSHOULDER) {
+				bool long_move = true;
+				debuginator_move_to_next_leaf(debuginator, long_move);
+				return true;
+			}
+			else if (button_ev.button == SDL_CONTROLLER_BUTTON_DPAD_LEFT || button_ev.button == SDL_CONTROLLER_BUTTON_BACK) {
+				if (debuginator->is_open && !debuginator->hot_item->leaf.is_expanded) {
+					debuginator_set_open(debuginator, false);
+					save(debuginator);
+					return true;
+				}
+				else if (!debuginator->hot_item->is_folder && debuginator->hot_item->leaf.is_expanded) {
+					debuginator_move_to_parent(debuginator);
+					return true;
+				}
+			}
+			else if (button_ev.button == SDL_CONTROLLER_BUTTON_DPAD_RIGHT) {
+				if (!debuginator->is_open) {
+					debuginator_set_open(debuginator, true);
+					return true;
+				}
+				else {
+					bool direct_activate = (event->key.keysym.mod & SDLK_LCTRL) > 0;
+					debuginator_move_to_child(debuginator, direct_activate);
+					return true;
+				}
+			}
+			else if (button_ev.button == SDL_CONTROLLER_BUTTON_A) {
+				bool direct_activate = true;
+				debuginator_move_to_child(debuginator, direct_activate);
+				return true;
+			}
+
+		}
+		break;
+		case SDL_CONTROLLERBUTTONUP:
+		{
+			current_button = SDL_CONTROLLER_BUTTON_INVALID;
+			//in_repeat_mode = false;
+		}
+		break;
+	}
+
+	return false;
+}
+
+void handle_debuginator_gamepad_input(TheDebuginator* debuginator, SDL_GameControllerButton current_button, double& time_since_button_pressed) {
+	if (current_button == SDL_CONTROLLER_BUTTON_INVALID) {
+		return;
+	}
+
+	if (time_since_button_pressed < 0.3) {
+		return;
+	}
+
+	time_since_button_pressed = 0.25;
+	if (current_button == SDL_CONTROLLER_BUTTON_DPAD_UP) {
+		bool long_move = false;
+		debuginator_move_to_prev_leaf(debuginator, long_move);
+		return;
+	}
+	else if (current_button == SDL_CONTROLLER_BUTTON_DPAD_DOWN) {
+		bool long_move = false;
+		debuginator_move_to_next_leaf(debuginator, long_move);
+		return;
+	}
+	else if (current_button == SDL_CONTROLLER_BUTTON_LEFTSHOULDER) {
+		bool long_move = true;
+		debuginator_move_to_prev_leaf(debuginator, long_move);
+		return;
+	}
+	else if (current_button == SDL_CONTROLLER_BUTTON_RIGHTSHOULDER) {
+		bool long_move = true;
+		debuginator_move_to_next_leaf(debuginator, long_move);
+		return;
+	}
 }
 
 int main(int argc, char **argv)
@@ -292,18 +399,25 @@ int main(int argc, char **argv)
 
 	SDL_Event event;
 	bool quit = false;
+	double time_since_button_pressed = 0;
+	SDL_GameControllerButton current_button = SDL_CONTROLLER_BUTTON_INVALID;
 	while (!quit) {
 		LAST = NOW;
 		NOW = SDL_GetPerformanceCounter();
 		Uint64 freq = SDL_GetPerformanceFrequency();
 		double dt = (double)((NOW - LAST) * 1.0 / freq);
+		time_since_button_pressed += dt;
 
 		while (SDL_PollEvent(&event) != 0)
 		{
-			if (handle_debuginator_input(&event, &debuginator)) {
+			if (handle_debuginator_keyboard_input_event(&event, &debuginator)) {
 				continue;
 			}
 
+			if (handle_debuginator_gamepad_input_event(&event, &debuginator, current_button, time_since_button_pressed)) {
+				continue;
+			}
+			
 			switch (event.type) {
 				case SDL_KEYDOWN:
 				{
@@ -319,6 +433,8 @@ int main(int argc, char **argv)
 				}
 			}
 		}
+
+		handle_debuginator_gamepad_input(&debuginator, current_button, time_since_button_pressed);
 
 		debuginator_update(&debuginator, (float)dt);
 
