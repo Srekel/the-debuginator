@@ -481,7 +481,9 @@ int main(int argc, char **argv)
 		}
 
 		handle_debuginator_gamepad_input(&debuginator, current_button, time_since_button_pressed);
-		debuginator_apply_scroll(&debuginator, (int)(gamepad_scroll_speed * dt));
+		if (gamepad_scroll_speed != 0) {
+			debuginator_apply_scroll(&debuginator, (int)(gamepad_scroll_speed * dt));
+		}
 
 		debuginator_update(&debuginator, (float)dt);
 

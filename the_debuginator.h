@@ -1842,9 +1842,13 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 
 void debuginator_apply_scroll(TheDebuginator* debuginator, int distance) {
 	debuginator->scroll_wanted += distance;
-	int max_offset = (int)debuginator->size.y / 2;
-	debuginator->scroll_wanted = DEBUGINATOR_min(debuginator->scroll_wanted, max_offset);
-	debuginator->scroll_wanted = DEBUGINATOR_max(debuginator->scroll_wanted, -debuginator->root->total_height + max_offset);
+
+	// Make sure we don't scroll too far away from the menu's content.
+	int distance_from_root_to_hot_item = 0;
+	debuginator__distance_to_hot_item(debuginator->root, debuginator->hot_item, debuginator->item_height, &distance_from_root_to_hot_item);
+	int max_offset = (int)(debuginator->size.y / 2);
+	debuginator->scroll_wanted = DEBUGINATOR_min(debuginator->scroll_wanted, max_offset + distance_from_root_to_hot_item);
+	debuginator->scroll_wanted = DEBUGINATOR_max(debuginator->scroll_wanted, -debuginator->root->total_height + distance_from_root_to_hot_item + max_offset);
 }
 
 void debuginator_reset_scrolling(TheDebuginator* debuginator) {
