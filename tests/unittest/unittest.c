@@ -80,7 +80,7 @@ static void unittest_debug_menu_setup(TheDebuginator* debuginator) {
 	debuginator_create_bool_item(debuginator, "Folder/SimpleBool 3", "Change a bool.", &g_testdata.simplebool_target);
 	debuginator_create_bool_item(debuginator, "Folder/SimpleBool 4 with a really really long title", "Change a bool.", &g_testdata.simplebool_target);
 
-	debuginator_new_folder_item(debuginator, NULL, "Folder 2", 0);
+	debuginator_create_folder_item(debuginator, NULL, "Folder 2");
 
 	static const char* string_values[3] = { "gamestring 1", "gamestring 2", "gamestring 3"};
 	static const char* string_titles[3] = { "First value", "Second one", "This is the third." };

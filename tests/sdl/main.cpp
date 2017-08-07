@@ -151,9 +151,21 @@ bool load(TheDebuginator* debuginator, char* loaded_data_buffer, int loaded_buff
 }
 
 bool handle_debuginator_keyboard_input_event(SDL_Event* event, TheDebuginator* debuginator) {
+	if (!debuginator_is_open(debuginator)) {
+		if (event->type != SDL_KEYDOWN || event->key.keysym.sym != SDLK_RIGHT) {
+			return false;
+		}
+
+		debuginator_set_open(debuginator, true);
+		return true;
+	}
+
+	DebuginatorItem* hot_item = debuginator_get_hot_item(debuginator);
 	switch (event->type) {
 		case SDL_KEYDOWN:
 		{
+			debuginator_reset_scrolling(debuginator);
+
 			if (event->key.keysym.sym == SDLK_UP) {
 				bool long_move = (event->key.keysym.mod & SDLK_LCTRL) > 0;
 				debuginator_move_to_prev_leaf(debuginator, long_move);
@@ -165,19 +177,19 @@ bool handle_debuginator_keyboard_input_event(SDL_Event* event, TheDebuginator* d
 				return true;
 			}
 			else if (event->key.keysym.sym == SDLK_LEFT || event->key.keysym.sym == SDLK_ESCAPE) {
-				if (debuginator->is_open && !debuginator->hot_item->leaf.is_expanded) {
+				if (debuginator->is_open && (debuginator_is_folder(hot_item) || !hot_item->leaf.is_expanded)) {
 					debuginator_set_open(debuginator, false);
 					save(debuginator);
 					return true;
 				}
-				else if (!debuginator->hot_item->is_folder && debuginator->hot_item->leaf.is_expanded) {
+				else if (!debuginator_is_folder(hot_item) && hot_item->leaf.is_expanded) {
 					debuginator_move_to_parent(debuginator);
 					return true;
 				}
 			}
 			else if (event->key.keysym.sym == SDLK_RIGHT) {
-				if (!debuginator->is_open) {
-					debuginator_set_open(debuginator, true);
+				if (debuginator_is_folder(hot_item)) {
+					debuginator_set_collapsed(debuginator, hot_item, !debuginator_is_collapsed(hot_item));
 					return true;
 				}
 				else {
@@ -223,6 +235,31 @@ bool handle_debuginator_keyboard_input_event(SDL_Event* event, TheDebuginator* d
 			strcat_s(filter, sizeof(debuginator->filter), event->text.text);
 			debuginator->filter_length = (int)strlen(filter);
 			debuginator_update_filter(debuginator, filter);
+
+			break;
+		}
+		case SDL_MOUSEMOTION: {
+			DebuginatorVector2 mouse_cursor_pos = { (float)event->motion.x, (float)event->motion.y };
+			debuginator_set_mouse_cursor_pos(debuginator, &mouse_cursor_pos);
+
+			break;
+		}
+		case SDL_MOUSEWHEEL: {
+			debuginator_apply_scroll(debuginator, event->wheel.y * 100);
+
+			break;
+		}
+		case SDL_MOUSEBUTTONDOWN: {
+			DebuginatorVector2 mouse_cursor_pos = { (float)event->button.x, (float)event->button.y };
+			debuginator_set_mouse_cursor_pos(debuginator, &mouse_cursor_pos);
+			if (event->button.button == SDL_BUTTON_LEFT && event->button.state == SDL_PRESSED) {
+				debuginator_activate_item_at_mouse_cursor(debuginator);
+			}
+			else if (event->button.button == SDL_BUTTON_RIGHT && event->button.state == SDL_PRESSED) {
+				debuginator_expand_item_at_mouse_cursor(debuginator, DEBUGINATOR_Toggle);
+			}
+
+			break;
 		}
 	}
 

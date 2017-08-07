@@ -24,6 +24,10 @@ These are subject to change and in various level of implementedness (including c
 - :small_blue_diamond: Some parts done, other parts on hold.
 - :red_circle: Not started.
 
+### :heavy_check_mark: STB-style single header library
+
+Though tests, examples and plugins are in separate files/folders/projects.
+
 ### :heavy_check_mark: Easy to use
 
 See documentation further down.
@@ -34,9 +38,11 @@ Or check out the SDL demo for information on how to initialize the debuginator a
 
 So it's easy to add to any project. In one case I use an anonymous union (I pragma away the warning), so if your compiler doesn't support that, I recommend forking and fixing. I just like the convenience.
 
-### :heavy_check_mark: Built using maximum warning levels and warnings as errors, tested with Cppcheck
+### :heavy_check_mark: Politely coded
 
-Because that's just polite to anyone who wants to use it.
+No globals or static variables, in case you want to have it in a plugin and reload (or instantiate more than one).
+
+Built using maximum warning levels and warnings as errors, tested with Cppcheck.
 
 I do use #pragma to ignore a silly warning (see above).
 
@@ -50,13 +56,11 @@ For the library that is. It will include some headers but only if you don't prov
 
 A font is included, and to build the SDL demo you need SDL 2 and SDL TTF.
 
-### :heavy_check_mark: STB-style single header library
-
-Though tests and examples are in separate files/folders/projects.
-
 ### :heavy_check_mark: Scrollable
 
 Can handle any number of items, the "hot" one will be centered (ish) smoothly.
+
+Also supports scrolling with for example mouse wheel.
 
 ### :heavy_check_mark: Performant
 
@@ -70,39 +74,45 @@ Check my post on this for a bit of details about it: https://medium.com/@Srekel/
 
 ### :heavy_check_mark: Save/Load of settings
 
-So you start up with the settings you had when you exited. Simple interface, application needs to do most of the work.
+So you start up with the settings you had when you exited. Simple interface, application needs to handle the actual I/O.
 
 ### :heavy_check_mark: Dynamic add and remove of items
 
-So you could, for example, have items that are only available when you are in the game's menu, or have one item for each enemy in the game.
+So you could, for example, have items that are only available when you are in the game's menu, or have one item for each spawned enemy in the game.
 
 ### :heavy_check_mark: Left or right aligned
 
 Because some games already have other important stuff on the left side of the screen.
 
-### :small_blue_diamond: Hierarchical
+Hey, you could even have one instance of The Debuginator on the left and another on the right.
 
-Put things in folders in folders. TODO: Support for expanding and collapsing folders.
+### :heavy_check_mark: Hierarchical
 
-### :small_blue_diamond: Input
+Put things in folders in folders in folders. They can be expanded and collapsed.
 
-Agnostic regarding Keyboard/Gamepad. It's handled at application layer, though guidelines for how to bind keys exist.
+Folder states are saved across sessions. This is useful when you have a lot of items but different users are only interested in different subsets of them.
 
-Mouse input coming later.
-
-### :small_blue_diamond: Custom item editors
+### :heavy_check_mark: Custom item editors
 
 Different editors for different types of items, and support for users adding their own.
 
-### :small_blue_diamond: Autodesk Stingray plugin available
+I'll add more customizability on request.
 
-Only builds as a static library for now, and it doesn't have a Lua API (just a C API).
+### :heavy_check_mark: Autodesk Stingray plugin available
 
-### :small_blue_diamond: Presets
+Only builds as a static library for now, and it doesn't have a Lua API (just a C API). Supports the majority of the features but it's not done. I'm not likely to work further on it unless I start working on a Stingray project again.
 
-Activate one item to activate a number of other ones.
+### :heavy_check_mark: Input
 
-### :factory: Nice look & feel
+The API for manouvering the menu is agnostic regarding keyboard/gamepad. It's handled at application layer, though guidelines for how to bind keys exist - see the demo.
+
+Also supports mouse and touch input.
+
+### :heavy_check_mark: Presets
+
+Activate one item to activate a number of other ones. Useful for if a user tends to reset her debug settings but has a lot of them she often wants to enable. Or if your QA should play under certain circumstances. Or if you have a few settings that is just really nice to always have enabled, for new devs.
+
+### :small_blue_diamond: Nice look & feel
 
 Nice default color scheme, multiple themes to choose from, unique "editors" for different types of data, smooth animations, juicy feedback.
 
@@ -126,11 +136,11 @@ Press a key when debug menu is active to assign the current item/value. Press it
 
 ## Can I help?
 
-Sure. This is my first public single-header C library. Any helpful comments appreciated.
+Sure. This is my first public single-header C library. Any helpful comments or PRs appreciated.
 
 ## License
 
-Similarly to STB's single header libraries: The debuginator and other source files in this repository are in the public domain. You can do anything you want with them. You have no legal obligation to do anything else, although I appreciate attribution.
+Similarly to STB's single header libraries: The Debuginator and other source files in this repository are in the public domain. You can do anything you want with them. You have no legal obligation to do anything else, although I appreciate attribution.
 
 They are also licensed under the MIT open source license, if you have lawyers who are unhappy with public domain. Every source file includes an explicit dual-license for you to choose from.
 
@@ -235,7 +245,7 @@ I recommend looking at the SDL demo for a good example of how to do this. But he
 
 Saving is fairly straightforward. Call debuginator_save and pass in a callback that gets called for each item who's value is different from the default. I recommend storing it to a single key-value map, like "MyGame/MySetting = True".
 
-Loading uses a bit of a trick inside The Debuginator. Remember how I said you can use the same path twice when creating an item, and it'll just overwrite it the second time? Here's the trick: Call debuginator_load_item. It takes a path and a value (which should match the title of one of the values of the item). If the item doesn't exist, it'll create one with no data, so it won't be visible.. except it will store the value inside the *description* field. Once the item is created *for reals*, it'll look to see if there's something already there, stored in the description field, and if so, use that to set the hot/active index.
+Folders will also save their state if they are collapsed. This is so that they remain collapsed if you for example close the game down and open it up again.
 
 ### Examples
 
@@ -322,7 +332,7 @@ If you want to give The Debuginator a string for it to own (and deallocate), you
 char* debuginator_copy_string(TheDebuginator* debuginator, const char* string, int length);
 ```
 
-## How to configure
+## API
 
 You know, it's best to just look in the header file and see which functions are exposed, but... here's the API such as it is currently. There's additional information in the code.
 
@@ -338,7 +348,7 @@ DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 DebuginatorItem* debuginator_create_bool_item(TheDebuginator* debuginator, const char* path, const char* description, void* user_data);
 DebuginatorItem* debuginator_create_preset_item(TheDebuginator* debuginator, const char* path, const char** paths, const char** value_titles, int** value_indices, int num_paths);
 
-DebuginatorItem* debuginator_new_folder_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* title, int title_length);
+DebuginatorItem* debuginator_create_folder_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* title, int title_length);
 DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* path, bool create_if_not_exist);
 void debuginator_set_hot_item(TheDebuginator* debuginator, const char* path);
 DebuginatorItem* debuginator_get_hot_item(TheDebuginator* debuginator);
@@ -370,7 +380,7 @@ void debuginator_set_size(TheDebuginator* debuginator, int width, int height);
 
 Open the Visual Studio solution. Build it. Set the *unittest* project as the StartUp project. Run.
 
-Note: The SDL demo project won't build until you fix the dependencies.
+Note: The SDL demo project won't build until you fix the dependencies so you might want to unload it.
 
 # How to run the SDL demo
 
