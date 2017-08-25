@@ -65,28 +65,40 @@ DebuginatorVector2 text_size(const char* text, DebuginatorFont* font, void* user
 	return *(DebuginatorVector2*)&text_size;
 }
 
-int save_item(const char* path, const char* value, char* save_buffer, int save_buffer_size) {
-	if (save_buffer_size < 512) {
-		return -1;
+struct SaveData {
+	char* buffer;
+	int buffer_size;
+	int buffer_capacity;
+};
+
+bool save_item(const char* key, const char* value, void* userdata) {
+	SaveData* save_data = (SaveData*)userdata;
+	if (save_data->buffer_capacity - save_data->buffer_size < 512) {
+		return false;
 	}
 
-	int chars = sprintf_s(save_buffer, save_buffer_size, "%s=%s\n", path, value);
-	return chars;
+	int chars = sprintf_s(save_data->buffer + save_data->buffer_size, save_data->buffer_capacity - save_data->buffer_size, "%s=%s\n", key, value);
+	save_data->buffer_size += chars;
+	return true;
 }
 
 void save(TheDebuginator* debuginator) {
-	int save_buffer_size = 32;
-	char* save_buffer = NULL;
+	SaveData save_data;
+	save_data.buffer = NULL;
+	save_data.buffer_size = 0;
+	save_data.buffer_capacity = 1024;
+
 	while (true) {
-		save_buffer = (char*)malloc(save_buffer_size);
-		memset(save_buffer, 0, save_buffer_size);
-		int saved = debuginator_save(debuginator, save_item, save_buffer, save_buffer_size);
-		if (saved >= 0) {
+		save_data.buffer = (char*)malloc(save_data.buffer_capacity);
+		memset(save_data.buffer, 0, save_data.buffer_capacity);
+		bool saved = debuginator_save(debuginator, save_item, &save_data);
+		if (saved) {
 			break;
 		}
 
-		save_buffer_size *= 16;
-		free(save_buffer);
+		save_data.buffer_size = 0;
+		save_data.buffer_capacity *= 16;
+		free(save_data.buffer);
 	}
 
 	FILE* file = NULL;
@@ -95,9 +107,9 @@ void save(TheDebuginator* debuginator) {
 		return;
 	}
 
-	fputs(save_buffer, file);
+	fputs(save_data.buffer, file);
 	fclose(file);
-	free(save_buffer);
+	free(save_data.buffer);
 }
 
 bool load(TheDebuginator* debuginator, char* loaded_data_buffer, int loaded_buffer_size) {
@@ -138,8 +150,8 @@ bool load(TheDebuginator* debuginator, char* loaded_data_buffer, int loaded_buff
 				loaded_data_buffer += data - value + 1;
 				loaded_buffer_size -= (int)(data - value + 1);
 				// Debuginator needs to own this
-				const char* value_title = debuginator_copy_string(debuginator, loaded_data_buffer_value, 0);
-				debuginator_load_item(debuginator, loaded_data_buffer_key, value_title);
+				const char* value_owned = debuginator_copy_string(debuginator, loaded_data_buffer_value, 0);
+				debuginator_load_item(debuginator, loaded_data_buffer_key, value_owned);
 				++data;
 				break;
 			}
@@ -152,6 +164,17 @@ bool load(TheDebuginator* debuginator, char* loaded_data_buffer, int loaded_buff
 
 bool handle_debuginator_keyboard_input_event(SDL_Event* event, TheDebuginator* debuginator) {
 	if (!debuginator_is_open(debuginator)) {
+
+		if (event->type == SDL_TEXTINPUT) {
+			int text_length = (int)strlen(event->text.text);
+			if (text_length > 0) {
+				char key[] = { event->text.text[0], 0 }; // Small hack
+				debuginator_activate_hot_key(debuginator, key);
+			}
+
+			return true;
+		}
+
 		if (event->type != SDL_KEYDOWN || event->key.keysym.sym != SDLK_RIGHT) {
 			return false;
 		}
@@ -160,7 +183,8 @@ bool handle_debuginator_keyboard_input_event(SDL_Event* event, TheDebuginator* d
 		return true;
 	}
 
-	DebuginatorItem* hot_item = debuginator_get_hot_item(debuginator);
+	int hot_item_index;
+	DebuginatorItem* hot_item = debuginator_get_hot_item(debuginator, &hot_item_index);
 	switch (event->type) {
 		case SDL_KEYDOWN:
 		{
@@ -221,20 +245,33 @@ bool handle_debuginator_keyboard_input_event(SDL_Event* event, TheDebuginator* d
 		}
 		case SDL_TEXTINPUT:
 		{
-			if (!debuginator->filter_enabled) {
-				break;
-			}
-
 			int new_text_length = (int)strlen(event->text.text);
-			if (debuginator->filter_length + new_text_length >= sizeof(debuginator->filter)) {
-				break;
-			}
+			if (debuginator->filter_enabled) {
+				if (debuginator->filter_length + new_text_length >= sizeof(debuginator->filter)) {
+					break;
+				}
 
-			char filter[64] = { 0 };
-			strcpy_s(filter, sizeof(debuginator->filter), debuginator->filter);
-			strcat_s(filter, sizeof(debuginator->filter), event->text.text);
-			debuginator->filter_length = (int)strlen(filter);
-			debuginator_update_filter(debuginator, filter);
+				char filter[64] = { 0 };
+				strcpy_s(filter, sizeof(debuginator->filter), debuginator->filter);
+				strcat_s(filter, sizeof(debuginator->filter), event->text.text);
+				debuginator->filter_length = (int)strlen(filter);
+				debuginator_update_filter(debuginator, filter);
+			}
+			else if (new_text_length > 0) {
+				int hot_mouse_item_index;
+				DebuginatorItem* hot_mouse_item = debuginator_get_item_at_mouse_cursor(debuginator, &hot_mouse_item_index);
+				if (hot_mouse_item != NULL) {
+					hot_item = hot_mouse_item;
+					hot_item_index = hot_mouse_item_index;
+				}
+
+				int buffer_size = 256;
+				char path[256];
+				debuginator_get_path(debuginator, hot_item, path, &buffer_size);
+				ASSERT(buffer_size == 256);
+				char key[] = { event->text.text[0], 0 }; // Small hack
+				debuginator_assign_hot_key(debuginator, key, path, hot_item_index, NULL);
+			}
 
 			break;
 		}
