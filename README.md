@@ -35,7 +35,7 @@ It's written in **C99**, to make it easy to add to any project on any platform. 
 
 **No globals or static variables**, in case you want to have it in a plugin and reload (or instantiate more than one!).
 
-**Built using maximum warning levels and warnings as errors**. I do use #pragma to ignore a silly warning (see above).
+**Built using maximum warning levels and warnings as errors**. I use a few #pragmas to ignore warnings I don't think is problematic. Define DEBUGINATOR_ENABLE_WARNINGS if you want to handle that manually.
 
 **Statically analyzed with Cppcheck.** (Though it's been a while, I should do it again!) :red_circle:
 
@@ -43,7 +43,7 @@ It's written in **C99**, to make it easy to add to any project on any platform. 
 
 **The library has no dependencies.** It will include some standard headers but only if you don't provide overrides. (For the SDL reference demo, a font is included, and to build  you need SDL 2 and SDL TTF.)
 
-**Enums rather than bools in the API**, because that's usually less confusing. On the todo list. :red_circle:
+** Tested on MSVC 2017/Windows 10, builds on Clang/Linux.
 
 ### :heavy_check_mark: Scrollable
 
@@ -118,13 +118,13 @@ Only builds as a static library for now, and it doesn't have a Lua API (just a C
 
 I used these extensively in the beginning of the project but the fun and usefulness of keeping them up to date is gone. They are surpassed by the SDL reference demo. I'm conflicted as whether to mark it as a done feature but yeah, for all intents and purposes, they are done.
 
-### :small_blue_diamond: Nice look & feel
+### :heavy_check_mark: Nice look & feel
 
 Nice default color scheme, multiple themes to choose from, unique "editors" for different types of data, smooth animations, juicy feedback.
 
 Yes, it's important.
 
-### :factory: Reference implementation
+### :heavy_check_mark: Reference implementation
 
 Written in near-C C++ and SDL.
 

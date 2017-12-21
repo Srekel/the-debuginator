@@ -940,7 +940,7 @@ DebuginatorItem* debuginator__prev_item(DebuginatorItem* item) {
 	return NULL;
 }
 
-DebuginatorItem* debuginator_nearest_visible_item(DebuginatorItem* item) {
+DebuginatorItem* debuginator__nearest_visible_item(DebuginatorItem* item) {
 	DebuginatorItem* found_item = debuginator__next_item(item);
 	if (found_item == NULL) {
 		found_item = debuginator__prev_item(item);
@@ -1255,7 +1255,7 @@ void debuginator_remove_item(TheDebuginator* debuginator, DebuginatorItem* item)
 	}
 
 	if (debuginator->hot_item == item) {
-		debuginator->hot_item = debuginator_nearest_visible_item(item);
+		debuginator->hot_item = debuginator__nearest_visible_item(item);
 	}
 
 	debuginator__set_total_height(item->parent, item->parent->total_height - item->total_height);
