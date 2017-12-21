@@ -7,6 +7,13 @@
 #include <stdbool.h>
 #endif
 
+#ifdef _MSC_VER
+#pragma warning( disable: 4464 4548 4710 4820 )
+#endif
+
+#ifdef __clang__
+
+#endif
 typedef struct UnitTestData
 {
 	char errors[256][256];
@@ -33,6 +40,7 @@ static void unittest_debuginator_assert(bool test) {
 }
 
 #define DEBUGINATOR_assert unittest_debuginator_assert
+#define DEBUGINATOR_static_assert unittest_debuginator_assert
 #define ASSERT unittest_debuginator_assert
 
 #define DEBUGINATOR_debug_print printf
@@ -50,7 +58,7 @@ void draw_rect(DebuginatorVector2* position, DebuginatorVector2* size, Debuginat
 }
 
 #pragma warning(suppress: 4100) // Unreferenced param
-void word_wrap(const char* text, DebuginatorFont font, float max_width, unsigned* row_count, unsigned* row_lengths, unsigned row_lengths_buffer_size, void* app_userdata) {
+void word_wrap(const char* text, DebuginatorFont font, float max_width, int* row_count, int* row_lengths, int row_lengths_buffer_size, void* app_userdata) {
 	*row_count = 0;
 }
 
@@ -89,7 +97,7 @@ static void unittest_debug_menu_setup(TheDebuginator* debuginator) {
 		string_titles, (void*)string_values, 3, sizeof(string_values[0]));
 }
 
-static void unittest_debug_menu_run() {
+static void unittest_debug_menu_run(void) {
 
 	memset(&g_testdata, 0, sizeof(g_testdata));
 	UnitTestData* testdata = &g_testdata;
@@ -105,7 +113,7 @@ static void unittest_debug_menu_run() {
 	config.draw_text = draw_text;
 	config.word_wrap = word_wrap;
 	config.text_size = text_size;
-	config.app_user_data = NULL;
+	config.app_user_data = &g_testdata;
 	config.size.x = 500;
 	config.size.y = 1000;
 	config.screen_resolution.x = 500;

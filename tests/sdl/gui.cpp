@@ -133,7 +133,7 @@ void gui_draw_text(GuiHandle gui_handle, const char* text, Vector2 position, Fon
 	rectangle.x = (int)position.x;
 	rectangle.y = (int)position.y;
 	TTF_SizeText(font_template->font, text, &rectangle.w, &rectangle.h);
-	
+
 	SDL_SetRenderDrawColor(gui->renderer, 255, 255, 255, 255);
 	SDL_RenderCopy(gui->renderer, text_texture, NULL, &rectangle);
 
@@ -152,7 +152,7 @@ void gui_draw_rect_filled(GuiHandle gui_handle, Vector2 position, Vector2 size, 
 	SDL_RenderFillRect(gui->renderer, &rect);
 }
 
-void gui_word_wrap(GuiHandle gui_handle, const char* text, FontTemplateHandle font_handle, float max_width, unsigned* row_count, unsigned* row_lengths, unsigned row_lengths_buffer_size) {
+void gui_word_wrap(GuiHandle gui_handle, const char* text, FontTemplateHandle font_handle, float max_width, int* row_count, int* row_lengths, int row_lengths_buffer_size) {
 	(void)gui_handle;
 	FontTemplate* font_template = (FontTemplate*)font_handle;
 
@@ -188,7 +188,7 @@ void gui_word_wrap(GuiHandle gui_handle, const char* text, FontTemplateHandle fo
 		if (TTF_SizeText(font_template->font, line, &width, NULL) != 0) {
 			break;
 		}
-		
+
 		bool line_too_long = width >= max_width;
 		if (line_too_long || found_newline) {
 			bool word_longer_than_line = current_word == current_line;
@@ -234,7 +234,7 @@ Vector2 gui_text_size(GuiHandle gui_handle, const char* text, FontTemplateHandle
 	Gui* gui = (Gui*)gui_handle;
 	(void)gui;
 	FontTemplate* font_template = (FontTemplate*)font_handle;
-	
+
 	if (text[0] == '\0') {
 		return Vector2(0, 0);
 	}

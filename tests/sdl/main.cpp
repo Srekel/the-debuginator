@@ -11,6 +11,7 @@ static void unittest_debuginator_assert(bool test) {
 }
 
 #define DEBUGINATOR_assert unittest_debuginator_assert
+#define DEBUGINATOR_static_assert unittest_debuginator_assert
 #define ASSERT unittest_debuginator_assert
 #define DEBUGINATOR_IMPLEMENTATION
 #include "../../the_debuginator.h"
@@ -55,7 +56,7 @@ void draw_rect(DebuginatorVector2* position, DebuginatorVector2* size, Debuginat
 	gui_draw_rect_filled((GuiHandle)userdata, *(Vector2*)position, *(Vector2*)size, *(Color*)color);
 }
 
-void word_wrap(const char* text, DebuginatorFont font, float max_width, unsigned* row_count, unsigned* row_lengths, unsigned row_lengths_buffer_size, void* app_userdata) {
+void word_wrap(const char* text, DebuginatorFont font, float max_width, int* row_count, int* row_lengths, int row_lengths_buffer_size, void* app_userdata) {
 	(void)text, font, max_width, row_count, row_lengths, row_lengths_buffer_size, row_lengths_buffer_size, app_userdata;
 	gui_word_wrap((GuiHandle)app_userdata, text, s_fonts[font.italic ? FONT_ItemDescription : FONT_ItemTitle], max_width, row_count, row_lengths, row_lengths_buffer_size);
 }
@@ -500,7 +501,7 @@ int main(int argc, char **argv)
 			if (handle_debuginator_gamepad_input_event(&event, &debuginator, current_button, time_since_button_pressed, gamepad_scroll_speed)) {
 				continue;
 			}
-			
+
 			switch (event.type) {
 				case SDL_KEYDOWN:
 				{
