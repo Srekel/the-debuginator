@@ -8,12 +8,12 @@ The API is designed to have  *just the right amount* of responsibilities. The ap
 
 It's nearly feature complete now - unless someone has any cool requests - and as far as I know, bug free.
 
-I'd really like to add GIFs but they get quite large and I'm not keen on forcing people to download megabytes just to view a GitHub project's README. So here's just one with a low resolution and framerate:
+I'd really like to add lots of nice GIFs but they get quite large and I'm not keen on forcing people to download megabytes just to view a GitHub project's README. So here's just one with a low resolution and framerate:
 
-<a href="https://www.youtube.com/watch?v=Snl67XsI6Is" target="_blank"><img src="debuginator.gif"
+<a href="https://www.youtube.com/watch?v=QoVHe_0quQ4" target="_blank"><img src="debuginator.gif"
 alt="GIF demo. Click to go to youtube demo!" /></a>
 
-There's a fancier demo on Youtube: https://www.youtube.com/watch?v=Snl67XsI6Is
+There's a fancier demo on Youtube: https://www.youtube.com/watch?v=QoVHe_0quQ4
 
 ## Features
 
