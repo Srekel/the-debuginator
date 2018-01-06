@@ -8,7 +8,12 @@ The API is designed to have  *just the right amount* of responsibilities. The ap
 
 It's nearly feature complete now - unless someone has any cool requests - and as far as I know, bug free.
 
-Gifs will be added once I'm getting ready to announce 1.0.
+I'd really like to add GIFs but they get quite large and I'm not keen on forcing people to download megabytes just to view a GitHub project's README. So here's just one with a low resolution and framerate:
+
+<a href="https://www.youtube.com/watch?v=Snl67XsI6Is" target="_blank"><img src="debuginator.gif"
+alt="GIF demo. Click to go to youtube demo!" /></a>
+
+There's a fancier demo on Youtube: https://www.youtube.com/watch?v=Snl67XsI6Is
 
 ## Features
 
@@ -29,21 +34,21 @@ Think of the_debuginator.h less as a library and more as a *thing* you plug in t
 
 Where it makes sense, I've added functionality for extending the menu with your own custom features.
 
-### :small_blue_diamond: Politely coded
+### :heavy_check_mark: Politely coded
 
 It's written in **C99**, to make it easy to add to any project on any platform. In one case I use an anonymous union (I pragma away the warning), so if your compiler doesn't support that, I recommend forking and fixing. I just like the convenience.
 
 **No globals or static variables**, in case you want to have it in a plugin and reload (or instantiate more than one!).
 
-**Built using maximum warning levels and warnings as errors**. I use a few #pragmas to ignore warnings I don't think is problematic. Define DEBUGINATOR_ENABLE_WARNINGS if you want to handle that manually.
+**Built using maximum warning levels and warnings as errors**. I use a few #pragmas to ignore warnings I don't think is problematic. Define `DEBUGINATOR_ENABLE_WARNINGS` if you want to handle that manually.
 
-**Statically analyzed with Cppcheck.** (Though it's been a while, I should do it again!) :red_circle:
+**Statically analyzed with Cppcheck.** Again, I suppress a few issues that I think aren't problematic. You can check `the-debuginator_solution_suppressions.cfg` if you're interested.
 
 **It doesn't allocate any memory.** You pass in a buffer at creation and that's what it'll use internally.
 
 **The library has no dependencies.** It will include some standard headers but only if you don't provide overrides. (For the SDL reference demo, a font is included, and to build  you need SDL 2 and SDL TTF.)
 
-** Tested on MSVC 2017/Windows 10, builds on Clang/Linux.
+**Multi-platform.** Tested on MSVC 2017/Windows 10, builds on Clang/Linux.
 
 ### :heavy_check_mark: Scrollable
 
@@ -128,6 +133,10 @@ Yes, it's important.
 
 Written in near-C C++ and SDL.
 
+### :factory: Thread safe
+
+Not really - I don't want to add multithreading constructs to the_debuginator - it's up to the application to ensure that no thread writes or reads to it while another thread is writing. While I don't intend to change that, I **am** working on a way to make it easier to use in a multithreaded environment (that's how our own game at Warpzone Studios is engineered) but it's not done yet.
+
 ### :red_circle: Accordiony
 
 No matter how far down or deep you scroll, you can always see the folders above the current item.
@@ -140,6 +149,8 @@ Set your most used ones. They will show up in a special folder near the top.
 
 Sure. This is my first public single-header C library. I'm limited to working on Windows 10 and currently only have VS2017 set up. Any helpful comments or PRs appreciated.
 
+Even though I think The Debuginator has most of the features I envision for it, have probably missed something, so I would love feature requests!
+
 ## License
 
 Similarly to STB's single header libraries: The Debuginator and other source files in this repository are in the public domain. You can do anything you want with them. You have no legal obligation to do anything else, although I appreciate attribution.
@@ -149,6 +160,8 @@ They are also licensed under the MIT open source license, if you have lawyers wh
 Note that this does **NOT** include any folders that has LICENSE or README files that specifies their own license. They retain their own licenses.
 
 # How to use the_debuginator.h
+
+I really recommend looking at the SDL demo for a real use case on how to set it up and use The Debuginator. It also includes basic save/load which is something you *really* want for your debug menu! :)
 
 ## Installation
 Put the_debuginator.h somewhere in your project. It's an STB-style single header library and as such usage is a bit special.
@@ -232,6 +245,8 @@ DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 	DebuginatorOnItemChangedCallback on_item_changed_callback, void* user_data,
 	const char** value_titles, void* values, int num_values, int value_size)
 ```
+
+Don't be alarmed - there are utility functions that make it easier to use! :) See below.
 
 Each *item* is defined by its path. If you create two items with the same path, only one will actually exist - with the data from the last call.
 
@@ -392,44 +407,4 @@ You'll need dependencies to build it. Get SDL 2 and SDLTTF 2. I'll update this w
 
 # How to use Stingray Plugin
 
-## Installation
-
-Add it to your project and build it. Currently it just builds as static library, sorry about that.
-
-## Setup
-
-Somewhere in your project's code:
-
-```C
-	PluginManagerApi *plugin_manager_api = (PluginManagerApi*)get_engine_api(PLUGIN_MANAGER_API_ID);
-	TheDebuginatorApi* debuginator_api = (TheDebuginatorApi*)plugin_manager_api->get_next_plugin_api(THE_DEBUGINATOR_API_ID, NULL);
-	ScriptApi* script_api = (ScriptApi*)get_engine_api(C_API_ID);
-
-	TheDebuginatorConfig config;
-	ASSERT(debuginator_api->get_default_config != NULL, "Debugintor plugin not loaded.");
-	debuginator_api->get_default_config(&config);
-
-	config.memory_arena_capacity = 1024 * 32;
-	config.size.x = 500;
-
-	DebuginatorPluginCreateContext create_context = { 0 };
-	create_context.config = config;
-	create_context.gui = gui;
-	create_context.font = hash64("core/performance_hud/debug");
-	create_context.font_material = script_api->Gui->material(my_gui, create_context.font);
-
-	debuginator_api->create_debuginator(NULL, &create_context);
-```
-
-## Update
-
-```C
-	void update(float dt) {
-		TheDebuginator* debuginator = debuginator_api->get_debuginator(NULL);
-		int devices = Debuginator_Keyboard | Debuginator_Gamepad;
-		debuginator_api->handle_default_input(debuginator, devices);
-	}
-```
-## That's it?
-
-That's it. Basically. The plugin automatically handles a few things for you. You don't have to call handle_default_input if you want to implement your own control scheme, and you can edit the config and create context however you wish.
+Not supported anymore (I mean, technically it should work with little problems but Stingray doesn't exist anymore so you are almost certainly not using it).

@@ -82,7 +82,7 @@ void gui_destroy_gui(GuiHandle gui_handle) {
 
 void gui_frame_begin(GuiHandle gui_handle) {
 	Gui* gui = (Gui*)gui_handle;
-	SDL_SetRenderDrawColor(gui->renderer, 0, 0, 0, 255);
+	SDL_SetRenderDrawColor(gui->renderer, 30, 30, 30, 255);
 	SDL_RenderClear(gui->renderer);
 }
 

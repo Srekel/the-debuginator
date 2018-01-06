@@ -452,7 +452,6 @@ int main(int argc, char **argv)
 	config.screen_resolution.x = (float)res_x;
 	config.screen_resolution.y = (float)res_y;
 	//config.open_direction = -1; // To show it on the right side of the screen
-	config.focus_height = 0.3f;
 	config.create_default_debuginator_items = true;
 
 	TheDebuginator debuginator;

@@ -563,6 +563,10 @@ typedef struct TheDebuginatorConfig {
 #define DEBUGINATOR_INDENT 20
 #endif
 
+#ifndef DEBUGINATOR_FILTER_HEIGHT
+#define DEBUGINATOR_FILTER_HEIGHT 50.0f
+#endif
+
 #ifndef DEBUGINATOR_SCORE_OVERRIDE
 #define DEBUGINATOR_SCORE_WORD_BREAK_START 10
 #define DEBUGINATOR_SCORE_WORD_BREAK_END 5
@@ -2014,7 +2018,7 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 
 	int distance_from_root_to_hot_item = 0;
 	debuginator__distance_to_hot_item(debuginator->root, debuginator->hot_item, debuginator->item_height, &distance_from_root_to_hot_item);
-	float wanted_y = debuginator->size.y * debuginator->focus_height + (float)debuginator->scroll_current;
+	float wanted_y = DEBUGINATOR_FILTER_HEIGHT + debuginator->size.y * debuginator->focus_height + (float)debuginator->scroll_current;
 	float distance_to_wanted_y = wanted_y - distance_from_root_to_hot_item;
 	debuginator->current_height_offset = distance_to_wanted_y;
 
@@ -2348,7 +2352,7 @@ static void debuginator_get_default_config(TheDebuginatorConfig* config) {
 
 	config->create_default_debuginator_items = true;
 	config->open_direction = 1;
-	config->focus_height = 0.3f;
+	config->focus_height = 0.25f;
 	config->item_height = 30;
 	config->quick_draw_size = 200;
 
@@ -2591,7 +2595,7 @@ void debuginator_update(TheDebuginator* debuginator, float dt) {
 	// Ensure hot item is smoothly placed at a nice position
 	int distance_from_root_to_hot_item = 0;
 	debuginator__distance_to_hot_item(debuginator->root, debuginator->hot_item, debuginator->item_height, &distance_from_root_to_hot_item);
-	float wanted_y = debuginator->size.y * debuginator->focus_height + debuginator->scroll_current;
+	float wanted_y = DEBUGINATOR_FILTER_HEIGHT + debuginator->size.y * debuginator->focus_height + debuginator->scroll_current;
 	float distance_to_wanted_y = wanted_y - distance_from_root_to_hot_item;
 	debuginator->current_height_offset = debuginator__lerp(debuginator->current_height_offset, distance_to_wanted_y, DEBUGINATOR_min(1, dt * 10));
 	if (DEBUGINATOR_fabs(debuginator->current_height_offset - distance_to_wanted_y) < 0.1f) {
@@ -2755,7 +2759,7 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 	if (debuginator->filter_timer > 0) {
 		float alpha = debuginator->filter_timer * (filter_hint_mode ? 0.5f : 1);
 		DebuginatorVector2 filter_pos = debuginator__vector2(debuginator->top_left.x + debuginator->size.x - 450, 25);
-		DebuginatorVector2 filter_size = debuginator__vector2(150 + (debuginator->size.x - 250) * debuginator->filter_timer, 50);
+		DebuginatorVector2 filter_size = debuginator__vector2(150 + (debuginator->size.x - 250) * debuginator->filter_timer, DEBUGINATOR_FILTER_HEIGHT);
 		DebuginatorColor filter_color = debuginator__color(50, 100, 50, (int)(200 * debuginator->filter_timer * alpha));
 		debuginator->draw_rect(&filter_pos, &filter_size, &filter_color, debuginator->app_user_data);
 
