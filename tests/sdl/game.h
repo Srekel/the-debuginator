@@ -19,15 +19,18 @@ struct GameBox {
 		color.g = (unsigned char)(50 + 100 * ((float)rand()) / RAND_MAX);
 		color.b = (unsigned char)(50 + 100 * ((float)rand()) / RAND_MAX);
 		color.a = (unsigned char)(150 + 100 * ((float)rand()) / RAND_MAX);
+		alpha = color.a;
 	}
 	Vector2 pos;
 	Vector2 size;
 	Vector2 velocity;
 	Color color;
+	unsigned char alpha;
 };
 
 struct GameData {
 	GuiHandle gui;
+	TheDebuginator* debuginator;
 	bool mybool;
 	bool gamebool;
 	bool load_test;

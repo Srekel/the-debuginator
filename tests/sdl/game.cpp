@@ -7,6 +7,26 @@
 
 #include "game.h"
 
+static void on_box_action(DebuginatorItem* item, void* value, const char* value_title, void* app_userdata) {
+	(void)app_userdata;
+	(void)value;
+	GameBox* box = (GameBox*)item->user_data;
+	if (strcmp(value_title, "Hide") == 0) {
+		box->color.a = 0;
+	}
+	else if (strcmp(value_title, "Show") == 0) {
+		box->color.a = box->alpha;
+	}
+	else if (strcmp(value_title, "Speed up") == 0) {
+		box->velocity.x *= 2;
+		box->velocity.y *= 2;
+	}
+	else if (strcmp(value_title, "Slow down") == 0) {
+		box->velocity.x *= 0.5f;
+		box->velocity.y *= 0.5f;
+	}
+}
+
 #pragma warning(suppress: 4505) // unreferenced local function
 static void on_boxes_activated(DebuginatorItem* item, void* value, const char* value_title, void* app_userdata) {
 	(void)app_userdata;
@@ -15,9 +35,20 @@ static void on_boxes_activated(DebuginatorItem* item, void* value, const char* v
 	if (strcmp(value_title, "Add box") == 0 && data->boxes_n < 256) {
 		GameBox* box = &data->boxes[data->boxes_n++];
 		box->randomize();
+
+		// Add item for box
+		char folder[64] = { 0 };
+		sprintf_s(folder, 64, "Game/Boxes/Box %02d", data->boxes_n);
+		static const char* box_action_titles[5] = { "Hide", "Show", "Speed up", "Slow down" };
+		debuginator_create_array_item(data->debuginator, NULL, folder,
+			"Change box properties.", on_box_action, box,
+			box_action_titles, NULL, 4, 0);
+		debuginator_set_edit_type(data->debuginator, folder, DEBUGINATOR_EditTypeActionArray);
 	}
 	else if (strcmp(value_title, "Clear all boxes") == 0 && data->boxes_n < 256) {
 		data->boxes_n = 0;
+
+		debuginator_remove_item_by_path(data->debuginator, "Game/Boxes");
 	}
 
 	sprintf_s(data->box_string, "Box count: %d", data->boxes_n);
@@ -78,8 +109,9 @@ static GameData s_game_data;
 GameData* game_init(GuiHandle gui, TheDebuginator* debuginator) {
 	memset(&s_game_data, 0, sizeof(s_game_data));
 	s_game_data.gui = gui;
-	s_game_data.window_size.x = 800; // TODO fix
-	s_game_data.window_size.y = 600;
+	s_game_data.window_size.x = 1280; // TODO fix
+	s_game_data.window_size.y = 720;
+	s_game_data.debuginator = debuginator;
 	debug_menu_setup(debuginator, &s_game_data);
 
 	return &s_game_data;
