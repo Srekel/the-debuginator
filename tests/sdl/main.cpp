@@ -299,6 +299,14 @@ bool handle_debuginator_keyboard_input_event(SDL_Event* event, TheDebuginator* d
 
 			break;
 		}
+		case SDL_WINDOWEVENT: {
+			if (event->window.event == SDL_WINDOWEVENT_LEAVE) {
+				DebuginatorVector2 mouse_cursor_pos = { -1.f, -1.f };
+				debuginator_set_mouse_cursor_pos(debuginator, &mouse_cursor_pos);
+			}
+
+			break;
+		}
 	}
 
 

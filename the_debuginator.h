@@ -2059,6 +2059,11 @@ void debuginator_activate_item_at_mouse_cursor(TheDebuginator* debuginator) {
 		debuginator_set_collapsed(debuginator, hot_item, collapse);
 	}
 	else if (debuginator->hot_mouse_item_index == DEBUGINATOR_NO_HOT_INDEX) {
+		if (!debuginator->edit_types[hot_item->leaf.edit_type].toggle_by_default) {
+			debuginator_expand_item_at_mouse_cursor(debuginator, DEBUGINATOR_Toggle);
+			return;
+		}
+
 		if (++hot_item->leaf.hot_index == hot_item->leaf.num_values) {
 			hot_item->leaf.hot_index = 0;
 		}
@@ -2500,6 +2505,10 @@ static void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* deb
 	debuginator->bool_values[1] = true;
 	debuginator->bool_titles[0] = "False";
 	debuginator->bool_titles[1] = "True";
+
+	// Ensure mouse interaction starts disabled
+	DebuginatorVector2 mouse_cursor_pos = debuginator__vector2(-1.f, -1.f);
+	debuginator_set_mouse_cursor_pos(debuginator, &mouse_cursor_pos);
 
 	// Create root
 	DebuginatorItem* item = debuginator_new_folder_item(debuginator, NULL, "Menu Root", 0);
