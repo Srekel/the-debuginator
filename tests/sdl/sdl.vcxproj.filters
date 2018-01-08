@@ -4,10 +4,12 @@
     <ClCompile Include="gui.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="game.cpp" />
+    <ClCompile Include="demo.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\the_debuginator.h" />
     <ClInclude Include="gui.h" />
     <ClInclude Include="game.h" />
+    <ClInclude Include="demo.h" />
   </ItemGroup>
 </Project>

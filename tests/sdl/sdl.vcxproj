@@ -19,12 +19,14 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="demo.cpp" />
     <ClCompile Include="game.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="gui.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\the_debuginator.h" />
+    <ClInclude Include="demo.h" />
     <ClInclude Include="game.h" />
     <ClInclude Include="gui.h" />
   </ItemGroup>

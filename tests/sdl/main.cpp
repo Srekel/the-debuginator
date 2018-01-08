@@ -23,17 +23,20 @@ static void unittest_debuginator_assert(bool test) {
 
 #include "gui.h"
 #include "game.h"
+#include "demo.h"
 
-
-static FontTemplateHandle s_fonts[16];
 enum FontTemplates {
+	FONT_DemoHeader,
 	FONT_ItemTitle,
 	FONT_ItemDescription,
 	FONT_count
 };
 
+static FontTemplateHandle s_fonts[16];
+
 static bool theme_setup(GuiHandle gui) {
 	memset(s_fonts, 0, sizeof(*s_fonts));
+	s_fonts[FONT_DemoHeader] = gui_register_font_template(gui, "LiberationMono-Bold.ttf", 72);
 	s_fonts[FONT_ItemTitle] = gui_register_font_template(gui, "LiberationMono-Regular.ttf", 18);
 	s_fonts[FONT_ItemDescription] = gui_register_font_template(gui, "LiberationSerif-Italic.ttf", 18);
 
@@ -163,7 +166,14 @@ bool load(TheDebuginator* debuginator, char* loaded_data_buffer, int loaded_buff
 	return result;
 }
 
-bool handle_debuginator_keyboard_input_event(SDL_Event* event, TheDebuginator* debuginator) {
+bool handle_debuginator_keyboard_input_event(SDL_Event* event, TheDebuginator* debuginator, DemoData* demodata) {
+	if (event->type == SDL_MOUSEBUTTONDOWN) {
+		DebuginatorItem* hot_mouse_item = debuginator_get_item_at_mouse_cursor(debuginator, NULL);
+		if (hot_mouse_item == NULL) {
+			demo_trigger_next(demodata);
+		}
+	}
+
 	if (!debuginator_is_open(debuginator)) {
 
 		if (event->type == SDL_TEXTINPUT) {
@@ -434,7 +444,7 @@ int main(int argc, char **argv)
 	int res_x = 1280;
 	int res_y = 720;
 	bool vsync_on = true;
-	GuiHandle gui = gui_create_gui(res_x, res_y, "Debuginator SDL demo", vsync_on);
+	GuiHandle gui = gui_create_gui(res_x, res_y, "The Debuginator - SDL Demo", vsync_on);
 	if (gui == 0) {
 		return 1;
 	}
@@ -473,18 +483,20 @@ int main(int argc, char **argv)
 	free(loaded_data_buffer);
 
 	GameData* gamedata = game_init(gui, &debuginator);
+	DemoData* demodata = demo_init(gui, &debuginator);
 
 	bool limit_framerate = true;
 	debuginator_create_bool_item(&debuginator, "SDL Demo/Throttle framerate", "Disables sleeping between frames.", &limit_framerate);
 
-	bool show_framerate = true;
+	bool show_framerate = false;
 	debuginator_create_bool_item(&debuginator, "SDL Demo/Show framerate", "Shows framerate and frame time in ms.", &show_framerate);
 
 	const char* preset_paths[2] = { "SDL Demo/Throttle framerate", "SDL Demo/Show framerate" };
 	const char* preset_value_titles[2] = { "True", "False" };
 	debuginator_create_preset_item(&debuginator, "SDL Demo/Preset example", preset_paths, preset_value_titles, NULL, 2);
 
-	Uint64 NOW = SDL_GetPerformanceCounter();
+	Uint64 START = SDL_GetPerformanceCounter();
+	Uint64 NOW = START;
 	Uint64 LAST = 0;
 
 	SDL_Event event;
@@ -501,7 +513,7 @@ int main(int argc, char **argv)
 
 		while (SDL_PollEvent(&event) != 0)
 		{
-			if (handle_debuginator_keyboard_input_event(&event, &debuginator)) {
+			if (handle_debuginator_keyboard_input_event(&event, &debuginator, demodata)) {
 				continue;
 			}
 
@@ -534,7 +546,21 @@ int main(int argc, char **argv)
 
 		gui_frame_begin(gui);
 
+		Vector2 main_text_size = gui_text_size(gui, "The Debuginator", s_fonts[FONT_DemoHeader]);
+		Vector2 main_text_pos(res_x / 2 - main_text_size.x / 2, res_y / 4 - main_text_size.y / 2);
+		float main_text_width = res_x - debuginator.openness * debuginator.size.x;
+		float main_text_offset = debuginator.open_direction == 1 ? debuginator.openness * debuginator.size.x : 0;
+		main_text_pos.x = main_text_offset + main_text_width / 2 - main_text_size.x / 2;
+		unsigned char main_text_brightness = 80 + (unsigned char)(50*sin((double)(NOW-START) * 1 / freq));
+		Color main_text_color(30 + main_text_brightness, 30 + main_text_brightness, main_text_brightness, 255);
+		gui_draw_text(gui, "The Debuginator", main_text_pos, s_fonts[FONT_DemoHeader], main_text_color);
+
 		game_update(gamedata, (float)dt);
+
+		Vector2 demo_pos = main_text_pos;
+		demo_pos.y += 100;
+		demo_update(demodata, (float)dt, demo_pos);
+
 		debuginator_draw(&debuginator, (float)dt);
 
 		// Not a good way to enforce a framerate due to delay being inprecise but
