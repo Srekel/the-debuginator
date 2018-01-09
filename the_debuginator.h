@@ -591,6 +591,10 @@ typedef struct TheDebuginatorConfig {
 #define DEBUGINATOR_DO_HOT_KEY_UPPERCASING 1
 #endif
 
+#ifndef DEBUGINATOR_ALLOCATOR_BLOCK_SIZE
+#define DEBUGINATOR_ALLOCATOR_BLOCK_SIZE 0x10000 // 65.5 kilobytes
+#endif
+
 typedef struct DebuginatorBlockAllocator DebuginatorBlockAllocator;
 
 typedef struct DebuginatorBlockAllocatorStaticData {
@@ -1259,7 +1263,7 @@ static void debuginator__store_item_setting(TheDebuginator* debuginator, const c
 
 	if (debuginator->num_loaded_settings == debuginator->loaded_settings_capacity) {
 		int current_size = debuginator->num_loaded_settings * 2 * (int)(sizeof(char*));
-		int grow_factor = 4;
+		int grow_factor = 16;
 		int initial_size = sizeof(char*) * 2 * 8;
 		int new_size = current_size == 0 ? initial_size : current_size * grow_factor;
 		void* buffer = debuginator__allocate(debuginator, new_size);
@@ -1267,7 +1271,7 @@ static void debuginator__store_item_setting(TheDebuginator* debuginator, const c
 		DEBUGINATOR_memcpy(buffer, debuginator->loaded_settings, (unsigned int)current_size);
 		debuginator__deallocate(debuginator, debuginator->loaded_settings);
 		debuginator->loaded_settings = (const char**)buffer;
-		debuginator->loaded_settings_capacity = new_size / 2;
+		debuginator->loaded_settings_capacity = new_size / 2 / sizeof(void*);
 	}
 
 	int setting_index = debuginator->num_loaded_settings * 2;
@@ -1289,9 +1293,9 @@ static const char* debuginator__get_item_setting(TheDebuginator* debuginator, co
 
 // Note: This will allocate a string and return it. I'm ok with that since it's an internal function.
 static const char* debuginator__compute_path(TheDebuginator* debuginator, DebuginatorItem* parent, const char* path, int path_length) {
-	//if (path_length == 0) {
+	if (path_length == 0) {
 		path_length = (int)DEBUGINATOR_strlen(path);
-	//}
+	}
 
 	// Find first parent that is not the root
 	DebuginatorItem* parents[DEBUGINATOR_MAX_HIERARCHY_SIZE];
@@ -2470,14 +2474,14 @@ static void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* deb
 	// Allocators begin at the first block, meaning we waste memory between memory_arena and
 	// the first block. That's ok.
 	debuginator->allocator_data.arena_end = debuginator->memory_arena + debuginator->memory_arena_capacity;
-	debuginator->allocator_data.block_capacity = 0x1000;
-	debuginator->allocator_data.next_free_block = (char*)((((uintptr_t)debuginator->memory_arena + 0x1000 - 1) / 0x1000) * 0x1000);
+	debuginator->allocator_data.block_capacity = DEBUGINATOR_ALLOCATOR_BLOCK_SIZE;
+	debuginator->allocator_data.next_free_block = (char*)((((uintptr_t)debuginator->memory_arena + DEBUGINATOR_ALLOCATOR_BLOCK_SIZE - 1) / DEBUGINATOR_ALLOCATOR_BLOCK_SIZE) * DEBUGINATOR_ALLOCATOR_BLOCK_SIZE);
 	debuginator__block_allocator_init(&debuginator->allocators[0], 8, &debuginator->allocator_data);
 	debuginator__block_allocator_init(&debuginator->allocators[1], 16, &debuginator->allocator_data);
 	debuginator__block_allocator_init(&debuginator->allocators[2], 32, &debuginator->allocator_data);
 	debuginator__block_allocator_init(&debuginator->allocators[3], 64, &debuginator->allocator_data);
 	debuginator__block_allocator_init(&debuginator->allocators[4], sizeof(DebuginatorItem), &debuginator->allocator_data);
-	debuginator__block_allocator_init(&debuginator->allocators[5], 1000, &debuginator->allocator_data);
+	debuginator__block_allocator_init(&debuginator->allocators[5], DEBUGINATOR_ALLOCATOR_BLOCK_SIZE - sizeof(DebuginatorBlockAllocator*), &debuginator->allocator_data);
 
 	debuginator->draw_rect = config->draw_rect;
 	debuginator->draw_text = config->draw_text;
