@@ -50,6 +50,11 @@ static void on_demo_action(DebuginatorItem* item, void* value, const char* value
 	if (strcmp(value_title, "Next") == 0) {
 		demo_trigger_next(data);
 	}
+	if (strcmp(value_title, "Prev") == 0) {
+		if (data->current_slide >= 0) {
+			data->current_slide -= 1;
+		}
+	}
 }
 
 static void debug_menu_setup(TheDebuginator* debuginator, DemoData* data) {
@@ -139,11 +144,18 @@ static void presentation_setup(DemoData* data) {
 	}
 	{
 		DemoSlide& slide = data->slides[data->num_slides++];
+		slide.texts[slide.num_texts++] = "Save & Load!";
+		slide.texts[slide.num_texts++] = "- Remembers state.";
+		slide.texts[slide.num_texts++] = "- Items & Folders.";
+	}
+	{
+		DemoSlide& slide = data->slides[data->num_slides++];
 		slide.texts[slide.num_texts++] = "That's it!";
 		slide.texts[slide.num_texts++] = "- I'm open to...";
 		slide.texts[slide.num_texts++] = "- ...suggestions.";
 		slide.texts[slide.num_texts++] = "- ...feature requests.";
 		slide.texts[slide.num_texts++] = "- ...bug reports.";
+		slide.texts[slide.num_texts++] = "- @srekel";
 		slide.texts[slide.num_texts++] = "- srekel@gmail.com";
 		slide.texts[slide.num_texts++] = "- https://github.com/Srekel/the-debuginator/";
 	}
