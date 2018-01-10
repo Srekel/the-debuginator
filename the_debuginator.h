@@ -903,14 +903,17 @@ static void debuginator__quick_draw_preset(TheDebuginator* debuginator, Debugina
 }
 
 static void debuginator__expanded_draw_preset(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
-	for (int i = 0; i < item->leaf.num_values; i++) {
-		position->y += debuginator->item_height;
-		const char* value_title = item->leaf.value_titles[i];
-		bool value_hot = i == item->leaf.hot_index;
-		bool value_overridden = i == item->leaf.active_index;
-		unsigned value_color_index = value_hot ? DEBUGINATOR_ItemValueHot : (value_overridden ? DEBUGINATOR_ItemTitleOverridden : DEBUGINATOR_ItemValueDefault);
-		debuginator->draw_text(value_title, position, &debuginator->theme.colors[value_color_index], &debuginator->theme.fonts[value_hot ? DEBUGINATOR_ItemTitleHot : DEBUGINATOR_ItemTitle], debuginator->app_user_data);
-	}
+	(void)debuginator, item, position;
+	// We don't really want to draw these I think, better to show in the description.
+
+	// for (int i = 0; i < item->leaf.num_values; i++) {
+	// 	position->y += debuginator->item_height;
+	// 	const char* value_title = item->leaf.value_titles[i];
+	// 	bool value_hot = i == item->leaf.hot_index;
+	// 	bool value_overridden = i == item->leaf.active_index;
+	// 	unsigned value_color_index = value_hot ? DEBUGINATOR_ItemValueHot : (value_overridden ? DEBUGINATOR_ItemTitleOverridden : DEBUGINATOR_ItemValueDefault);
+	// 	debuginator->draw_text(value_title, position, &debuginator->theme.colors[value_color_index], &debuginator->theme.fonts[value_hot ? DEBUGINATOR_ItemTitleHot : DEBUGINATOR_ItemTitle], debuginator->app_user_data);
+	// }
 }
 
 static void* debuginator__allocate(TheDebuginator* debuginator, int bytes/*, const void* origin*/) {
@@ -2459,6 +2462,7 @@ static void debuginator_get_default_config(TheDebuginatorConfig* config) {
 	config->edit_types[DEBUGINATOR_EditTypePreset].quick_draw = debuginator__quick_draw_preset;
 	config->edit_types[DEBUGINATOR_EditTypePreset].expanded_draw = debuginator__expanded_draw_preset;
 	config->edit_types[DEBUGINATOR_EditTypePreset].toggle_by_default = true;
+	config->edit_types[DEBUGINATOR_EditTypePreset].forget_state = true;
 }
 
 static void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginator) {
@@ -3321,9 +3325,9 @@ DebuginatorItem* debuginator_create_preset_item(TheDebuginator* debuginator, con
 		++value_title_part;
 
 		//TODO fix bug here.
-		if ((int)(description_end - description) < 128) {
+		if ((int)(description_end - description) > sizeof(description) - DEBUGINATOR_MAX_PATH_LENGTH) {
 			DEBUGINATOR_strcpy_s(description_end, 32, "[Preset description cropped]\n");
-			description_end += 28;
+			description_end += sizeof("[Preset description cropped]\n");
 			break;
 		}
 	}
