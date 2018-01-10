@@ -48,6 +48,7 @@ extern "C" {
 #ifndef DEBUGINATOR_ENABLE_WARNINGS
 #ifdef _MSC_VER
 #pragma warning( push, 0 )
+// member padding, nameless struct/union
 #pragma warning( disable: 4820 4201)
 #endif
 
