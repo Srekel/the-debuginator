@@ -2060,8 +2060,8 @@ void debuginator_activate_item_at_mouse_cursor(TheDebuginator* debuginator) {
 	int distance_from_root_to_hot_item_before = 0;
 	debuginator__distance_to_hot_item(debuginator->root, debuginator->hot_item, debuginator->item_height, &distance_from_root_to_hot_item_before);
 
-	debuginator->hot_item = hot_item;
 	if (hot_item->is_folder) {
+		debuginator->hot_item = hot_item;
 		bool collapse = !hot_item->folder.is_collapsed;
 		debuginator_set_collapsed(debuginator, hot_item, collapse);
 	}
@@ -2071,12 +2071,14 @@ void debuginator_activate_item_at_mouse_cursor(TheDebuginator* debuginator) {
 			return;
 		}
 
+		debuginator->hot_item = hot_item;
 		if (++hot_item->leaf.hot_index == hot_item->leaf.num_values) {
 			hot_item->leaf.hot_index = 0;
 		}
 		debuginator_activate(debuginator, hot_item, true);
 	}
 	else {
+		debuginator->hot_item = hot_item;
 		hot_item->leaf.hot_index = debuginator->hot_mouse_item_index;
 		debuginator_activate(debuginator, hot_item, true);
 	}
