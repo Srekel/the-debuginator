@@ -809,9 +809,10 @@ static void debuginator__expanded_draw_default(TheDebuginator* debuginator, Debu
 			debuginator->draw_rect(&pos, &size, &debuginator->theme.colors[mouse_over ? DEBUGINATOR_LineHighlightMouse : DEBUGINATOR_LineHighlight], debuginator->app_user_data);
 		}
 
+		bool forget_state = debuginator->edit_types[item->leaf.edit_type].forget_state;
 		const char* value_title = item->leaf.value_titles[i];
 		bool value_hot = i == item->leaf.hot_index || mouse_over;
-		bool value_overridden = i == item->leaf.active_index;
+		bool value_overridden = i == item->leaf.active_index && !forget_state;
 		unsigned value_color_index = value_hot ? DEBUGINATOR_ItemValueHot : (value_overridden ? DEBUGINATOR_ItemTitleOverridden : DEBUGINATOR_ItemValueDefault);
 		debuginator->draw_text(value_title, position, &debuginator->theme.colors[value_color_index], &debuginator->theme.fonts[value_hot ? DEBUGINATOR_ItemTitleHot : DEBUGINATOR_ItemTitle], debuginator->app_user_data);
 
@@ -1544,7 +1545,8 @@ bool debuginator_save(TheDebuginator* debuginator, DebuginatorSaveItemCallback c
 			path_indices[current_path_index + 1] = path_indices[current_path_index] + (int)DEBUGINATOR_strlen(item->title);
 			//int current_path_length = path_indices[current_path_index + 1];
 
-			if (item->leaf.active_index != item->leaf.default_index) {
+
+			if (item->leaf.active_index != item->leaf.default_index && !debuginator->edit_types[item->leaf.edit_type].forget_state) {
 				bool saved = callback(current_full_path, item->leaf.value_titles[item->leaf.active_index], userdata);
 				if (!saved) {
 					return false;
