@@ -7,6 +7,14 @@
 
 #include "game.h"
 
+static void on_colorpicker(DebuginatorItem* item, void* value, const char* value_title, void* app_userdata) {
+	(void)app_userdata;
+	(void)value;
+	(void)value_title;
+	GameData* data = (GameData*)item->user_data;
+	data->background_color = *(DebuginatorColor*)(value);
+}
+
 static void on_box_action(DebuginatorItem* item, void* value, const char* value_title, void* app_userdata) {
 	(void)app_userdata;
 	(void)value;
@@ -59,8 +67,14 @@ static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
 	{
 		static const char* string_titles[5] = { "String A", "String B", "String C", "String D", "String E" };
 		debuginator_create_array_item(debuginator, NULL, "SDL Demo/String Test",
-			"Multiple strings.", NULL, NULL,
+			"Example of an item having multiple strings to choose from.", NULL, NULL,
 			string_titles, NULL, 5, 0);
+	}
+
+	{
+		DebuginatorColor start = { 200, 0, 200, 200 };
+		debuginator_create_colorpicker_item(debuginator, "SDL Demo/Colorpicker Test",
+			"Example of the colorpicker edit type.", on_colorpicker, data, &start);
 	}
 
 	debuginator_create_bool_item(debuginator, "SDL Demo/Draw boxes", "Whether to draw the animated boxes or not.", &data->draw_boxes);

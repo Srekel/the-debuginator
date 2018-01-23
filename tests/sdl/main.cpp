@@ -59,6 +59,10 @@ void draw_rect(DebuginatorVector2* position, DebuginatorVector2* size, Debuginat
 	gui_draw_rect_filled((GuiHandle)userdata, *(Vector2*)position, *(Vector2*)size, *(Color*)color);
 }
 
+void draw_image(DebuginatorVector2* position, DebuginatorVector2* size, DebuginatorImageHandle handle, void* userdata) {
+	gui_draw_texture((GuiHandle)userdata, handle.h.ull_value, *(Vector2*)position, *(Vector2*)size);
+}
+
 void word_wrap(const char* text, DebuginatorFont font, float max_width, int* row_count, int* row_lengths, int row_lengths_buffer_size, void* app_userdata) {
 	(void)text, font, max_width, row_count, row_lengths, row_lengths_buffer_size, row_lengths_buffer_size, app_userdata;
 	gui_word_wrap((GuiHandle)app_userdata, text, s_fonts[font.italic ? FONT_ItemDescription : FONT_ItemTitle], max_width, row_count, row_lengths, row_lengths_buffer_size);
@@ -454,12 +458,15 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
+	TextureHandle colorpicker_image = gui_load_texture(gui, "color_picker.png");
+
 	int memory_arena_capacity = 1024 * 1024 * 1;
 	char* memory_arena = (char*)malloc(memory_arena_capacity);
 	TheDebuginatorConfig config;
 	debuginator_get_default_config(&config);
 	config.memory_arena = memory_arena;
 	config.memory_arena_capacity = memory_arena_capacity;
+	config.draw_image = draw_image;
 	config.draw_rect = draw_rect;
 	config.draw_text = draw_text;
 	config.word_wrap = word_wrap;
@@ -471,6 +478,7 @@ int main(int argc, char **argv)
 	config.screen_resolution.y = (float)res_y;
 	//config.open_direction = -1; // To show it on the right side of the screen
 	config.create_default_debuginator_items = true;
+	config.colorpicker_image.h.ull_value = colorpicker_image;
 
 	TheDebuginator debuginator;
 	debuginator_create(&config, &debuginator);

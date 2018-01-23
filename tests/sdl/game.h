@@ -40,6 +40,7 @@ struct GameData {
 	int boxes_n;
 	char box_string[32];
 	Vector2 window_size;
+	DebuginatorColor background_color;
 };
 
 

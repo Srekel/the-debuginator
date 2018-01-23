@@ -8,6 +8,7 @@
 
 typedef intptr_t GuiHandle;
 typedef intptr_t FontTemplateHandle;
+typedef intptr_t TextureHandle;
 //typedef DebuginatorVector2 Vector2;
 
 
@@ -32,6 +33,9 @@ void gui_destroy_gui(GuiHandle gui_handle);
 
 void gui_frame_begin(GuiHandle gui_hande);
 void gui_frame_end(GuiHandle gui_hande);
+
+TextureHandle gui_load_texture(GuiHandle gui, const char* texture_filename);
+void gui_draw_texture(GuiHandle gui_handle, TextureHandle handle, Vector2 position, Vector2 size);
 
 FontTemplateHandle gui_register_font_template(GuiHandle gui_handle, const char* font, int size);
 void gui_unregister_font_template(GuiHandle gui_handle, FontTemplateHandle font_handle);

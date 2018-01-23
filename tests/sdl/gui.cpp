@@ -1,5 +1,6 @@
 #include <SDL.h>
 #include <SDL_ttf.h>
+#include <SDL_image.h>
 
 #include <string.h>
 
@@ -18,6 +19,10 @@ struct Gui {
 
 	FontTemplate font_templates[8];
 	int font_template_count;
+
+	TextureHandle texture_handles[8];
+	SDL_Texture* textures[8];
+	int num_textures;
 };
 
 static Gui guis[1];
@@ -89,6 +94,24 @@ void gui_frame_begin(GuiHandle gui_handle) {
 void gui_frame_end(GuiHandle gui_handle){
 	Gui* gui = (Gui*)gui_handle;
 	SDL_RenderPresent(gui->renderer);
+}
+
+TextureHandle gui_load_texture(GuiHandle gui_handle, const char* texture_filename) {
+	Gui* gui = (Gui*)gui_handle;
+	SDL_Texture* texture = IMG_LoadTexture(gui->renderer, texture_filename);
+	gui->textures[gui->num_textures] = texture;
+	return (TextureHandle)gui->num_textures++;
+}
+
+void gui_draw_texture(GuiHandle gui_handle, TextureHandle handle, Vector2 position, Vector2 size) {
+	Gui* gui = (Gui*)gui_handle;
+	SDL_Texture* texture = gui->textures[handle];
+	SDL_Rect texture_rect;
+	texture_rect.x = (int)position.x;
+	texture_rect.y = (int)position.y;
+	texture_rect.w = (int)size.x;
+	texture_rect.h = (int)size.y;
+	SDL_RenderCopy(gui->renderer, texture, NULL, &texture_rect);
 }
 
 FontTemplateHandle gui_register_font_template(GuiHandle gui_handle, const char* font, int size) {

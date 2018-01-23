@@ -140,10 +140,21 @@ typedef struct DebuginatorTheme {
 typedef struct DebuginatorItem DebuginatorItem;
 typedef struct TheDebuginator TheDebuginator;
 
+typedef struct DebuginatorImageHandle {
+	union {
+		const char* str_value;
+		const void* ptr_value;
+		unsigned long long ull_value;
+		signed long long sll_value;
+	} h;
+} DebuginatorImageHandle;
+
 typedef void (*DebuginatorDrawTextCallback)
 	(const char* text, DebuginatorVector2* position, DebuginatorColor* color, DebuginatorFont* font, void* userdata);
 typedef void (*DebuginatorDrawRectCallback)
 	(DebuginatorVector2* position, DebuginatorVector2* size, DebuginatorColor* color, void* userdata);
+typedef void (*DebuginatorDrawImageCallback)
+	(DebuginatorVector2* position, DebuginatorVector2* size, DebuginatorImageHandle handle, void* userdata);
 
 // Of note: New line characters should be at the beginning of any row rather than at the end of them.
 typedef void(*DebuginatorWordWrapCallback)
@@ -161,6 +172,7 @@ typedef enum DebuginatorItemEditorDataType {
 	DEBUGINATOR_EditTypeActionArray, // For items with direct actions and no state
 	DEBUGINATOR_EditTypeBoolean,
 	DEBUGINATOR_EditTypePreset,
+	DEBUGINATOR_EditTypeColorPicker,
 	/*DEBUGINATOR_EditTypeUserType1,
 	...
 	DEBUGINATOR_EditTypeUserTypeN,*/
@@ -201,6 +213,10 @@ void debuginator_copy_1byte(DebuginatorItem* item, void* value, const char* valu
 // value_indices is currently not used
 // paths and value_titles need to be of length num_paths.
 DebuginatorItem* debuginator_create_preset_item(TheDebuginator* debuginator, const char* path, const char** paths, const char** value_titles, int** value_indices, int num_paths);
+
+// Wraps create_array_item. Creates an item that contains a color picker.
+DebuginatorItem* debuginator_create_colorpicker_item(TheDebuginator* debuginator, const char* path, const char* description, DebuginatorOnItemChangedCallback on_item_changed_callback, void* user_data, DebuginatorColor* start_color);
+
 
 // If you want to create a new empty folder.
 DebuginatorItem* debuginator_create_folder_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* path);
@@ -362,17 +378,18 @@ typedef struct DebuginatorItemEditorData {
 	// Draws the active value to the right of the item title.
 	void(*quick_draw)(TheDebuginator* debuginator, DebuginatorItem* item_data, DebuginatorVector2* position);
 
-	// Currently not used
-	// float(*expanded_height)(DebuginatorItem* item, void* userdata);
-
 	// Draws stuff under the title when the item is expanded.
 	void(*expanded_draw)(TheDebuginator* debuginator, DebuginatorItem* item_data, DebuginatorVector2* position);
+
+	// Currently not used
+	void(*on_expanded)(TheDebuginator* debuginator, DebuginatorItem* item, void* userdata);
 
 	// If the item should revert to its default value after activation
 	bool forget_state;
 
 	// If the default behaviour should be to insta-activate the item rather than expand it.
 	bool toggle_by_default;
+
 } DebuginatorItemEditorData;
 
 typedef struct DebuginatorItem {
@@ -429,6 +446,9 @@ typedef struct TheDebuginatorConfig {
 	DebuginatorWordWrapCallback word_wrap;
 	DebuginatorTextSizeCallback text_size;
 
+	// Optional. Will be called during draw.
+	DebuginatorDrawImageCallback draw_image;
+
 	// Optional. Gets called when The Debuginator is opened or closed.
 	DebuginatorOnOpenChangedCallback on_opened_changed;
 
@@ -450,6 +470,9 @@ typedef struct TheDebuginatorConfig {
 
 	// The height of each item.
 	int item_height;
+
+	// Optional, use if you want to use a color picker editor.
+	DebuginatorImageHandle colorpicker_image;
 } TheDebuginatorConfig;
 
 
@@ -713,8 +736,9 @@ typedef struct TheDebuginator {
 	float draw_timer;
 	float filter_timer;
 	void* app_user_data;
-	DebuginatorDrawTextCallback draw_text;
+	DebuginatorDrawImageCallback draw_image;
 	DebuginatorDrawRectCallback draw_rect;
+	DebuginatorDrawTextCallback draw_text;
 	DebuginatorWordWrapCallback word_wrap;
 	DebuginatorTextSizeCallback text_size;
 	DebuginatorOnOpenChangedCallback on_opened_changed;
@@ -757,6 +781,8 @@ typedef struct TheDebuginator {
 
 	bool bool_values[2];
 	const char* bool_titles[2];
+
+	DebuginatorImageHandle colorpicker_image;
 
 } TheDebuginator;
 
@@ -914,6 +940,44 @@ static void debuginator__expanded_draw_preset(TheDebuginator* debuginator, Debug
 	// 	unsigned value_color_index = value_hot ? DEBUGINATOR_ItemValueHot : (value_overridden ? DEBUGINATOR_ItemTitleOverridden : DEBUGINATOR_ItemValueDefault);
 	// 	debuginator->draw_text(value_title, position, &debuginator->theme.colors[value_color_index], &debuginator->theme.fonts[value_hot ? DEBUGINATOR_ItemTitleHot : DEBUGINATOR_ItemTitle], debuginator->app_user_data);
 	// }
+}
+
+static void debuginator__quick_draw_colorpicker(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
+	(void)debuginator, item, position;
+
+	float anim_t = (float)(DEBUGINATOR_sin(debuginator->draw_timer * 0.2) + 1) * 0.5f;
+	DebuginatorVector2 square_pos = debuginator__vector2(debuginator->top_left.x + debuginator->size.x - debuginator->quick_draw_size, position->y);
+	square_pos.x = square_pos.x;
+	square_pos.y -= 2;
+	DebuginatorVector2 square_size;
+	square_size.x = debuginator->item_height - 4;
+	square_size.y = (debuginator->item_height - 4) * anim_t;
+
+	DebuginatorColor square_color = debuginator__color(255, 255, 255, 255);
+	debuginator->draw_rect(&square_pos, &square_size, &square_color, debuginator->app_user_data);
+
+	// square_pos.x -= 5;
+	square_pos.y += square_size.y;
+	square_size.y = (debuginator->item_height - 4) * (1 - anim_t);
+	square_color = debuginator__color(0, 0, 0, 255);
+	debuginator->draw_rect(&square_pos, &square_size, &square_color, debuginator->app_user_data);
+
+	square_pos.x += 4;
+	square_pos.y = position->y - 2 + 4;
+	square_size.x -= 8;
+	square_size.y = debuginator->item_height - 4 - 8;
+	square_color = *(DebuginatorColor*)item->leaf.values;
+	debuginator->draw_rect(&square_pos, &square_size, &square_color, debuginator->app_user_data);
+}
+
+static void debuginator__expanded_draw_colorpicker(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
+	DebuginatorVector2 image_size = debuginator__vector2(100, 100);
+	debuginator->draw_image(position, &image_size, debuginator->colorpicker_image, debuginator->app_user_data);
+}
+
+static void debuginator__on_expanded_colorpicker(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
+	DebuginatorVector2 image_size = debuginator__vector2(100, 100);
+	debuginator->draw_image(position, &image_size, debuginator->colorpicker_image, debuginator->app_user_data);
 }
 
 static void* debuginator__allocate(TheDebuginator* debuginator, int bytes/*, const void* origin*/) {
@@ -2463,6 +2527,8 @@ static void debuginator_get_default_config(TheDebuginatorConfig* config) {
 	config->edit_types[DEBUGINATOR_EditTypePreset].expanded_draw = debuginator__expanded_draw_preset;
 	config->edit_types[DEBUGINATOR_EditTypePreset].toggle_by_default = true;
 	config->edit_types[DEBUGINATOR_EditTypePreset].forget_state = true;
+	config->edit_types[DEBUGINATOR_EditTypeColorPicker].quick_draw = debuginator__quick_draw_colorpicker;
+	config->edit_types[DEBUGINATOR_EditTypeColorPicker].expanded_draw = debuginator__expanded_draw_colorpicker;
 }
 
 static void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginator) {
@@ -2492,6 +2558,7 @@ static void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* deb
 	debuginator__block_allocator_init(&debuginator->allocators[4], sizeof(DebuginatorItem), &debuginator->allocator_data);
 	debuginator__block_allocator_init(&debuginator->allocators[5], DEBUGINATOR_ALLOCATOR_BLOCK_SIZE - sizeof(DebuginatorBlockAllocator*), &debuginator->allocator_data);
 
+	debuginator->draw_image = config->draw_image;
 	debuginator->draw_rect = config->draw_rect;
 	debuginator->draw_text = config->draw_text;
 	debuginator->word_wrap = config->word_wrap;
@@ -3339,6 +3406,22 @@ DebuginatorItem* debuginator_create_preset_item(TheDebuginator* debuginator, con
 		paths, (void*)value_titles, num_paths, 0);
 
 	item->leaf.edit_type = DEBUGINATOR_EditTypePreset;
+
+	return item;
+}
+
+DebuginatorItem* debuginator_create_colorpicker_item(TheDebuginator* debuginator, const char* path, const char* description, DebuginatorOnItemChangedCallback on_item_changed_callback, void* user_data, DebuginatorColor* start_color) {
+	DebuginatorColor* value_before_creation = start_color;
+	DebuginatorColor* state = (DebuginatorColor*)debuginator__allocate(debuginator, sizeof(DebuginatorColor));
+	*state = *start_color;
+	DebuginatorItem* item = debuginator_create_array_item(debuginator, NULL, path,
+		description, on_item_changed_callback, user_data,
+		NULL, state, 0, 0);
+	item->leaf.edit_type = DEBUGINATOR_EditTypeColorPicker;
+
+	if (value_before_creation != NULL) {
+		// TODO
+	}
 
 	return item;
 }
