@@ -13,7 +13,7 @@ I'd really like to add lots of nice GIFs but they get quite large and I'm not ke
 <a href="https://www.youtube.com/watch?v=QoVHe_0quQ4" target="_blank"><img src="debuginator.gif"
 alt="GIF demo. Click to go to youtube demo!" /></a>
 
-There's a fancier demo on Youtube: https://www.youtube.com/watch?v=QoVHe_0quQ4
+There's a fancier demo on Youtube: https://youtu.be/8lA5HQik2wo
 
 ## Features
 
