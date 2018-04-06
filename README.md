@@ -4,7 +4,7 @@ A juicy feature-packed debug menu intended for games.
 
 It's conceptually based on the debug menu I wrote at Fatshark for **Warhammer: End Times – Vermintide**, where it was - and still is! - used extensively by everyone. Quote by one of the game designers during the Christmas party: *"The debug menu saved man-years for us"*. He was drunk. But not wrong.
 
-The API is designed to have  *just the right amount* of responsibilities. The application reads input and uses that to control the menu, and the menu sends back what it wants the application to draw.
+The API is designed to have what I think is *just the right amount* of responsibilities. The application reads input and uses that to control the menu, and the menu sends back what it wants the application to draw.
 
 It's nearly feature complete now - unless someone has any cool requests - and as far as I know, bug free.
 
@@ -115,10 +115,6 @@ Hot keys are persisted automatically if you implement the save interface.
 
 Different colors for when the current value of an item is different from it's defined *default value* makes it clearer to the developer that she is or isn't  working under the game's standard conditions.
 
-### :heavy_check_mark: Autodesk Stingray plugin available
-
-Only builds as a static library for now, and it doesn't have a Lua API (just a C API). Supports the majority of the features but it's not done. I'm not likely to work further on it.
-
 ### :heavy_check_mark: Unit tests
 
 I used these extensively in the beginning of the project but the fun and usefulness of keeping them up to date is gone. They are surpassed by the SDL reference demo. I'm conflicted as whether to mark it as a done feature but yeah, for all intents and purposes, they are done.
@@ -133,13 +129,15 @@ Yes, it's important.
 
 Written in near-C C++ and SDL.
 
+There's also a plugin for Autodesk Stingray. Since Stingray is basically dead I'm not likely to work further on the plugin, but it's useful as another reference implementation.
+
 ### :factory: Thread safe
 
 Not really - I don't want to add multithreading constructs to the_debuginator - it's up to the application to ensure that no thread writes or reads to it while another thread is writing. While I don't intend to change that, I **am** working on a way to make it easier to use in a multithreaded environment (that's how our own game at Warpzone Studios is engineered) but it's not done yet.
 
 ### :red_circle: Accordiony
 
-No matter how far down or deep you scroll, you can always see the folders above the current item.
+The idea is that, no matter how far down or deep you scroll, you can always see the folders above the current item. 
 
 ### :red_circle: Favorites
 
@@ -147,7 +145,7 @@ Set your most used ones. They will show up in a special folder near the top.
 
 ## Can I help?
 
-Sure. This is my first public single-header C library. I'm limited to working on Windows 10 and currently only have VS2017 set up. Any helpful comments or PRs appreciated.
+Sure. Any helpful comments, bug reports, or PRs appreciated. 
 
 Even though I think The Debuginator has most of the features I envision for it, have probably missed something, so I would love feature requests!
 
