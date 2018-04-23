@@ -657,7 +657,7 @@ static void debuginator__block_allocator_init(DebuginatorBlockAllocator* allocat
 
 static void* debuginator__block_allocate(DebuginatorBlockAllocator* allocator, int num_bytes) {
 	(void)num_bytes;
-	if (allocator->data->block_capacity - allocator->current_block_size < num_bytes) {
+	if (allocator->data->block_capacity - allocator->current_block_size < allocator->element_size) {
 		if (allocator->data->arena_end <= allocator->data->next_free_block) {
 			return NULL;
 		}
