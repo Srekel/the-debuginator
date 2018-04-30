@@ -2853,13 +2853,14 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 				end_position.y -= (anim_item->leaf.hot_index + anim_item->leaf.description_line_count) * debuginator->item_height;
 			}
 
-			DebuginatorVector2 position;
-			position.x = debuginator__ease_out(animation->time, start_position.x, end_position.x - start_position.x, animation->duration);
-			position.y = debuginator__ease_out(animation->time, start_position.y, end_position.y - start_position.y, animation->duration);
-			DebuginatorFont* font = &debuginator->theme.fonts[DEBUGINATOR_ItemTitle];
-			const char* text = anim_item->leaf.value_titles[animation->data.item_activate.value_index];
-			debuginator->draw_text(text, &position, &debuginator->theme.colors[DEBUGINATOR_ItemTitleActive], font, debuginator->app_user_data);
-
+			if (anim_item->leaf.num_values) {
+				DebuginatorVector2 position;
+				position.x = debuginator__ease_out(animation->time, start_position.x, end_position.x - start_position.x, animation->duration);
+				position.y = debuginator__ease_out(animation->time, start_position.y, end_position.y - start_position.y, animation->duration);
+				DebuginatorFont* font = &debuginator->theme.fonts[DEBUGINATOR_ItemTitle];
+				const char* text = anim_item->leaf.value_titles[animation->data.item_activate.value_index];
+				debuginator->draw_text(text, &position, &debuginator->theme.colors[DEBUGINATOR_ItemTitleActive], font, debuginator->app_user_data);
+			}
 		}
 	}
 
