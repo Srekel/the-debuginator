@@ -1,3 +1,4 @@
+// clang-format off
 
 /*
 the_debuginator.h - v0.01 - public domain - Anders Elfgren @srekel, 2017
@@ -205,6 +206,9 @@ DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 // Wraps create_array_item. user_data should point to a single byte. It'll get 1 or 0 written to it.
 DebuginatorItem* debuginator_create_bool_item(TheDebuginator* debuginator, const char* path, const char* description, void* user_data);
 
+// Like above but when you want a custom callback
+DebuginatorItem* debuginator_create_bool_item_with_callback(TheDebuginator* debuginator, const char* path, const char* description, void* user_data, DebuginatorOnItemChangedCallback callback);
+
 // Useful simple callback function for setting a small value
 void debuginator_copy_1byte(DebuginatorItem* item, void* value, const char* value_title, void* app_userdata);
 
@@ -257,6 +261,18 @@ void debuginator_set_default_value(TheDebuginator* debuginator, const char* path
 
 // Set an item's edit type.
 void debuginator_set_edit_type(TheDebuginator* debuginator, const char* path, DebuginatorItemEditorDataType edit_type);
+
+// Set an item's callback. Only for leaves.
+void debuginator_item_set_on_changed_callback_by_path(TheDebuginator* debuginator, const char* path, DebuginatorOnItemChangedCallback callback);
+
+// Set an item's callback. Only for leaves.
+void debuginator_item_set_on_changed_callback(DebuginatorItem* item, DebuginatorOnItemChangedCallback callback);
+
+// Set an item's userdata. Only for leaves.
+void debuginator_item_set_user_data_by_path(TheDebuginator* debuginator, const char* path, void* user_data);
+
+// Set an item's userdata. Only for leaves.
+void debuginator_item_set_user_data(DebuginatorItem* item, void* user_data);
 
 // Change an item's active index to its hot index, and trigger an activation - callbacks and animations and all.
 void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item, bool animate);
@@ -389,7 +405,6 @@ typedef struct DebuginatorItemEditorData {
 
 	// If the default behaviour should be to insta-activate the item rather than expand it.
 	bool toggle_by_default;
-
 } DebuginatorItemEditorData;
 
 typedef struct DebuginatorItem {
@@ -689,14 +704,14 @@ static void* debuginator__block_allocate(DebuginatorBlockAllocator* allocator, i
 }
 
 static void debuginator__block_deallocate(DebuginatorBlockAllocator* allocator, const void* ptr) {
-	uintptr_t* next_ptr = (uintptr_t*)ptr;
+	uintptr_t* next_ptr = (uintptr_t*)(uintptr_t)ptr;
 	if (allocator->next_free_slot == NULL) {
 		*next_ptr = 0;
 	}
 	else {
 		*next_ptr = (uintptr_t)allocator->next_free_slot;
 	}
-	allocator->next_free_slot = (char*)ptr;
+	allocator->next_free_slot = (char*)(uintptr_t)ptr;
 	allocator->stat_total_used -= allocator->element_size;
 	allocator->stat_num_freed++;
 	allocator->stat_num_allocations--;
@@ -1001,7 +1016,7 @@ static void* debuginator__allocate(TheDebuginator* debuginator, int bytes/*, con
 static void debuginator__deallocate(TheDebuginator* debuginator, const void* void_ptr) {
 	// We remove the const part and that's fine, if it's our string we can do whatever we want with it,
 	// and if not, then we don't do anything (see right below). It makes the API a bit nicer.
-	char* ptr = (char*)void_ptr;
+	char* ptr = (char*)(uintptr_t)void_ptr;
 	if (!(debuginator->memory_arena <= ptr && ptr < debuginator->memory_arena + debuginator->memory_arena_capacity)) {
 		// Yes, to simplify other code we do this check here. That way we can always attempt to
 		// deallocate a piece of memory even though we don't have ownership of it.
@@ -1744,6 +1759,36 @@ void debuginator_set_edit_type(TheDebuginator* debuginator, const char* path, De
 	item->leaf.edit_type = edit_type;
 }
 
+void debuginator_item_set_on_changed_callback(DebuginatorItem* item, DebuginatorOnItemChangedCallback callback) {
+  DEBUGINATOR_assert(!item->is_folder);
+	item->leaf.on_item_changed_callback = callback;
+}
+
+void debuginator_item_set_on_changed_callback_by_path(TheDebuginator* debuginator, const char* path, DebuginatorOnItemChangedCallback callback) {
+	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, false);
+	if (item == NULL) {
+		return;
+	}
+
+  DEBUGINATOR_assert(!item->is_folder);
+	item->leaf.on_item_changed_callback = callback;
+}
+
+void debuginator_item_set_user_data(DebuginatorItem* item, void* user_data) {
+  DEBUGINATOR_assert(!item->is_folder);
+	item->user_data = user_data;
+}
+
+void debuginator_item_set_user_data_by_path(TheDebuginator* debuginator, const char* path, void* user_data) {
+	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, false);
+	if (item == NULL) {
+		return;
+	}
+
+  DEBUGINATOR_assert(!item->is_folder);
+	item->user_data = user_data;
+}
+
 // Note: If you remove the last visible item, you must create a new one under the root.
 void debuginator_remove_item(TheDebuginator* debuginator, DebuginatorItem* item) {
 	if (item->is_folder) {
@@ -2203,6 +2248,10 @@ DebuginatorItem* debuginator_get_item_at_mouse_cursor(TheDebuginator* debuginato
 }
 
 bool debuginator_is_mouse_over(TheDebuginator* debuginator, bool* out_over_quick_draw_area) {
+	if (debuginator->openness == 0) {
+		return false;
+	}
+
 	float right_edge_x = debuginator->top_left.x + debuginator->size.x;
 	if (out_over_quick_draw_area != NULL) {
 		*out_over_quick_draw_area =
@@ -3303,10 +3352,10 @@ void debuginator_move_to_parent(TheDebuginator* debuginator) {
 
 void debuginator_move_to_root(TheDebuginator* debuginator) {
 	DebuginatorItem* hot_item = debuginator->hot_item;
-   if (!hot_item->is_folder && hot_item->leaf.is_expanded) {
-      hot_item->leaf.is_expanded = false;
-      debuginator__set_total_height(hot_item, debuginator->item_height);
-   }
+	if (!hot_item->is_folder && hot_item->leaf.is_expanded) {
+		hot_item->leaf.is_expanded = false;
+		debuginator__set_total_height(hot_item, debuginator->item_height);
+	}
 
 	// We're now in the root, select the first child
 	debuginator->hot_item = debuginator__first_visible_child(debuginator->root);
@@ -3335,8 +3384,33 @@ DebuginatorItem* debuginator_create_bool_item(TheDebuginator* debuginator, const
 
 	if (value_before_creation == true) {
 		item->leaf.default_index = 1;
-		item->leaf.hot_index = 1;
-		item->leaf.active_index = 1;
+
+		const char* item_setting = debuginator__get_item_setting(debuginator, path);
+		if (DEBUGINATOR_strcmp(item_setting, "") == 0) {
+			item->leaf.hot_index = 1;
+			item->leaf.active_index = 1;
+		}
+	}
+
+	return item;
+}
+
+DebuginatorItem* debuginator_create_bool_item_with_callback(TheDebuginator* debuginator, const char* path, const char* description, void* user_data, DebuginatorOnItemChangedCallback callback) {
+	bool value_before_creation = *(bool*)user_data;
+	DEBUGINATOR_static_assert(sizeof(debuginator->bool_values[0]) == 1);
+	DebuginatorItem* item = debuginator_create_array_item(debuginator, NULL, path,
+		description, callback, user_data,
+		debuginator->bool_titles, debuginator->bool_values, 2, sizeof(debuginator->bool_values[0]));
+	item->leaf.edit_type = DEBUGINATOR_EditTypeBoolean;
+
+	if (value_before_creation == true) {
+		item->leaf.default_index = 1;
+
+		const char* item_setting = debuginator__get_item_setting(debuginator, path);
+		if (DEBUGINATOR_strcmp(item_setting, "") == 0) {
+			item->leaf.hot_index = 1;
+			item->leaf.active_index = 1;
+		}
 	}
 
 	return item;
@@ -3391,7 +3465,6 @@ DebuginatorItem* debuginator_create_preset_item(TheDebuginator* debuginator, con
 		++path_part;
 		++value_title_part;
 
-		//TODO fix bug here.
 		if ((int)(description_end - description) > sizeof(description) - DEBUGINATOR_MAX_PATH_LENGTH) {
 			DEBUGINATOR_strcpy_s(description_end, 32, "[Preset description cropped]\n");
 			description_end += sizeof("[Preset description cropped]\n");
@@ -3483,3 +3556,4 @@ ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ------------------------------------------------------------------------------
 */
+// clang-format on
