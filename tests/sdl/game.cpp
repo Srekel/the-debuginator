@@ -88,7 +88,9 @@ static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
 	}
 
 	debuginator_create_bool_item(debuginator, "Test/LOL/XXZZ", "Change a bool.", &data->mybool);
+	debuginator_create_bool_item(debuginator, "Test/LOL2/YY XX", "Change a bool.", &data->mybool);
 	debuginator_create_bool_item(debuginator, "Test/LOL2/YY", "Change a bool.", &data->mybool);
+	debuginator_create_bool_item(debuginator, "Test/LOL2/YYYY", "Change a bool.", &data->mybool);
 	debuginator_create_bool_item(debuginator, "YYY", NULL, &data->mybool);
 
 
