@@ -319,9 +319,10 @@ DebuginatorItem* debuginator_get_item_at_mouse_cursor(TheDebuginator* debuginato
 bool debuginator_is_mouse_over(TheDebuginator* debuginator, bool* out_over_quick_draw_area);
 
 // Hot key API
+// Activate returns true if there was an item bound to that key
 void debuginator_assign_hot_key(TheDebuginator* debuginator, const char* key, const char* path, int value_index, const char* optional_value_title);
 void debuginator_unassign_hot_key(TheDebuginator* debuginator, const char* key);
-void debuginator_activate_hot_key(TheDebuginator* debuginator, const char* key);
+bool debuginator_activate_hot_key(TheDebuginator* debuginator, const char* key);
 void debuginator_clear_hot_keys(TheDebuginator* debuginator);
 
 // Sets the height of all items. Default 30.
@@ -2389,7 +2390,7 @@ void debuginator_unassign_hot_key(TheDebuginator* debuginator, const char* _key)
 	}
 }
 
-void debuginator_activate_hot_key(TheDebuginator* debuginator, const char* _key) {
+bool debuginator_activate_hot_key(TheDebuginator* debuginator, const char* _key) {
 #if DEBUGINATOR_DO_HOT_KEY_UPPERCASING
 	char key[128] = { 0 };
 	DEBUGINATOR_strcpy_s(key, 128, _key);
@@ -2404,11 +2405,11 @@ void debuginator_activate_hot_key(TheDebuginator* debuginator, const char* _key)
 		if (DEBUGINATOR_strcmp(key, debuginator->hot_keys[i].key) == 0) {
 			DebuginatorItem* item = debuginator_get_item(debuginator, NULL, debuginator->hot_keys[i].path, false);
 			if (item == NULL) {
-				return;
+				return false;
 			}
 
 			if (item->is_folder || item->leaf.num_values < debuginator->hot_keys[i].value_index) {
-				return;
+				return false;
 			}
 
 			if (debuginator->hot_keys[i].value_index == DEBUGINATOR_NO_HOT_INDEX) {
@@ -2422,9 +2423,11 @@ void debuginator_activate_hot_key(TheDebuginator* debuginator, const char* _key)
 				debuginator_activate(debuginator, item, true);
 			}
 
-			return;
+			return true;
 		}
 	}
+
+  return false;
 }
 
 void debuginator_clear_hot_keys(TheDebuginator* debuginator) {
