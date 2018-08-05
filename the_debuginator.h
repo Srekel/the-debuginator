@@ -2302,8 +2302,8 @@ bool debuginator_is_mouse_over(TheDebuginator* debuginator, bool* out_over_quick
 	}
 
 	return
-		debuginator->top_left.x < debuginator->mouse_cursor_pos.x &&
-		debuginator->mouse_cursor_pos.x < right_edge_x;
+		debuginator->top_left.x <= debuginator->mouse_cursor_pos.x &&
+		debuginator->mouse_cursor_pos.x <= right_edge_x;
 }
 
 void debuginator_assign_hot_key(TheDebuginator* debuginator, const char* _key, const char* path, int value_index, const char* optional_value_title) {
