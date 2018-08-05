@@ -339,6 +339,8 @@ int debuginator_total_height(TheDebuginator* debuginator);
 
 // True for left, false for right. Use in conjunction with screen resolution.
 void debuginator_set_left_aligned(TheDebuginator* debuginator, bool left_aligned);
+bool debuginator_is_left_aligned(TheDebuginator* debuginator);
+float debuginator_distance_from_edge(TheDebuginator* debuginator);
 
 // Copies a string and returns a pointer to one that the debuginator owns and will
 // free if assigned as the description. (TODO: Add for value_titles)
@@ -2517,6 +2519,14 @@ void debuginator_set_screen_resolution(TheDebuginator* debuginator, int width, i
 
 void debuginator_set_left_aligned(TheDebuginator* debuginator, bool left_aligned) {
 	debuginator->open_direction = left_aligned ? 1 : -1;
+}
+
+bool debuginator_is_left_aligned(TheDebuginator* debuginator) {
+  return debuginator->open_direction == 1;
+}
+
+float debuginator_distance_from_edge(TheDebuginator* debuginator) {
+  return debuginator->openness * debuginator->size.x;
 }
 
 static void debuginator_get_default_config(TheDebuginatorConfig* config) {
