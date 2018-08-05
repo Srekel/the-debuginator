@@ -99,11 +99,11 @@
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>D:\projects\external\sdl\SDL2-2.0.7\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\projects\external\sdl\SDL2-2.0.8\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalDependencies>SDL2.lib;SDL2main.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>D:\projects\external\sdl\SDL2-2.0.7\lib\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>D:\projects\external\sdl\SDL2-2.0.8\lib\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <SubSystem>Console</SubSystem>
     </Link>
   </ItemDefinitionGroup>
@@ -112,12 +112,12 @@
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\..\external\SDL2-2.0.7\include;$(SolutionDir)..\..\external\SDL2_image-2.0.2\include;$(SolutionDir)..\..\external\SDL2_ttf-2.0.14\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\external\SDL2-2.0.8\include;$(SolutionDir)..\..\external\SDL2_image-2.0.2\include;$(SolutionDir)..\..\external\SDL2_ttf-2.0.14\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
     <Link>
       <AdditionalDependencies>SDL2.lib;SDL2main.lib;SDL2_image.lib;SDL2_ttf.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)..\..\external\SDL2-2.0.7\lib\x64;$(SolutionDir)..\..\external\SDL2_ttf-2.0.14\lib\x64;$(SolutionDir)..\..\external\SDL2_image-2.0.2\lib\x64</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)..\..\external\SDL2-2.0.8\lib\x64;$(SolutionDir)..\..\external\SDL2_ttf-2.0.14\lib\x64;$(SolutionDir)..\..\external\SDL2_image-2.0.2\lib\x64</AdditionalLibraryDirectories>
       <SubSystem>Console</SubSystem>
     </Link>
     <CustomBuildStep>
@@ -125,7 +125,7 @@
       </Command>
     </CustomBuildStep>
     <PostBuildEvent>
-      <Command>copy $(SolutionDir)..\..\external\SDL2-2.0.7\lib\x64\SDL2.dll $(OutputPath)
+      <Command>copy $(SolutionDir)..\..\external\SDL2-2.0.8\lib\x64\SDL2.dll $(OutputPath)
 
 copy $(SolutionDir)..\..\external\SDL2_ttf-2.0.14\lib\x64\*.dll $(OutputPath)
 
@@ -158,17 +158,17 @@ copy $(SolutionDir)3rdparty\SDL_GameControllerDB-master\gamecontrollerdb.txt $(O
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\..\external\SDL2-2.0.7\include;$(SolutionDir)..\..\external\SDL2_image-2.0.2\include;$(SolutionDir)..\..\external\SDL2_ttf-2.0.14\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\external\SDL2-2.0.8\include;$(SolutionDir)..\..\external\SDL2_image-2.0.2\include;$(SolutionDir)..\..\external\SDL2_ttf-2.0.14\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <SubSystem>Console</SubSystem>
       <AdditionalDependencies>SDL2.lib;SDL2main.lib;SDL2_image.lib;SDL2_ttf.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(SolutionDir)..\..\external\SDL2-2.0.7\lib\x64;$(SolutionDir)..\..\external\SDL2_image-2.0.2\lib\x64;$(SolutionDir)..\..\external\SDL2_ttf-2.0.14\lib\x64</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)..\..\external\SDL2-2.0.8\lib\x64;$(SolutionDir)..\..\external\SDL2_image-2.0.2\lib\x64;$(SolutionDir)..\..\external\SDL2_ttf-2.0.14\lib\x64</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>copy $(SolutionDir)..\..\external\SDL2-2.0.7\lib\x64\SDL2.dll $(OutputPath)
+      <Command>copy $(SolutionDir)..\..\external\SDL2-2.0.8\lib\x64\SDL2.dll $(OutputPath)
 
 copy $(SolutionDir)..\..\external\SDL2_ttf-2.0.14\lib\x64\*.dll $(OutputPath)
 

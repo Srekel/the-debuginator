@@ -5,7 +5,7 @@ the_debuginator.h - v0.01 - public domain - Anders Elfgren @srekel, 2017
 
 # THE DEBUGINATOR
 
-A super sweet hierarchical scrollable accordion debug menu intended for games.
+A super sweet hierarchical scrollable debug menu intended for games.
 
 See github for latest version: https://github.com/Srekel/the-debuginator
 
@@ -174,6 +174,7 @@ typedef enum DebuginatorItemEditorDataType {
 	DEBUGINATOR_EditTypeBoolean,
 	DEBUGINATOR_EditTypePreset,
 	DEBUGINATOR_EditTypeColorPicker,
+	DEBUGINATOR_EditTypeNumberRange,
 	/*DEBUGINATOR_EditTypeUserType1,
 	...
 	DEBUGINATOR_EditTypeUserTypeN,*/
@@ -221,6 +222,7 @@ DebuginatorItem* debuginator_create_preset_item(TheDebuginator* debuginator, con
 // Wraps create_array_item. Creates an item that contains a color picker.
 DebuginatorItem* debuginator_create_colorpicker_item(TheDebuginator* debuginator, const char* path, const char* description, DebuginatorOnItemChangedCallback on_item_changed_callback, void* user_data, DebuginatorColor* start_color);
 
+DebuginatorItem* debuginator_create_numberrange_item(TheDebuginator* debuginator, const char* path, const char* description, DebuginatorOnItemChangedCallback on_item_changed_callback, void* user_data, float range_min, float range_max, float start_value);
 
 // If you want to create a new empty folder.
 DebuginatorItem* debuginator_create_folder_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* path);
@@ -988,6 +990,30 @@ static void debuginator__quick_draw_colorpicker(TheDebuginator* debuginator, Deb
 static void debuginator__expanded_draw_colorpicker(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
 	DebuginatorVector2 image_size = debuginator__vector2(100, 100);
 	debuginator->draw_image(position, &image_size, debuginator->colorpicker_image, debuginator->app_user_data);
+}
+
+// static void debuginator__on_expanded_colorpicker(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
+// 	DebuginatorVector2 image_size = debuginator__vector2(100, 100);
+// 	debuginator->draw_image(position, &image_size, debuginator->colorpicker_image, debuginator->app_user_data);
+// }
+
+static void debuginator__quick_draw_numberrange(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
+	(void)debuginator, item, position;
+
+	float default_value = *(float*)(&item->leaf.default_index);
+	float current_value = *(float*)(&item->leaf.hot_index);
+	char value_str[64];
+	DEBUGINATOR_sprintf_s(value_str, sizeof(value_str), "%.4f", current_value);
+
+	DebuginatorVector2 pos = debuginator__vector2(debuginator->top_left.x + debuginator->size.x - debuginator->quick_draw_size, position->y);
+	DebuginatorFont* font = &debuginator->theme.fonts[DEBUGINATOR_ItemValueOverridden];
+	debuginator->draw_text(value_str, &pos, &debuginator->theme.colors[DEBUGINATOR_ItemTitleActive], font, debuginator->app_user_data);
+}
+
+static void debuginator__expanded_draw_numberrange(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
+	(void)debuginator, item, position;
+	// DebuginatorVector2 image_size = debuginator__vector2(100, 100);
+	// debuginator->draw_image(position, &image_size, debuginator->colorpicker_image, debuginator->app_user_data);
 }
 
 static void debuginator__on_expanded_colorpicker(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
@@ -2578,6 +2604,8 @@ static void debuginator_get_default_config(TheDebuginatorConfig* config) {
 	config->edit_types[DEBUGINATOR_EditTypePreset].forget_state = true;
 	config->edit_types[DEBUGINATOR_EditTypeColorPicker].quick_draw = debuginator__quick_draw_colorpicker;
 	config->edit_types[DEBUGINATOR_EditTypeColorPicker].expanded_draw = debuginator__expanded_draw_colorpicker;
+	config->edit_types[DEBUGINATOR_EditTypeNumberRange].quick_draw = debuginator__quick_draw_numberrange;
+	config->edit_types[DEBUGINATOR_EditTypeNumberRange].expanded_draw = debuginator__expanded_draw_numberrange;
 }
 
 static void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginator) {
@@ -3497,6 +3525,23 @@ DebuginatorItem* debuginator_create_colorpicker_item(TheDebuginator* debuginator
 		// TODO
 	}
 
+	return item;
+}
+
+static void debuginator__number_range_default_item_changed() {
+
+}
+
+DebuginatorItem* debuginator_create_numberrange_item(TheDebuginator* debuginator, const char* path, const char* description, DebuginatorOnItemChangedCallback on_item_changed_callback, void* user_data, float range_min, float range_max, float start_value) {
+	// float value_before_creation = start_value;
+	float* state = (float*)debuginator__allocate(debuginator, sizeof(float) * 2);
+	state[0] = range_min;
+	state[1] = range_max;
+	// DEBUGINATOR_memcpy(state, range, sizeof(float) * range_count);
+	DebuginatorItem* item = debuginator_create_array_item(debuginator, NULL, path,
+		description, on_item_changed_callback, user_data,
+		NULL, state, 0, sizeof(float));
+	item->leaf.edit_type = DEBUGINATOR_EditTypeNumberRange;
 	return item;
 }
 
