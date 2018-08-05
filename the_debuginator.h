@@ -637,6 +637,10 @@ typedef struct TheDebuginatorConfig {
 #define DEBUGINATOR_ALLOCATOR_BLOCK_SIZE 0x10000 // 65.5 kilobytes
 #endif
 
+#ifndef DEBUGINATOR_UNUSED
+#define DEBUGINATOR_UNUSED(x) ((void)x)
+#endif
+
 typedef struct DebuginatorBlockAllocator DebuginatorBlockAllocator;
 
 typedef struct DebuginatorBlockAllocatorStaticData {
@@ -989,11 +993,13 @@ static void debuginator__quick_draw_colorpicker(TheDebuginator* debuginator, Deb
 }
 
 static void debuginator__expanded_draw_colorpicker(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
+	DEBUGINATOR_UNUSED(item);
 	DebuginatorVector2 image_size = debuginator__vector2(100, 100);
 	debuginator->draw_image(position, &image_size, debuginator->colorpicker_image, debuginator->app_user_data);
 }
 
 // static void debuginator__on_expanded_colorpicker(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
+// 	DEBUGINATOR_UNUSED(item);
 // 	DebuginatorVector2 image_size = debuginator__vector2(100, 100);
 // 	debuginator->draw_image(position, &image_size, debuginator->colorpicker_image, debuginator->app_user_data);
 // }
