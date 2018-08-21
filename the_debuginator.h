@@ -610,6 +610,10 @@ typedef struct NumberRangeFloatState {
 #endif
 #endif
 
+#ifndef DEBUGINATOR_intptr
+#define DEBUGINATOR_intptr uintptr_t
+#endif
+
 #ifndef DEBUGINATOR_LEFT_MARGIN
 #define DEBUGINATOR_LEFT_MARGIN 10
 #endif
@@ -725,14 +729,14 @@ static void* debuginator__block_allocate(DebuginatorBlockAllocator* allocator, i
 }
 
 static void debuginator__block_deallocate(DebuginatorBlockAllocator* allocator, const void* ptr) {
-	uintptr_t* next_ptr = (uintptr_t*)(uintptr_t)ptr;
+	DEBUGINATOR_intptr* next_ptr = (DEBUGINATOR_intptr*)(DEBUGINATOR_intptr)ptr;
 	if (allocator->next_free_slot == NULL) {
 		*next_ptr = 0;
 	}
 	else {
-		*next_ptr = (uintptr_t)allocator->next_free_slot;
+		*next_ptr = (DEBUGINATOR_intptr)allocator->next_free_slot;
 	}
-	allocator->next_free_slot = (char*)(uintptr_t)ptr;
+	allocator->next_free_slot = (char*)(DEBUGINATOR_intptr)ptr;
 	allocator->stat_total_used -= allocator->element_size;
 	allocator->stat_num_freed++;
 	allocator->stat_num_allocations--;
@@ -1091,14 +1095,14 @@ static void* debuginator__allocate(TheDebuginator* debuginator, int bytes/*, con
 static void debuginator__deallocate(TheDebuginator* debuginator, const void* void_ptr) {
 	// We remove the const part and that's fine, if it's our string we can do whatever we want with it,
 	// and if not, then we don't do anything (see right below). It makes the API a bit nicer.
-	char* ptr = (char*)(uintptr_t)void_ptr;
+	char* ptr = (char*)(DEBUGINATOR_intptr)void_ptr;
 	if (!(debuginator->memory_arena <= ptr && ptr < debuginator->memory_arena + debuginator->memory_arena_capacity)) {
 		// Yes, to simplify other code we do this check here. That way we can always attempt to
 		// deallocate a piece of memory even though we don't have ownership of it.
 		return;
 	}
 
-	uintptr_t block_address = (uintptr_t)ptr;
+	DEBUGINATOR_intptr block_address = (DEBUGINATOR_intptr)ptr;
 	int capacity = debuginator->allocator_data.block_capacity;
 	block_address /= capacity;
 	block_address *= capacity;
@@ -2701,7 +2705,7 @@ static void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* deb
 	// the first block. That's ok.
 	debuginator->allocator_data.arena_end = debuginator->memory_arena + debuginator->memory_arena_capacity;
 	debuginator->allocator_data.block_capacity = DEBUGINATOR_ALLOCATOR_BLOCK_SIZE;
-	debuginator->allocator_data.next_free_block = (char*)((((uintptr_t)debuginator->memory_arena + DEBUGINATOR_ALLOCATOR_BLOCK_SIZE - 1) / DEBUGINATOR_ALLOCATOR_BLOCK_SIZE) * DEBUGINATOR_ALLOCATOR_BLOCK_SIZE);
+	debuginator->allocator_data.next_free_block = (char*)((((DEBUGINATOR_intptr)debuginator->memory_arena + DEBUGINATOR_ALLOCATOR_BLOCK_SIZE - 1) / DEBUGINATOR_ALLOCATOR_BLOCK_SIZE) * DEBUGINATOR_ALLOCATOR_BLOCK_SIZE);
 	debuginator__block_allocator_init(&debuginator->allocators[0], 8, &debuginator->allocator_data);
 	debuginator__block_allocator_init(&debuginator->allocators[1], 16, &debuginator->allocator_data);
 	debuginator__block_allocator_init(&debuginator->allocators[2], 32, &debuginator->allocator_data);
