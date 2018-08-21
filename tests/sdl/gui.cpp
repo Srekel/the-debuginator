@@ -15,7 +15,7 @@ struct FontTemplate {
 struct Gui {
 	SDL_Window* window;
 	SDL_Renderer* renderer;
-	SDL_GameController* game_controllers[8];
+	SDL_GameController* game_controllers[32];
 
 	FontTemplate font_templates[8];
 	int font_template_count;
@@ -45,7 +45,7 @@ GuiHandle gui_create_gui(int resx, int resy, const char* window_title, bool vsyn
 	}
 
 	SDL_Window* window = SDL_CreateWindow(window_title,
-		SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, resx, resy, SDL_WINDOW_OPENGL);
+		SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, resx, resy, SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE);
 	if (window == NULL) {
 		SDL_Quit();
 		return (GuiHandle)nullptr;
@@ -266,4 +266,16 @@ Vector2 gui_text_size(GuiHandle gui_handle, const char* text, FontTemplateHandle
 	TTF_SizeText(font_template->font, text, &x, &y);
 	Vector2 out_text_size((float)x, (float)y);
 	return out_text_size;
+}
+
+Vector2 gui_get_window_size(GuiHandle gui_handle) {
+	Gui* gui = (Gui*)gui_handle;
+	int w, h;
+	SDL_GetWindowSize(gui->window, &w, &h);
+	return Vector2((float)w, (float)h);
+}
+
+SDL_GameController** gui_get_controllers(GuiHandle gui_handle) {
+	Gui* gui = (Gui*)gui_handle;
+	return gui->game_controllers;
 }

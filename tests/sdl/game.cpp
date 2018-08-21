@@ -62,12 +62,12 @@ static void on_boxes_activated(DebuginatorItem* item, void* value, const char* v
 	sprintf_s(data->box_string, "Box count: %d", data->boxes_n);
 }
 
-static void on_number_changed(DebuginatorItem* item, void* value, const char* value_title, void* app_userdata) {
-	(void)item, value_title, app_userdata;
-	float fvalue = *(float*)value;
-	GameData* data = (GameData*)item->user_data;
-	data->background_color.r = (unsigned char)fvalue;
-}
+// static void on_number_changed(DebuginatorItem* item, void* value, const char* value_title, void* app_userdata) {
+// 	(void)item, value_title, app_userdata;
+// 	float fvalue = *(float*)value;
+// 	GameData* data = (GameData*)item->user_data;
+// 	data->background_color.r = (unsigned char)fvalue;
+// }
 
 static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
 	(void)data;
@@ -107,7 +107,6 @@ static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
 	debuginator_create_bool_item(debuginator, "Folder/Subfolder with a long name ololololol/SimpleBool 4 with a really long long title", "Change a bool.", &data->mybool);
 	// debuginator_create_bool_item(debuginator, "SDL Demo/Load test", "Change a bool.", &data->load_test);
 
-	debuginator_create_numberrange_item(debuginator, "Game/Test/NumberRange", "Demo of the NumberRange Edit Type", on_number_changed, &data, 0, 255, data->background_color.r);
 
 	debuginator_create_folder_item(debuginator, NULL, "Folder 2");
 	char folder[64] = { 0 };
@@ -133,9 +132,8 @@ static GameData s_game_data;
 
 GameData* game_init(GuiHandle gui, TheDebuginator* debuginator) {
 	memset(&s_game_data, 0, sizeof(s_game_data));
+	s_game_data.window_size = gui_get_window_size(gui);
 	s_game_data.gui = gui;
-	s_game_data.window_size.x = 1280; // TODO fix
-	s_game_data.window_size.y = 720;
 	s_game_data.debuginator = debuginator;
 	debug_menu_setup(debuginator, &s_game_data);
 
@@ -143,6 +141,9 @@ GameData* game_init(GuiHandle gui, TheDebuginator* debuginator) {
 }
 
 void game_update(GameData* game_data, float dt) {
+
+	s_game_data.window_size = gui_get_window_size(game_data->gui);
+	debuginator_set_screen_resolution(game_data->debuginator, (int)s_game_data.window_size.x, (int)s_game_data.window_size.y);
 
 	// bouncing boxes
 	if (game_data->draw_boxes) {

@@ -440,6 +440,19 @@ void handle_debuginator_gamepad_input(TheDebuginator* debuginator, SDL_GameContr
 		return;
 	}
 }
+void handle_debuginator_gamepad_input_immediate(TheDebuginator* debuginator, GuiHandle gui) {
+	SDL_GameController** controller =	gui_get_controllers(gui);
+	while(*controller) {
+		int axis_value = SDL_GameControllerGetAxis(*controller,  SDL_CONTROLLER_AXIS_RIGHTY);
+		if (axis_value * axis_value > 8000 * 8000) {
+			float change = 0.1f * (axis_value / 32767.0f) * (axis_value / 32767.0f) * (axis_value / 32767.0f);
+			DebuginatorItem* hot_item = debuginator_get_hot_item(debuginator, NULL);
+			debuginator_modify_value(debuginator, hot_item, 0, change, false);
+		}
+
+		++controller;
+	}
+}
 
 int main(int argc, char **argv)
 {
@@ -503,6 +516,9 @@ int main(int argc, char **argv)
 	const char* preset_value_titles[2] = { "True", "False" };
 	debuginator_create_preset_item(&debuginator, "SDL Demo/Preset example", preset_paths, preset_value_titles, NULL, 2);
 
+	float demo_y_offset = 0;
+	debuginator_create_numberrange_float_item(&debuginator, "SDL Demo/Number Range", "Example of the NumberRange edit type", &demo_y_offset, -100, 200);
+
 	Uint64 START = SDL_GetPerformanceCounter();
 	Uint64 NOW = START;
 	Uint64 LAST = 0;
@@ -546,6 +562,7 @@ int main(int argc, char **argv)
 		}
 
 		handle_debuginator_gamepad_input(&debuginator, current_button, time_since_button_pressed);
+		handle_debuginator_gamepad_input_immediate(&debuginator, gui);
 		if (gamepad_scroll_speed != 0) {
 			debuginator_apply_scroll(&debuginator, (int)(gamepad_scroll_speed * dt));
 		}
@@ -555,7 +572,7 @@ int main(int argc, char **argv)
 		gui_frame_begin(gui);
 
 		Vector2 main_text_size = gui_text_size(gui, "The Debuginator", s_fonts[FONT_DemoHeader]);
-		Vector2 main_text_pos(res_x / 2 - main_text_size.x / 2, res_y / 4 - main_text_size.y / 2);
+		Vector2 main_text_pos(res_x / 2 - main_text_size.x / 2, res_y / 4 - main_text_size.y / 2 + demo_y_offset);
 		float main_text_width = res_x - debuginator.openness * debuginator.size.x;
 		float main_text_offset = debuginator.open_direction == 1 ? debuginator.openness * debuginator.size.x : 0;
 		main_text_pos.x = main_text_offset + main_text_width / 2 - main_text_size.x / 2;

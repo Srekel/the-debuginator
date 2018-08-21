@@ -45,3 +45,7 @@ void gui_draw_rect_filled(GuiHandle gui_handle, Vector2 position, Vector2 size, 
 
 void gui_word_wrap(GuiHandle gui_handle, const char* text, FontTemplateHandle font_handle, float max_width, int* row_count, int* row_lengths, int row_lengths_buffer_size);
 Vector2 gui_text_size(GuiHandle gui_handle, const char* text, FontTemplateHandle font_handle);
+
+Vector2 gui_get_window_size(GuiHandle gui_handle);
+SDL_GameController** gui_get_controllers(GuiHandle gui_handle);
+
