@@ -1,7 +1,7 @@
 // clang-format off
 
 /*
-the_debuginator.h - v0.01 - public domain - Anders Elfgren @srekel, 2017
+the_debuginator.h - v0.01 - public domain - Anders Elfgren @srekel, 2018
 
 # THE DEBUGINATOR
 
@@ -29,7 +29,7 @@ Other source files should just include the_debuginator.h
 
 ## Notes
 
-See the accompanying SDL demo and unit test projects for references on how to use it.
+See the accompanying SDL demo project for references on how to use it.
 Or the documentation on the github page.
 
 ## License

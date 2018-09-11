@@ -4,7 +4,7 @@ A juicy feature-packed debug menu intended for games.
 
 It's conceptually based on the debug menu I wrote at Fatshark for **Warhammer: End Times – Vermintide**, where it was - and still is! - used extensively by everyone. Quote by one of the game designers during the Christmas party: *"The debug menu saved man-years for us"*. He was drunk. But not wrong.
 
-The API is designed to have what I think is *just the right amount* of responsibilities. The application reads input and uses that to control the menu, and the menu sends back what it wants the application to draw.
+The API is designed to have what I think is just the right amount of responsibilities. The application reads input and uses that to control the menu, and the menu sends back what it wants the application to draw.
 
 It's nearly feature complete now - unless someone has any cool requests - and as far as I know, bug free.
 
@@ -48,7 +48,7 @@ It's written in **C99**, to make it easy to add to any project on any platform. 
 
 **The library has no dependencies.** It will include some standard headers but only if you don't provide overrides. (For the SDL reference demo, a font is included, and to build  you need SDL 2 and SDL TTF.)
 
-**Multi-platform.** Tested on MSVC 2017/Windows 10, builds on Clang/Linux.
+**Multi-platform.** Tested on MSVC 2017/Windows 10 and on the PS4 (so I've been told), and builds on Clang/Linux.
 
 ### :heavy_check_mark: Scrollable
 
@@ -76,7 +76,7 @@ So you start up with the settings you had when you exited. Simple interface, app
 
 ### :heavy_check_mark: Dynamic add and remove of items
 
-So you could, for example, have items that are only available when you are in the game's menu, or have one item for each spawned enemy in the game.
+So you could, for example, have items that are only available when you are in the game's main menu, or have one item for each currently spawned enemy in the game.
 
 ### :heavy_check_mark: Left or right aligned
 
@@ -137,7 +137,7 @@ Not really - I don't want to add multithreading constructs to the_debuginator - 
 
 ### :red_circle: Accordiony
 
-The idea is that, no matter how far down or deep you scroll, you can always see the folders above the current item. 
+The idea is that, no matter how far down or deep you scroll, you can always see the folders above the current item.
 
 ### :red_circle: Favorites
 
@@ -145,7 +145,7 @@ Set your most used ones. They will show up in a special folder near the top.
 
 ## Can I help?
 
-Sure. Any helpful comments, bug reports, or PRs appreciated. 
+Sure. Any helpful comments, bug reports, or PRs appreciated.
 
 Even though I think The Debuginator has most of the features I envision for it, have probably missed something, so I would love feature requests!
 
@@ -215,7 +215,7 @@ int main(...) {
     config.size.x = 500;
     config.size.y = GetMyScreenResolution().y; // You need to calculate this.
 
-    config.screen_resolution.x = config.size.x; // Yes these are temporary and will be removed.
+    config.screen_resolution.x = config.size.x;
     config.screen_resolution.y = config.size.y;
 
     // There's a bunch of other things you CAN change in the config, but these things
@@ -230,7 +230,7 @@ int main(...) {
 }
 ```
 
-Actual usage, such as adding items or modifying settings, can be done from any c file.
+Actual usage, such as adding items or modifying settings, can be done from any C or C++ file.
 
 ## How to use
 
@@ -391,11 +391,13 @@ void debuginator_set_item_height(TheDebuginator* debuginator, int item_height);
 void debuginator_set_size(TheDebuginator* debuginator, int width, int height);
 
 ```
+
 # How to run the Unit Test
 
 Open the Visual Studio solution. Build it. Set the *unittest* project as the StartUp project. Run.
 
 Note: The SDL demo project won't build until you fix the dependencies so you might want to unload it.
+Note: The unit tests haven't been updated in a long while so you probably don't want to do this.
 
 # How to run the SDL demo
 
@@ -405,4 +407,4 @@ You'll need dependencies to build it. Get SDL 2 and SDLTTF 2. I'll update this w
 
 # How to use Stingray Plugin
 
-Not supported anymore (I mean, technically it should work with little problems but Stingray doesn't exist anymore so you are almost certainly not using it).
+Not supported anymore (I mean, technically it should work with little problems but Stingray isn't available to the public any more so you are almost certainly not using it).
