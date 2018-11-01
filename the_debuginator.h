@@ -2029,6 +2029,7 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 
 	int best_score = -1;
 	DebuginatorItem* best_item = NULL;
+	bool collapsed_folder = false;
 
 	DebuginatorItem* item = debuginator->root->folder.first_child;
 	while (item != NULL) {
@@ -2165,6 +2166,20 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 						taken_chars[matches[best_match_index] + match_i] = true;
 					}
 				}
+			}
+
+
+			// Ignore items in collapsed folders.
+			// TODO: Make smarter.
+			DebuginatorItem* parent = item->parent;
+			while(parent) {
+				if (parent->folder.is_collapsed) {
+					is_filtered = true;
+					score = -1;
+					break;
+				}
+
+				parent = parent->parent;
 			}
 
 			if (is_filtered && !item->is_filtered) {
