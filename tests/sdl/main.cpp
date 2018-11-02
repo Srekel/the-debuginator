@@ -246,14 +246,10 @@ bool handle_debuginator_keyboard_input_event(SDL_Event* event, TheDebuginator* d
 					//debuginator->filter[--debuginator->filter_length] = '\0';
 				}
 				else if (debuginator->filter_enabled) {
-					debuginator->filter_enabled = false;
-					//SDL_StopTextInput();
-					//debuginator_set_filtering_enabled(true);
+					debuginator_set_filtering_enabled(debuginator, false);
 				}
 				else {
-					debuginator->filter_enabled = true;
-					//SDL_StartTextInput();
-					//debuginator_set_filtering_enabled(true);
+					debuginator_set_filtering_enabled(debuginator, true);
 				}
 			}
 			break;

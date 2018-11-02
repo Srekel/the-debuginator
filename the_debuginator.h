@@ -105,6 +105,13 @@ typedef struct DebuginatorFont {
 	bool italic;
 } DebuginatorFont;
 
+typedef struct DebuginatorSortedItem {
+	DebuginatorItem* item;
+	int score;
+	DebuginatorSortedItem* prev;
+	DebuginatorSortedItem* next;
+} DebuginatorSortedItem;
+
 typedef enum DebuginatorDrawTypes {
 	DEBUGINATOR_Background,
 	DEBUGINATOR_FolderTitle,
@@ -180,6 +187,11 @@ typedef enum DebuginatorItemEditorDataType {
 	DEBUGINATOR_EditTypeUserTypeN,*/
 	DEBUGINATOR_EditTypeCount = 16,
 } DebuginatorItemEditorDataType;
+
+typedef enum DebuginatorDrawMode {
+	DEBUGINATOR_DrawModeHierarchy,
+	DEBUGINATOR_DrawModeSortedFilter,
+} DebuginatorDrawMode;
 
 // Returns true when it's started to show, returns false as soon as it's closing.
 bool debuginator_is_open(TheDebuginator* debuginator);
@@ -659,6 +671,10 @@ typedef struct NumberRangeFloatState {
 #define DEBUGINATOR_UNUSED(x) ((void)x)
 #endif
 
+#ifndef DEBUGINATOR_SORTED_ITEM_COUNT
+#define DEBUGINATOR_SORTED_ITEM_COUNT 4
+#endif
+
 typedef struct DebuginatorBlockAllocator DebuginatorBlockAllocator;
 
 typedef struct DebuginatorBlockAllocatorStaticData {
@@ -802,6 +818,9 @@ typedef struct TheDebuginator {
 	bool filter_enabled;
 	char filter[32];
 	int filter_length;
+	DebuginatorSortedItem sorted_items[DEBUGINATOR_SORTED_ITEM_COUNT];
+	DebuginatorSortedItem* best_sorted_item;
+	DebuginatorDrawMode draw_mode;
 
 	char* memory_arena; // char* for pointer arithmetic
 	int memory_arena_capacity;
@@ -1977,6 +1996,7 @@ bool debuginator_is_filtering_enabled(TheDebuginator* debuginator) {
 
 void debuginator_set_filtering_enabled(TheDebuginator* debuginator, bool enabled) {
 	debuginator->filter_enabled = enabled;
+	// debuginator->draw_mode = enabled ? DEBUGINATOR_DrawModeSortedFilter : DEBUGINATOR_DrawModeHierarchy;
 }
 
 const char* debuginator_get_filter(TheDebuginator* debuginator) {
@@ -2023,11 +2043,14 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 		}
 	//}
 
+	DEBUGINATOR_memset(debuginator->sorted_items, 0, sizeof(*debuginator->sorted_items));
+
 	char current_full_path[DEBUGINATOR_MAX_PATH_LENGTH] = { 0 };
 	int path_indices[DEBUGINATOR_MAX_HIERARCHY_SIZE] = { 0 };
 	int current_path_index = 0;
 
 	int best_score = -1;
+	int worst_score = 0;
 	DebuginatorItem* best_item = NULL;
 	bool collapsed_folder = false;
 
@@ -2168,7 +2191,6 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 				}
 			}
 
-
 			// Ignore items in collapsed folders.
 			// TODO: Make smarter.
 			DebuginatorItem* parent = item->parent;
@@ -2200,6 +2222,53 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 				}
 				best_score = score;
 				best_item = item;
+			}
+
+			if (debuginator->draw_mode == DEBUGINATOR_DrawModeSortedFilter && score > worst_score) {
+				DebuginatorSortedItem* sorted_item = NULL;
+				int worst_count = 0;
+				for (int i_si = 0; i_si < DEBUGINATOR_SORTED_ITEM_COUNT; ++i_si) {
+					if (debuginator->sorted_items[i_si].score == worst_score) {
+						++worst_count;
+						sorted_item = &debuginator->sorted_items[i_si];
+					}
+				}
+
+				DEBUGINATOR_assert(worst_count > 0);
+				DEBUGINATOR_assert(sorted_item);
+
+				if (worst_count == 1) {
+					worst_score = score;
+				}
+
+				if (sorted_item->prev) {
+					sorted_item->prev->next = sorted_item->next;
+				}
+
+				if (sorted_item->next) {
+					sorted_item->next->prev = sorted_item->prev;
+				}
+
+				sorted_item->score = score;
+				sorted_item->item = item;
+
+				DebuginatorSortedItem* next = debuginator->best_sorted_item;
+				while (next) {
+					if (sorted_item->score > next->score && next->item != NULL) {
+						sorted_item->prev = next->prev;
+						sorted_item->next = next;
+						if (next->prev) {
+							next->prev->next = sorted_item;
+						}
+						next->prev = sorted_item;
+						// goto LABEL_;
+					}
+				}
+
+				// Store head
+				if (item == best_item) {
+					debuginator->best_sorted_item = sorted_item;
+				}
 			}
 		}
 
@@ -2875,6 +2944,8 @@ void debuginator_update(TheDebuginator* debuginator, float dt) {
 
 
 float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2 offset, bool hot);
+void debuginator__draw_hierarchy(TheDebuginator* debuginator, float dt, DebuginatorVector2 offset);
+void debuginator__draw_sorted_filter(TheDebuginator* debuginator, float dt, DebuginatorVector2 offset);
 
 void debuginator_draw(TheDebuginator* debuginator, float dt) {
 	// Don't do anything if we're fully closed
@@ -2908,6 +2979,15 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 	DebuginatorVector2 offset = debuginator->top_left;
 	debuginator->draw_rect(&offset, &debuginator->size, &debuginator->theme.colors[DEBUGINATOR_Background], debuginator->app_user_data);
 
+	if (debuginator->draw_mode == DEBUGINATOR_DrawModeHierarchy) {
+		debuginator__draw_hierarchy(debuginator, dt, offset);
+	}
+	else if (debuginator->draw_mode == DEBUGINATOR_DrawModeSortedFilter) {
+		debuginator__draw_sorted_filter(debuginator, dt, offset);
+	}
+}
+
+void debuginator__draw_hierarchy(TheDebuginator* debuginator, float dt, DebuginatorVector2 offset){
 	offset.y = debuginator->current_height_offset;
 
 	// Draw all items
@@ -3189,6 +3269,16 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 	}
 
 	return offset.y;
+}
+
+void debuginator__draw_sorted_filter(TheDebuginator* debuginator, float dt, DebuginatorVector2 offset){
+	DebuginatorSortedItem* sorted_item = debuginator->best_sorted_item;
+	while (sorted_item && sorted_item->score > 0) {
+		DebuginatorItem* item = sorted_item->item;
+		debuginator->draw_text(item->title, &offset, &debuginator->theme.colors[DEBUGINATOR_ItemDescription], &debuginator->theme.fonts[DEBUGINATOR_ItemDescription], debuginator->app_user_data);
+		offset.y += debuginator->item_height;
+		sorted_item = sorted_item->next;
+	}
 }
 
 bool debuginator_is_open(TheDebuginator* debuginator) {
