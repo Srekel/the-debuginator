@@ -593,8 +593,10 @@ typedef struct NumberRangeFloatState {
 
 #ifndef DEBUGINATOR_isalpha
 #include <ctype.h>
+// must override all
 #define DEBUGINATOR_isalpha isalpha
-#define DEBUGINATOR_isdigit isdigit // must override both
+#define DEBUGINATOR_isdigit isdigit
+#define DEBUGINATOR_isupper isupper
 #endif
 
 #ifndef DEBUGINATOR_fabs
@@ -641,7 +643,7 @@ typedef struct NumberRangeFloatState {
 #ifndef DEBUGINATOR_SCORE_OVERRIDE
 #define DEBUGINATOR_SCORE_WORD_BREAK_START 10
 #define DEBUGINATOR_SCORE_WORD_BREAK_END 5
-#define DEBUGINATOR_SCORE_ITEM_TITLE_MATCH 10
+#define DEBUGINATOR_SCORE_ITEM_TITLE_MATCH 5
 #endif
 
 #ifndef DEBUGINATOR_MAX_NUM_HOT_KEYS
@@ -2011,16 +2013,12 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 	bool expanding_search = false;
 	if (filter_length < DEBUGINATOR_strlen(debuginator->filter)) {
 		expanding_search = true;
-		if (debuginator->hot_item->user_data == (void*)0x12345678) {
-			debuginator_remove_item(debuginator, debuginator->hot_item);
-		}
 	}
-	else if (filter_length > DEBUGINATOR_strlen(debuginator->filter)) {
-		// TODO do memcmp here to check for completely new filter.
-		if (debuginator->hot_item->user_data == (void*)0x12345678) {
-			DEBUGINATOR_strcpy_s(debuginator->filter, sizeof(debuginator->filter), wanted_filter);
-			return;
-		}
+
+	// Remove "No entries found" item - we can find new ones even with a longer filter if it
+	// means scoring higher
+	if (debuginator->hot_item->user_data == (void*)0x12345678) {
+		debuginator_remove_item(debuginator, debuginator->hot_item);
 	}
 
 	// Exact search
@@ -2046,30 +2044,30 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 	DEBUGINATOR_memset(debuginator->sorted_items, 0, sizeof(*debuginator->sorted_items));
 
 	char current_full_path[DEBUGINATOR_MAX_PATH_LENGTH] = { 0 };
+	char current_full_path_lowercase[DEBUGINATOR_MAX_PATH_LENGTH] = { 0 };
 	int path_indices[DEBUGINATOR_MAX_HIERARCHY_SIZE] = { 0 };
 	int current_path_index = 0;
 
 	int best_score = -1;
 	int worst_score = 0;
 	DebuginatorItem* best_item = NULL;
-	bool collapsed_folder = false;
 
 	DebuginatorItem* item = debuginator->root->folder.first_child;
 	while (item != NULL) {
 		if (item->is_folder) {
 			if (item->folder.first_child != NULL) {
 				DEBUGINATOR_strcpy_s(current_full_path + path_indices[current_path_index], sizeof(current_full_path) - path_indices[current_path_index], item->title);
+				DEBUGINATOR_strcpy_s(current_full_path_lowercase + path_indices[current_path_index], sizeof(current_full_path) - path_indices[current_path_index], item->title);
 
 				path_indices[current_path_index+1] = path_indices[current_path_index] + (int)DEBUGINATOR_strlen(item->title);
 				*(current_full_path + path_indices[current_path_index + 1]) = ' ';
+				*(current_full_path_lowercase + path_indices[current_path_index + 1]) = ' ';
 				path_indices[current_path_index + 1]++;
 				DEBUGINATOR_assert(path_indices[current_path_index + 1] < sizeof(current_full_path));
 
-				//if (!exact_search) {
-					for (int i = path_indices[current_path_index]; i < path_indices[current_path_index + 1]; i++) {
-						current_full_path[i] = (char)DEBUGINATOR_tolower(current_full_path[i]);
-					}
-				//}
+				for (int i = path_indices[current_path_index]; i < path_indices[current_path_index + 1]; i++) {
+					current_full_path_lowercase[i] = (char)DEBUGINATOR_tolower(current_full_path_lowercase[i]);
+				}
 
 				++current_path_index;
 				DEBUGINATOR_assert(current_path_index + 1 < sizeof(path_indices) / sizeof(path_indices[0]));
@@ -2081,16 +2079,15 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 		else {
 			bool taken_chars[DEBUGINATOR_MAX_PATH_LENGTH] = { 0 };
 			DEBUGINATOR_static_assert(sizeof(taken_chars) == sizeof(current_full_path));
-			DEBUGINATOR_strcpy_s(current_full_path + path_indices[current_path_index], 50, item->title);
+			DEBUGINATOR_strcpy_s(current_full_path + path_indices[current_path_index], sizeof(current_full_path) - path_indices[current_path_index], item->title);
+			DEBUGINATOR_strcpy_s(current_full_path_lowercase + path_indices[current_path_index], sizeof(current_full_path) - path_indices[current_path_index], item->title);
 			path_indices[current_path_index + 1] = path_indices[current_path_index] + (int)DEBUGINATOR_strlen(item->title);
 			DEBUGINATOR_assert(path_indices[current_path_index + 1] < sizeof(current_full_path));
 			int current_path_length = path_indices[current_path_index + 1];
 
-			//if (!exact_search) {
-				for (int i = path_indices[current_path_index]; i < current_path_length; i++) {
-					current_full_path[i] = (char)DEBUGINATOR_tolower(current_full_path[i]);
-				}
-			//}
+			for (int i = path_indices[current_path_index]; i < current_path_length; i++) {
+				current_full_path_lowercase[i] = (char)DEBUGINATOR_tolower(current_full_path_lowercase[i]);
+			}
 
 			int score = -1;
 			bool is_filtered = false;
@@ -2105,10 +2102,10 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 				int path_part = 0;
 				int matches[8] = { 0 };
 				int match_count = 0;
-				while (current_full_path[path_part] != '\0') {
+				while (current_full_path_lowercase[path_part] != '\0') {
 					bool filter_part_found = false;
 					for (int path_i = path_part; path_i < current_path_length; path_i++) {
-						if (current_full_path[path_i] == filter[filter_part] && taken_chars[path_i] == false) {
+						if (current_full_path_lowercase[path_i] == filter[filter_part] && taken_chars[path_i] == false) {
 							path_part = path_i;
 							filter_part_found = true;
 							break;
@@ -2121,7 +2118,7 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 
 					int match_length = 0;
 					const char* filter_char = filter + filter_part;
-					const char* path_char = current_full_path + path_part;
+					const char* path_char = current_full_path_lowercase + path_part;
 					while (*filter_char++ == *path_char++) {
 						match_length++;
 						if (*filter_char == '\0' || *filter_char == ' ' || taken_chars[path_part + match_length] == true) {
@@ -2146,18 +2143,20 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 				}
 
 				int best_match_index = -1;
-				int best_match_score = -1;
+				int best_match_score = 0;
 				for (int i = 0; i < match_count; i += 2) {
 					int match_index = matches[i];
 					int match_length = matches[i + 1];
 					int is_word_break_start = match_index == 0
 						|| current_full_path[match_index - 1] == ' '
 						|| (!DEBUGINATOR_isalpha(current_full_path[match_index - 1]) && DEBUGINATOR_isalpha(current_full_path[match_index]))
-						|| (!DEBUGINATOR_isdigit(current_full_path[match_index - 1]) && DEBUGINATOR_isdigit(current_full_path[match_index]));
+						|| (!DEBUGINATOR_isdigit(current_full_path[match_index - 1]) && DEBUGINATOR_isdigit(current_full_path[match_index]))
+						|| (!DEBUGINATOR_isupper(current_full_path[match_index - 1]) && DEBUGINATOR_isupper(current_full_path[match_index]));
 					int is_word_break_end = match_index + match_length == current_path_length
 						|| current_full_path[match_index + match_length] == ' '
-						|| (!DEBUGINATOR_isalpha(current_full_path[match_index + match_length]) && DEBUGINATOR_isalpha(current_full_path[match_index]))
-						|| (!DEBUGINATOR_isdigit(current_full_path[match_index + match_length]) && DEBUGINATOR_isdigit(current_full_path[match_index]));
+						|| (!DEBUGINATOR_isalpha(current_full_path[match_index + match_length]) && DEBUGINATOR_isalpha(current_full_path[match_index + match_length - 1]))
+						|| (!DEBUGINATOR_isdigit(current_full_path[match_index + match_length]) && DEBUGINATOR_isdigit(current_full_path[match_index + match_length - 1]))
+						|| (!DEBUGINATOR_isupper(current_full_path[match_index + match_length]) && DEBUGINATOR_isupper(current_full_path[match_index + match_length - 1]));
 					int is_match_in_item_title = match_index >= path_indices[current_path_index];
 					int path_segment_length = path_indices[current_path_index + 1] - path_indices[current_path_index];
 					int path_segment_modifier = 0;
@@ -2165,12 +2164,23 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 						++path_segment_modifier;
 					}
 
+					// The goal here is to severely punish matching in the middle of words, especially for short matches.
+					// For example, we don't want to get "detail" as a filter result to "AI", as it just clutters the
+					// result list.
+					// However, we do want to be able to type "pick" and match "Colorpicker", and there is no practical
+					// way to detect that there is a word boundary between "Color" and "picker".
+					// So we give a score of zero to filters that don't align with the start or end of a word, except
+					// when the match is long enough (3+), in which case, we add anything that matches that too.
+					int score_word_start = is_word_break_start * DEBUGINATOR_SCORE_WORD_BREAK_START;
+					int score_word_break_end = is_word_break_end * DEBUGINATOR_SCORE_WORD_BREAK_END;
+					int score_match_in_item_title = is_match_in_item_title * DEBUGINATOR_SCORE_ITEM_TITLE_MATCH;
+					int score_match_length =  match_length * match_length;
+					int score_match_length_fallback = match_length < 3 ? 0 : match_length * match_length;
 					int match_score =
-						(is_word_break_start * DEBUGINATOR_SCORE_WORD_BREAK_START
-						+ is_word_break_end * DEBUGINATOR_SCORE_WORD_BREAK_END
-						+ is_match_in_item_title * DEBUGINATOR_SCORE_ITEM_TITLE_MATCH
-						+ match_length) * match_length
-						- path_segment_modifier;
+								(score_word_start + score_word_break_end)
+								* (score_match_length + score_match_in_item_title - path_segment_modifier)
+								+ score_match_length_fallback;
+
 					if (match_score > best_match_score) {
 						best_match_score = match_score;
 						best_match_index = i;
@@ -2291,10 +2301,11 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 		}
 	}
 
-	if (expanding_search && debuginator->hot_item != NULL) {
-		// We're good. Just keep the previously hot item; it can't have disappeared.
-	}
-	else if (best_item != NULL) {
+	// if (expanding_search && debuginator->hot_item != NULL) {
+	// 	// We're good. Just keep the previously hot item; it can't have disappeared.
+	// }
+	// else
+	if (best_item != NULL) {
 		debuginator->hot_item = best_item;
 		best_item->parent->folder.hot_child = best_item;
 	}
