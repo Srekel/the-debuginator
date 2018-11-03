@@ -241,8 +241,17 @@ DebuginatorItem* debuginator_create_folder_item(TheDebuginator* debuginator, Deb
 DebuginatorItem* debuginator_new_folder_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* title, int title_length);
 
 // Get an item by its path.
-// If create_if_not_exist is a valid pointer, sets it to true if it needed to create the item, or false if it already existed.
+// If create_if_not_exist is a valid pointer, the item will be created if not found. The pointer will then be set to true.
 DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* path, bool* create_if_not_exist);
+
+// Returns the menu root item.
+DebuginatorItem* debuginator_get_root_item(TheDebuginator* debuginator);
+
+// Returns first child of the folder item, or NULL if it oesn't have any children.
+DebuginatorItem* debuginator_get_first_child(TheDebuginator* debuginator, DebuginatorItem* item);
+
+// Returns the item's next sibling, or NULL if it doesn't have any, i.e. it's the last item under a folder.
+DebuginatorItem* debuginator_get_next_sibling(TheDebuginator* debuginator, DebuginatorItem* item);
 
 // Remove an item by reference
 void debuginator_remove_item(TheDebuginator* debuginator, DebuginatorItem* item);
@@ -1603,6 +1612,19 @@ DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, DebuginatorIt
 
 	DEBUGINATOR_assert(false);
 	return NULL;
+}
+
+DebuginatorItem* debuginator_get_root_item(TheDebuginator* debuginator) {
+	return debuginator->root;
+}
+
+DebuginatorItem* debuginator_get_first_child(TheDebuginator* debuginator, DebuginatorItem* item) {
+	DEBUGINATOR_assert(item->is_folder);
+	return item->folder.first_child;
+}
+
+DebuginatorItem* debuginator_get_next_sibling(TheDebuginator* debuginator, DebuginatorItem* item) {
+	return item->next_sibling;
 }
 
 DebuginatorItem* debuginator_get_parent(DebuginatorItem* item) {
