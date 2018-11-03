@@ -241,7 +241,8 @@ DebuginatorItem* debuginator_create_folder_item(TheDebuginator* debuginator, Deb
 DebuginatorItem* debuginator_new_folder_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* title, int title_length);
 
 // Get an item by its path.
-DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* path, bool create_if_not_exist);
+// If create_if_not_exist is a valid pointer, sets it to true if it needed to create the item, or false if it already existed.
+DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* path, bool* create_if_not_exist);
 
 // Remove an item by reference
 void debuginator_remove_item(TheDebuginator* debuginator, DebuginatorItem* item);
@@ -1530,7 +1531,8 @@ DebuginatorItem* debuginator_new_folder_item(TheDebuginator* debuginator, Debugi
 }
 
 DebuginatorItem* debuginator_create_folder_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* path) {
-	DebuginatorItem* folder_item = debuginator_get_item(debuginator, parent, path, true);
+	bool create_if_not_exist;
+	DebuginatorItem* folder_item = debuginator_get_item(debuginator, parent, path, &create_if_not_exist);
 	folder_item->is_folder = true;
 	debuginator__set_total_height(folder_item, debuginator->item_height);
 
@@ -1544,7 +1546,7 @@ DebuginatorItem* debuginator_create_folder_item(TheDebuginator* debuginator, Deb
 	return folder_item;
 }
 
-DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* path, bool create_if_not_exist) {
+DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* path, bool* create_if_not_exist) {
 	parent = parent == NULL ? debuginator->root : parent;
 	const char* temp_path = path;
 	while (true) {
@@ -1565,11 +1567,17 @@ DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, DebuginatorIt
 			parent_child = parent_child->next_sibling;
 		}
 
-		if (current_item == NULL && !create_if_not_exist) {
+		if (current_item == NULL && create_if_not_exist == NULL) {
+			// Item wasn't found and we don't want to create it, so be done.
 			return NULL;
 		}
 
-		// If current_item is set, it means the item already existed and we're just going to reuse it
+		if (create_if_not_exist) {
+			*create_if_not_exist = current_item == NULL;
+		}
+
+		// If current_item is set, it means the item existed.
+		// If create_if_not_exist s set, we're just going to reuse the item instead of creating a new one.
 		if (next_slash == NULL) {
 			// Found the last part of the path
 			if (current_item == NULL) {
@@ -1624,7 +1632,8 @@ DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 	DebuginatorOnItemChangedCallback on_item_changed_callback, void* user_data,
 	const char** value_titles, void* values, int num_values, int value_size) {
 
-	DebuginatorItem* item = debuginator_get_item(debuginator, parent, path, true);
+	bool create_if_not_exist;
+	DebuginatorItem* item = debuginator_get_item(debuginator, parent, path, &create_if_not_exist);
 	item->is_folder = false;
 	item->leaf.num_values = num_values;
 	item->leaf.values = values;
@@ -1657,7 +1666,11 @@ DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 	}
 
 	item->leaf.description = description == NULL ? "" : description;
-	debuginator__adjust_num_visible_children(item->parent, 1);
+
+	if (create_if_not_exist) {
+		// Only want to update this if the item didn't already exist.
+		debuginator__adjust_num_visible_children(item->parent, 1);
+	}
 
 	if (description && !item->is_folder) {
 		int indent = DEBUGINATOR_LEFT_MARGIN;
@@ -1782,7 +1795,7 @@ void debuginator_load_item(TheDebuginator* debuginator, const char* key, const c
 	debuginator__store_item_setting(debuginator, key, value);
 
 	// Then we check if the item already existed, and if so, update its state.
-	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, key, false);
+	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, key, NULL);
 	if (item == NULL) {
 		// Pass
 	}
@@ -1831,7 +1844,7 @@ void debuginator_set_hot_item(TheDebuginator* debuginator, DebuginatorItem* item
 }
 
 void debuginator_set_default_value(TheDebuginator* debuginator, const char* path, const char* value_title, int value_index) {
-	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, false);
+	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, NULL);
 	if (item == NULL || item->is_folder) {
 		return;
 	}
@@ -1857,7 +1870,7 @@ void debuginator_modify_value(TheDebuginator* debuginator, DebuginatorItem* item
 }
 
 void debuginator_set_edit_type(TheDebuginator* debuginator, const char* path, DebuginatorItemEditorDataType edit_type) {
-	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, false);
+	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, NULL);
 	if (item == NULL) {
 		return;
 	}
@@ -1871,7 +1884,7 @@ void debuginator_item_set_on_changed_callback(DebuginatorItem* item, Debuginator
 }
 
 void debuginator_item_set_on_changed_callback_by_path(TheDebuginator* debuginator, const char* path, DebuginatorOnItemChangedCallback callback) {
-	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, false);
+	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, NULL);
 	if (item == NULL) {
 		return;
 	}
@@ -1886,7 +1899,7 @@ void debuginator_item_set_user_data(DebuginatorItem* item, void* user_data) {
 }
 
 void debuginator_item_set_user_data_by_path(TheDebuginator* debuginator, const char* path, void* user_data) {
-	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, false);
+	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, NULL);
 	if (item == NULL) {
 		return;
 	}
@@ -1954,7 +1967,7 @@ void debuginator_remove_item(TheDebuginator* debuginator, DebuginatorItem* item)
 }
 
 void debuginator_remove_item_by_path(TheDebuginator* debuginator, const char* path) {
-	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, false);
+	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, NULL);
 	if (item == NULL) {
 		return;
 	}
@@ -2464,7 +2477,7 @@ void debuginator_assign_hot_key(TheDebuginator* debuginator, const char* _key, c
 
 	debuginator_unassign_hot_key(debuginator, key);
 
-	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, false);
+	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, NULL);
 	if (optional_value_title != NULL) {
 		if (!item->is_folder) {
 			for (int vt_i = 0; vt_i < item->leaf.num_values; ++vt_i) {
@@ -2524,7 +2537,7 @@ void debuginator_unassign_hot_key(TheDebuginator* debuginator, const char* _key)
 
 	for (int i = 0; i < debuginator->num_hot_keys; ++i) {
 		if (DEBUGINATOR_strcmp(key, debuginator->hot_keys[i].key) == 0) {
-			DebuginatorItem* item = debuginator_get_item(debuginator, NULL, debuginator->hot_keys[i].path, false);
+			DebuginatorItem* item = debuginator_get_item(debuginator, NULL, debuginator->hot_keys[i].path, NULL);
 			if (item != NULL) {
 				item->leaf.hot_key_index = DEBUGINATOR_NO_HOT_INDEX;
 			}
@@ -2533,7 +2546,7 @@ void debuginator_unassign_hot_key(TheDebuginator* debuginator, const char* _key)
 			debuginator__deallocate(debuginator, debuginator->hot_keys[i].path);
 
 			int last_index = --debuginator->num_hot_keys;
-			DebuginatorItem* swap_item = debuginator_get_item(debuginator, NULL, debuginator->hot_keys[last_index].path, false);
+			DebuginatorItem* swap_item = debuginator_get_item(debuginator, NULL, debuginator->hot_keys[last_index].path, NULL);
 			if (swap_item != NULL) {
 				swap_item->leaf.hot_key_index = i;
 			}
@@ -2556,7 +2569,7 @@ bool debuginator_activate_hot_key(TheDebuginator* debuginator, const char* _key)
 
 	for (int i = 0; i < debuginator->num_hot_keys; ++i) {
 		if (DEBUGINATOR_strcmp(key, debuginator->hot_keys[i].key) == 0) {
-			DebuginatorItem* item = debuginator_get_item(debuginator, NULL, debuginator->hot_keys[i].path, false);
+			DebuginatorItem* item = debuginator_get_item(debuginator, NULL, debuginator->hot_keys[i].path, NULL);
 			if (item == NULL) {
 				return false;
 			}
@@ -2585,7 +2598,7 @@ bool debuginator_activate_hot_key(TheDebuginator* debuginator, const char* _key)
 
 void debuginator_clear_hot_keys(TheDebuginator* debuginator) {
 	for (int i = 0; i < debuginator->num_hot_keys; ++i) {
-		DebuginatorItem* item = debuginator_get_item(debuginator, NULL, debuginator->hot_keys[i].path, false);
+		DebuginatorItem* item = debuginator_get_item(debuginator, NULL, debuginator->hot_keys[i].path, NULL);
 		if (item != NULL) {
 			item->leaf.hot_key_index = DEBUGINATOR_NO_HOT_INDEX;
 		}
@@ -2611,7 +2624,7 @@ DebuginatorItem* debuginator_get_hot_key_assignment(TheDebuginator* debuginator,
 
 	for (int i = 0; i < debuginator->num_hot_keys; ++i) {
 		if (DEBUGINATOR_strcmp(key, debuginator->hot_keys[i].key) == 0) {
-			DebuginatorItem* item = debuginator_get_item(debuginator, NULL, debuginator->hot_keys[i].path, false);
+			DebuginatorItem* item = debuginator_get_item(debuginator, NULL, debuginator->hot_keys[i].path, NULL);
 			return item;
 		}
 	}
@@ -2632,7 +2645,7 @@ DebuginatorItem* debuginator_get_hot_key_assigned_path(TheDebuginator* debuginat
 
 	for (int i = 0; i < debuginator->num_hot_keys; ++i) {
 		if (DEBUGINATOR_strcmp(key, debuginator->hot_keys[i].key) == 0) {
-			DebuginatorItem* item = debuginator_get_item(debuginator, NULL, debuginator->hot_keys[i].path, false);
+			DebuginatorItem* item = debuginator_get_item(debuginator, NULL, debuginator->hot_keys[i].path, NULL);
 			return item;
 		}
 	}
@@ -3649,7 +3662,7 @@ static void debuginator__activate_preset(DebuginatorItem* item, void* value, con
 	TheDebuginator* debuginator = (TheDebuginator*)item->user_data;
 	for (int i = 0; i < item->leaf.num_values; i++) {
 		const char* path = item->leaf.value_titles[i];
-		DebuginatorItem* item_to_activate = debuginator_get_item(debuginator, NULL, path, false);
+		DebuginatorItem* item_to_activate = debuginator_get_item(debuginator, NULL, path, NULL);
 		if (item_to_activate == NULL) {
 			continue;
 		}
