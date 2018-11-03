@@ -3243,13 +3243,22 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 			char hot_key_text[DEBUGINATOR_MAX_PATH_LENGTH];
 			DEBUGINATOR_sprintf_s(hot_key_text, DEBUGINATOR_MAX_PATH_LENGTH, "[%s] %s", key, hot_key_value_index == DEBUGINATOR_NO_HOT_INDEX ? "Toggle" : item->leaf.value_titles[hot_key_value_index]);
 
-			DebuginatorVector2 key_rect_pos = debuginator__vector2(debuginator->top_left.x + debuginator->size.x, offset.y - 5);
-			DebuginatorVector2 key_rect_size = debuginator__vector2(debuginator->text_size(hot_key_text, font, debuginator->app_user_data).x + 20, (float)debuginator->item_height);
-			debuginator->draw_rect(&key_rect_pos, &key_rect_size, &debuginator->theme.colors[DEBUGINATOR_Background], debuginator->app_user_data);
+			if (debuginator->open_direction == 1) {
+				DebuginatorVector2 key_rect_pos = debuginator__vector2(debuginator->top_left.x + debuginator->size.x, offset.y - 5);
+				DebuginatorVector2 key_rect_size = debuginator__vector2(debuginator->text_size(hot_key_text, font, debuginator->app_user_data).x + 20, (float)debuginator->item_height);
+				debuginator->draw_rect(&key_rect_pos, &key_rect_size, &debuginator->theme.colors[DEBUGINATOR_Background], debuginator->app_user_data);
 
+				DebuginatorVector2 key_text_pos = debuginator__vector2(debuginator->top_left.x + debuginator->size.x + 10, offset.y);
+				debuginator->draw_text(hot_key_text, &key_text_pos, &debuginator->theme.colors[DEBUGINATOR_ItemTitleOverridden], font, debuginator->app_user_data);
+			}
+			else {
+				DebuginatorVector2 key_rect_size = debuginator__vector2(debuginator->text_size(hot_key_text, font, debuginator->app_user_data).x + 20, (float)debuginator->item_height);
+				DebuginatorVector2 key_rect_pos = debuginator__vector2(debuginator->top_left.x - key_rect_size.x, offset.y - 5);
+				debuginator->draw_rect(&key_rect_pos, &key_rect_size, &debuginator->theme.colors[DEBUGINATOR_Background], debuginator->app_user_data);
 
-			DebuginatorVector2 key_text_pos = debuginator__vector2(debuginator->top_left.x + debuginator->size.x + 10, offset.y);
-			debuginator->draw_text(hot_key_text, &key_text_pos, &debuginator->theme.colors[DEBUGINATOR_ItemTitleOverridden], font, debuginator->app_user_data);
+				DebuginatorVector2 key_text_pos = debuginator__vector2(key_rect_pos.x + 10, offset.y);
+				debuginator->draw_text(hot_key_text, &key_text_pos, &debuginator->theme.colors[DEBUGINATOR_ItemTitleOverridden], font, debuginator->app_user_data);
+			}
 		}
 
 		if (item->leaf.is_expanded) {
