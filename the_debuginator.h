@@ -332,6 +332,7 @@ void debuginator_move_to_root(TheDebuginator* debuginator);
 bool debuginator_is_filtering_enabled(TheDebuginator* debuginator);
 void debuginator_set_filtering_enabled(TheDebuginator* debuginator, bool enabled);
 const char* debuginator_get_filter(TheDebuginator* debuginator);
+void debuginator_set_filter(TheDebuginator* debuginator, const char* wanted_filter);
 void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_filter);
 
 // Mouse / Touch API
@@ -2040,6 +2041,10 @@ const char* debuginator_get_filter(TheDebuginator* debuginator) {
 	return debuginator->filter;
 }
 
+void debuginator_set_filter(TheDebuginator* debuginator, const char* wanted_filter) {
+	DEBUGINATOR_strcpy_s(debuginator->filter, sizeof(debuginator->filter), filter);
+}
+
 void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_filter) {
 	// See this for a description of how the fuzzy filtering works.
 	// https://medium.com/@Srekel/implementing-a-fuzzy-search-algorithm-for-the-debuginator-cacc349e6c55
@@ -2070,11 +2075,9 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 	}
 
 	char filter[32] = { 0 };
-	//if (!exact_search) {
-		for (int i = 0; i < 20; i++) {
-			filter[i] = (char)DEBUGINATOR_tolower(wanted_filter[i]);
-		}
-	//}
+	for (int i = 0; i < 20; i++) {
+		filter[i] = (char)DEBUGINATOR_tolower(wanted_filter[i]);
+	}
 
 	DEBUGINATOR_memset(debuginator->sorted_items, 0, sizeof(*debuginator->sorted_items));
 
