@@ -2042,7 +2042,7 @@ const char* debuginator_get_filter(TheDebuginator* debuginator) {
 }
 
 void debuginator_set_filter(TheDebuginator* debuginator, const char* wanted_filter) {
-	DEBUGINATOR_strcpy_s(debuginator->filter, sizeof(debuginator->filter), filter);
+	DEBUGINATOR_strcpy_s(debuginator->filter, sizeof(debuginator->filter), wanted_filter);
 }
 
 void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_filter) {
