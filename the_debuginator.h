@@ -1814,7 +1814,7 @@ bool debuginator_save(TheDebuginator* debuginator, DebuginatorSaveItemCallback c
 }
 
 void debuginator_load_item(TheDebuginator* debuginator, const char* key, const char* value) {
-	// First we store path + value so that we can use it later when  (re)creating the item.
+	// First we store path + value so that we can use it later when (re)creating the item.
 	debuginator__store_item_setting(debuginator, key, value);
 
 	// Then we check if the item already existed, and if so, update its state.
@@ -2995,6 +2995,8 @@ void debuginator_update(TheDebuginator* debuginator, float dt) {
 float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2 offset, bool hot);
 void debuginator__draw_hierarchy(TheDebuginator* debuginator, float dt, DebuginatorVector2 offset);
 void debuginator__draw_sorted_filter(TheDebuginator* debuginator, float dt, DebuginatorVector2 offset);
+void debuginator__draw_animations(TheDebuginator* debuginator, float dt);
+void debuginator__draw_search_filter(TheDebuginator* debuginator, float dt);
 
 void debuginator_draw(TheDebuginator* debuginator, float dt) {
 	// Don't do anything if we're fully closed
@@ -3030,10 +3032,13 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 
 	if (debuginator->draw_mode == DEBUGINATOR_DrawModeHierarchy) {
 		debuginator__draw_hierarchy(debuginator, dt, offset);
+		debuginator__draw_animations(debuginator, dt);
 	}
 	else if (debuginator->draw_mode == DEBUGINATOR_DrawModeSortedFilter) {
 		debuginator__draw_sorted_filter(debuginator, dt, offset);
 	}
+
+	debuginator__draw_search_filter(debuginator, dt);
 }
 
 void debuginator__draw_hierarchy(TheDebuginator* debuginator, float dt, DebuginatorVector2 offset){
@@ -3074,7 +3079,9 @@ void debuginator__draw_hierarchy(TheDebuginator* debuginator, float dt, Debugina
 
 		item_to_draw = debuginator__next_visible_sibling(item_to_draw);
 	}
+}
 
+void debuginator__draw_animations(TheDebuginator* debuginator, float dt) {
 	// Update animations
 	int running_animations = debuginator->animation_count; // Can be cleverer I guess
 	for (int i = 0; i < debuginator->animation_count; i++) {
@@ -3117,9 +3124,9 @@ void debuginator__draw_hierarchy(TheDebuginator* debuginator, float dt, Debugina
 	if (running_animations == 0) {
 		debuginator->animation_count = 0;
 	}
-	offset.x -= DEBUGINATOR_LEFT_MARGIN;
+}
 
-	// Draw search filter
+void debuginator__draw_search_filter(TheDebuginator* debuginator, float dt) {
 	bool filter_hint_mode = !debuginator->filter_enabled && debuginator->current_height_offset > 100;
 	if (debuginator->filter_enabled || filter_hint_mode) {
 		debuginator->filter_timer += dt * 5;
