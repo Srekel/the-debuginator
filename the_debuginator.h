@@ -2192,9 +2192,9 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 						|| (!DEBUGINATOR_isupper(current_full_path[match_index - 1]) && DEBUGINATOR_isupper(current_full_path[match_index]));
 					int is_word_break_end = match_index + match_length == current_path_length
 						|| current_full_path[match_index + match_length] == ' '
-						|| (!DEBUGINATOR_isalpha(current_full_path[match_index + match_length]) && DEBUGINATOR_isalpha(current_full_path[match_index + match_length - 1]))
-						|| (!DEBUGINATOR_isdigit(current_full_path[match_index + match_length]) && DEBUGINATOR_isdigit(current_full_path[match_index + match_length - 1]))
-						|| (!DEBUGINATOR_isupper(current_full_path[match_index + match_length]) && DEBUGINATOR_isupper(current_full_path[match_index + match_length - 1]));
+						|| (!DEBUGINATOR_isalpha(current_full_path[match_index + match_length - 1]) && DEBUGINATOR_isalpha(current_full_path[match_index + match_length]))
+						|| (!DEBUGINATOR_isdigit(current_full_path[match_index + match_length - 1]) && DEBUGINATOR_isdigit(current_full_path[match_index + match_length]))
+						|| (!DEBUGINATOR_isupper(current_full_path[match_index + match_length - 1]) && DEBUGINATOR_isupper(current_full_path[match_index + match_length]));
 					int is_match_in_item_title = match_index >= path_indices[current_path_index];
 					int path_segment_length = path_indices[current_path_index + 1] - path_indices[current_path_index];
 					int path_segment_modifier = 0;
@@ -2216,8 +2216,9 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 					int score_match_length_fallback = match_length < 3 ? 0 : match_length * match_length;
 					int match_score =
 								(score_word_start + score_word_break_end)
-								* (score_match_length + score_match_in_item_title - path_segment_modifier)
-								+ score_match_length_fallback;
+								* (score_match_length + score_match_in_item_title)
+								+ score_match_length_fallback
+								- path_segment_modifier;
 
 					if (match_score > best_match_score) {
 						best_match_score = match_score;
