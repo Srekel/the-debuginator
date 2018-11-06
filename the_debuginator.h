@@ -147,6 +147,7 @@ typedef struct DebuginatorTheme {
 
 typedef struct DebuginatorItem DebuginatorItem;
 typedef struct TheDebuginator TheDebuginator;
+typedef struct TheDebuginatorConfig TheDebuginatorConfig;
 
 typedef struct DebuginatorImageHandle {
 	union {
@@ -192,6 +193,15 @@ typedef enum DebuginatorDrawMode {
 	DEBUGINATOR_DrawModeHierarchy,
 	DEBUGINATOR_DrawModeSortedFilter,
 } DebuginatorDrawMode;
+
+// Call to create an instance of the debuginator. Make sure the config has
+// all the necessary stuff in it.
+// debuginator_get_default_config is recommended but not necessary.
+void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginator);
+
+// Provides a decent default config for debuginator_create. NOTE Does not initialize
+// EVERYTHING that's needed, you still need to set some things.
+void debuginator_get_default_config(TheDebuginatorConfig* config);
 
 // Returns true when it's started to show, returns false as soon as it's closing.
 bool debuginator_is_open(TheDebuginator* debuginator);
@@ -2713,7 +2723,7 @@ float debuginator_distance_from_edge(TheDebuginator* debuginator) {
   return debuginator->openness * debuginator->size.x;
 }
 
-static void debuginator_get_default_config(TheDebuginatorConfig* config) {
+void debuginator_get_default_config(TheDebuginatorConfig* config) {
 	DEBUGINATOR_memset(config, 0, sizeof(*config));
 
 	config->create_default_debuginator_items = true;
@@ -2820,7 +2830,7 @@ static void debuginator_get_default_config(TheDebuginatorConfig* config) {
 	// config->edit_types[DEBUGINATOR_EditTypeNumberRange].activate = debuginator__activate_numberrange;
 }
 
-static void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginator) {
+void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginator) {
 	DEBUGINATOR_assert(config->draw_rect != NULL);
 	DEBUGINATOR_assert(config->draw_text != NULL);
 	DEBUGINATOR_assert(config->app_user_data != NULL);
