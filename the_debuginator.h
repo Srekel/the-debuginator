@@ -1191,7 +1191,13 @@ static void debuginator__set_total_height(DebuginatorItem* item, int height) {
 static int debuginator__set_item_total_height_recursively(DebuginatorItem* item, int item_height) {
 	if (item->is_folder) {
 		if (item->folder.is_collapsed) {
-			item->total_height = 30;
+			if (item->folder.num_visible_children > 0) {
+				// If a folder doesn't have children, it shouldn't be visible in any case.
+				item->total_height = item_height;
+			}
+			else {
+				item->total_height = 0;
+			}
 		}
 		else {
 			item->total_height = 0;
@@ -2258,7 +2264,10 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 			DebuginatorItem* parent = item->parent;
 			while(parent) {
 				if (parent->folder.is_collapsed) {
-					is_filtered = true;
+					// If a folder is collapsed, we want to treat this item as filtered IF
+					// we actually have a filter. Otherwise, it's business as usual and we
+					// clear the is_filtered flag.
+					is_filtered = filter_length > 0;
 					score = -1;
 					break;
 				}
