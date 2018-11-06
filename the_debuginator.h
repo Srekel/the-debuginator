@@ -1332,7 +1332,7 @@ static DebuginatorItem* debuginator__find_first_leaf(DebuginatorItem* item) {
 	}
 
 	DebuginatorItem* sibling = debuginator__next_visible_sibling(item);
-	while (sibling != NULL  ) {
+	while (sibling != NULL) {
 		item = debuginator__find_first_leaf(sibling);
 		if (item != NULL) {
 			return item;
@@ -1918,7 +1918,7 @@ void debuginator_set_edit_type(TheDebuginator* debuginator, const char* path, De
 }
 
 void debuginator_item_set_on_changed_callback(DebuginatorItem* item, DebuginatorOnItemChangedCallback callback) {
-  DEBUGINATOR_assert(!item->is_folder);
+	DEBUGINATOR_assert(!item->is_folder);
 	item->leaf.on_item_changed_callback = callback;
 }
 
@@ -1928,12 +1928,12 @@ void debuginator_item_set_on_changed_callback_by_path(TheDebuginator* debuginato
 		return;
 	}
 
-  DEBUGINATOR_assert(!item->is_folder);
+	DEBUGINATOR_assert(!item->is_folder);
 	item->leaf.on_item_changed_callback = callback;
 }
 
 void debuginator_item_set_user_data(DebuginatorItem* item, void* user_data) {
-  DEBUGINATOR_assert(!item->is_folder);
+	DEBUGINATOR_assert(!item->is_folder);
 	item->user_data = user_data;
 }
 
@@ -1943,7 +1943,7 @@ void debuginator_item_set_user_data_by_path(TheDebuginator* debuginator, const c
 		return;
 	}
 
-  DEBUGINATOR_assert(!item->is_folder);
+	DEBUGINATOR_assert(!item->is_folder);
 	item->user_data = user_data;
 }
 
@@ -2231,7 +2231,7 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 					int score_word_start = is_word_break_start * DEBUGINATOR_SCORE_WORD_BREAK_START;
 					int score_word_break_end = is_word_break_end * DEBUGINATOR_SCORE_WORD_BREAK_END;
 					int score_match_in_item_title = is_match_in_item_title * DEBUGINATOR_SCORE_ITEM_TITLE_MATCH;
-					int score_match_length =  match_length * match_length;
+					int score_match_length = match_length * match_length;
 					int score_match_length_fallback = match_length < 3 ? 0 : match_length * match_length;
 					int match_score =
 								(score_word_start + score_word_break_end)
@@ -2640,7 +2640,7 @@ bool debuginator_activate_hot_key(TheDebuginator* debuginator, const char* _key)
 		}
 	}
 
-  return false;
+	return false;
 }
 
 void debuginator_clear_hot_keys(TheDebuginator* debuginator) {
@@ -2727,11 +2727,11 @@ void debuginator_set_left_aligned(TheDebuginator* debuginator, bool left_aligned
 }
 
 bool debuginator_is_left_aligned(TheDebuginator* debuginator) {
-  return debuginator->open_direction == 1;
+	return debuginator->open_direction == 1;
 }
 
 float debuginator_distance_from_edge(TheDebuginator* debuginator) {
-  return debuginator->openness * debuginator->size.x;
+	return debuginator->openness * debuginator->size.x;
 }
 
 void debuginator_get_default_config(TheDebuginatorConfig* config) {
