@@ -2062,7 +2062,10 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 	const size_t filter_length = DEBUGINATOR_strlen(wanted_filter);
 	bool expanding_search = false;
 	if (filter_length < DEBUGINATOR_strlen(debuginator->filter)) {
-		expanding_search = true;
+		if (DEBUGINATOR_memcmp(wanted_filter, debuginator->filter, filter_length) == 0) {
+			// The new filter is the same as the old one, minus 1-N characters.
+			expanding_search = true;
+		}
 	}
 
 	// Remove "No entries found" item - we can find new ones even with a longer filter if it
@@ -2350,11 +2353,10 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 		}
 	}
 
-	// if (expanding_search && debuginator->hot_item != NULL) {
-	// 	// We're good. Just keep the previously hot item; it can't have disappeared.
-	// }
-	// else
-	if (best_item != NULL) {
+	if (expanding_search && debuginator->hot_item != NULL && !debuginator->hot_item->is_filtered) {
+	 	// We're good. Just keep the previously hot item.
+	}
+	else if (best_item != NULL) {
 		debuginator->hot_item = best_item;
 		best_item->parent->folder.hot_child = best_item;
 	}
