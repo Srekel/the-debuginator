@@ -3276,7 +3276,7 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 				break;
 			}
 
-			if (offset.y + child->total_height > 0 || child->is_folder) {
+			if (offset.y + child->total_height > 0) {
 				debuginator_draw_item(debuginator, child, offset, debuginator->hot_item == child);
 			}
 			offset.y += child->total_height;
