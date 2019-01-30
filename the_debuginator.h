@@ -3072,7 +3072,7 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 void debuginator__draw_hierarchy(TheDebuginator* debuginator, float dt, DebuginatorVector2 offset){
 	offset.y = debuginator->current_height_offset;
 
-	// Draw all items
+	// Draw all items within the debuginator's draw area
 	offset.x += DEBUGINATOR_LEFT_MARGIN;
 	DebuginatorItem* item_to_draw = debuginator__first_visible_child(debuginator->root);
 	while (item_to_draw && offset.y < -item_to_draw->total_height) {
@@ -3093,6 +3093,8 @@ void debuginator__draw_hierarchy(TheDebuginator* debuginator, float dt, Debugina
 		}
 	}
 
+	// item_to_draw is now the first item (folder most likely) who is at least partly
+	// within the rendering area.
 	while (item_to_draw && offset.y < debuginator->size.y) {
 		debuginator_draw_item(debuginator, item_to_draw, offset, debuginator->hot_item == item_to_draw);
 		offset.y += item_to_draw->total_height;
@@ -3268,13 +3270,16 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 
 		offset.x += DEBUGINATOR_INDENT;
 		DebuginatorItem* child = debuginator__first_visible_child(item);
+		offset.y += debuginator->item_height;
 		while (child) {
-			offset.y += debuginator->item_height;
 			if (offset.y > debuginator->size.y) {
 				break;
 			}
 
-			offset.y = debuginator_draw_item(debuginator, child, offset, debuginator->hot_item == child);
+			if (offset.y + child->total_height > 0 || child->is_folder) {
+				debuginator_draw_item(debuginator, child, offset, debuginator->hot_item == child);
+			}
+			offset.y += child->total_height;
 			child = debuginator__next_visible_sibling(child);
 		}
 	}
