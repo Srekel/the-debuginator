@@ -359,7 +359,7 @@ bool debuginator_is_mouse_over(TheDebuginator* debuginator, bool* out_over_quick
 // Hot key API
 // Activate returns true if there was an item bound to that key
 void debuginator_assign_hot_key(TheDebuginator* debuginator, const char* key, const char* path, int value_index, const char* optional_value_title);
-void debuginator_unassign_hot_key(TheDebuginator* debuginator, const char* key);
+DebuginatorItem* debuginator_unassign_hot_key(TheDebuginator* debuginator, const char* key);
 bool debuginator_activate_hot_key(TheDebuginator* debuginator, const char* key);
 void debuginator_clear_hot_keys(TheDebuginator* debuginator);
 
@@ -2545,9 +2545,14 @@ void debuginator_assign_hot_key(TheDebuginator* debuginator, const char* _key, c
 	const char* key = _key;
 #endif
 
-	debuginator_unassign_hot_key(debuginator, key);
+	DebuginatorItem* unassigned_item = debuginator_unassign_hot_key(debuginator, key);
 
-	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, NULL);
+	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, false);
+	if (item == unassigned_item) {
+		// User toggled it off, we're done.
+		return;
+	}
+
 	if (optional_value_title != NULL) {
 		if (!item->is_folder) {
 			for (int vt_i = 0; vt_i < item->leaf.num_values; ++vt_i) {
@@ -2594,7 +2599,7 @@ void debuginator_assign_hot_key(TheDebuginator* debuginator, const char* _key, c
 	}
 }
 
-void debuginator_unassign_hot_key(TheDebuginator* debuginator, const char* _key) {
+DebuginatorItem* debuginator_unassign_hot_key(TheDebuginator* debuginator, const char* _key) {
 #if DEBUGINATOR_DO_HOT_KEY_UPPERCASING
 	char key[128] = { 0 };
 	DEBUGINATOR_strcpy_s(key, 128, _key);
@@ -2621,9 +2626,11 @@ void debuginator_unassign_hot_key(TheDebuginator* debuginator, const char* _key)
 				swap_item->leaf.hot_key_index = i;
 			}
 			debuginator->hot_keys[i] = debuginator->hot_keys[last_index];
-			return;
+			return item;
 		}
 	}
+
+	return NULL;
 }
 
 bool debuginator_activate_hot_key(TheDebuginator* debuginator, const char* _key) {
