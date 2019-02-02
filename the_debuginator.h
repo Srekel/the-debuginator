@@ -178,7 +178,9 @@ typedef bool(*DebuginatorSaveItemCallback)(const char* key, const char* value, v
 
 typedef enum DebuginatorItemEditorDataType {
 	DEBUGINATOR_EditTypeArray, // The default
+	DEBUGINATOR_EditTypeArrayExpand, // When you want it to expand rather than toggle
 	DEBUGINATOR_EditTypeActionArray, // For items with direct actions and no state
+	DEBUGINATOR_EditTypeActionArrayExpand, // When you want it to expand rather than toggle
 	DEBUGINATOR_EditTypeBoolean,
 	DEBUGINATOR_EditTypePreset,
 	DEBUGINATOR_EditTypeColorPicker,
