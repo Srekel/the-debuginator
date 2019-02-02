@@ -1,11 +1,11 @@
 // clang-format off
 
 /*
-the_debuginator.h - v0.01 - public domain - Anders Elfgren @srekel, 2018
+the_debuginator.h - v0.01 - public domain - Anders Elfgren @srekel, 2017
 
 # THE DEBUGINATOR
 
-A super sweet hierarchical scrollable debug menu intended for games.
+A super sweet hierarchical debug menu intended for games.
 
 See github for latest version: https://github.com/Srekel/the-debuginator
 
@@ -1578,6 +1578,7 @@ DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, DebuginatorIt
 	parent = parent == NULL ? debuginator->root : parent;
 	const char* temp_path = path;
 	while (true) {
+		DEBUGINATOR_assert(parent->is_folder); // Maybe you've added A/B/C as a leaf, then try to add A/B/C/D
 		const char* next_slash = DEBUGINATOR_strchr(temp_path, '/');
 		size_t path_part_length = next_slash ? next_slash - temp_path : DEBUGINATOR_strlen(temp_path);
 
@@ -2097,6 +2098,7 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 
 	char filter[32] = { 0 };
 	for (int i = 0; i < 20; i++) {
+		// TODO fix loop counter
 		filter[i] = (char)DEBUGINATOR_tolower(wanted_filter[i]);
 	}
 
