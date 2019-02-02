@@ -1532,7 +1532,7 @@ static const char* debuginator__compute_path(TheDebuginator* debuginator, Debugi
 
 	// unsigned int lol = 3;
 	// DEBUGINATOR_strncpy_s(curr_path_pos, lol, path, path_length + 1);
-	DEBUGINATOR_strncpy_s(curr_path_pos, (unsigned int)(sizeof(full_path) - (curr_path_pos - full_path)), path,  (unsigned int)(path_length + 1));
+	DEBUGINATOR_strncpy_s(curr_path_pos, (unsigned int)(sizeof(full_path) - (curr_path_pos - full_path)), path, (unsigned int)(path_length + 1));
 	curr_path_pos += path_length;
 	*curr_path_pos = '\0';
 	++curr_path_pos;
@@ -2100,7 +2100,7 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 		filter[i] = (char)DEBUGINATOR_tolower(wanted_filter[i]);
 	}
 
-	DEBUGINATOR_memset(debuginator->sorted_items, 0, sizeof(*debuginator->sorted_items));
+	DEBUGINATOR_memset(debuginator->sorted_items, 0, sizeof(debuginator->sorted_items));
 
 	char current_full_path[DEBUGINATOR_MAX_PATH_LENGTH] = { 0 };
 	char current_full_path_lowercase[DEBUGINATOR_MAX_PATH_LENGTH] = { 0 };
@@ -2110,6 +2110,7 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 	int best_score = -1;
 	int worst_score = 0;
 	DebuginatorItem* best_item = NULL;
+	debuginator->best_sorted_item = NULL;
 
 	DebuginatorItem* item = debuginator->root->folder.first_child;
 	while (item != NULL) {
@@ -2311,9 +2312,13 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 				DEBUGINATOR_assert(sorted_item);
 
 				if (worst_count == 1) {
+					// There was only one item with the worst score.
+					// We're replacing it, so update the new worst score.
 					worst_score = score;
 				}
 
+				// First we remove the sorted item from the linked list, and ensure that its
+				// previous neighbors have the right references.
 				if (sorted_item->prev) {
 					sorted_item->prev->next = sorted_item->next;
 				}
@@ -2324,22 +2329,38 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 
 				sorted_item->score = score;
 				sorted_item->item = item;
+				sorted_item->prev = NULL;
+				sorted_item->next = NULL;
 
+
+				// Find the first item that we score higher than, and insert the new item before it.
 				DebuginatorSortedItem* next = debuginator->best_sorted_item;
 				while (next) {
-					if (sorted_item->score > next->score && next->item != NULL) {
+					if (sorted_item->score > next->score) {
 						sorted_item->prev = next->prev;
 						sorted_item->next = next;
 						if (next->prev) {
 							next->prev->next = sorted_item;
 						}
 						next->prev = sorted_item;
-						// goto LABEL_;
+						break;
 					}
+
+					next = next->next;
 				}
 
-				// Store head
-				if (item == best_item) {
+				if (sorted_item->next == NULL && debuginator->best_sorted_item != NULL) {
+					// We're the last item (worst scoring of the ones found so far)
+					next = debuginator->best_sorted_item;
+					while (next->next) {
+						next = next->next;
+					}
+					next->next = sorted_item;
+					sorted_item->prev = next;
+				}
+
+				if (sorted_item->prev == NULL) {
+					// We're the first item
 					debuginator->best_sorted_item = sorted_item;
 				}
 			}
@@ -2890,6 +2911,7 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 	debuginator->screen_resolution = config->screen_resolution;
 	debuginator->item_height = config->item_height;
 	debuginator->quick_draw_size = config->quick_draw_size;
+	debuginator->draw_mode = DEBUGINATOR_DrawModeHierarchy;
 
 	debuginator->root_position.x = -debuginator->size.x;
 	debuginator->top_left = debuginator__vector2(debuginator->root_position.x + debuginator->size.x * debuginator->openness * debuginator->open_direction, 0);
