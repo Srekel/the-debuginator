@@ -1594,6 +1594,7 @@ DebuginatorItem* debuginator_new_folder_item(TheDebuginator* debuginator, Debugi
 		folder_item->folder.is_collapsed = true;
 	}
 	debuginator__deallocate(debuginator, item_setting);
+	debuginator__deallocate(debuginator, full_path);
 
 	return folder_item;
 }
@@ -1611,6 +1612,7 @@ DebuginatorItem* debuginator_create_folder_item(TheDebuginator* debuginator, Deb
 		folder_item->folder.is_collapsed = true;
 	}
 	debuginator__deallocate(debuginator, item_setting);
+	debuginator__deallocate(debuginator, full_path);
 
 	return folder_item;
 }
@@ -1788,6 +1790,8 @@ DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 			debuginator_assign_hot_key(debuginator, hot_key_key, full_path, DEBUGINATOR_NO_HOT_INDEX, NULL);
 		}
 	}
+
+	debuginator__deallocate(debuginator, full_path);
 
 	return item;
 }
