@@ -3482,7 +3482,6 @@ void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item, bo
 	if (item->leaf.num_values <= 0) {
 		// "Action" items doesn't have a list of values, they just get triggered
 		if (item->leaf.on_item_changed_callback != NULL) {
-			void* value = item->leaf.num_values == DEBUGINATOR_CUSTOM_VALUE_STATE_COUNT ? item->leaf.values : NULL;
 			item->leaf.on_item_changed_callback(item, item->leaf.values, NULL, debuginator->app_user_data);
 		}
 		return;
