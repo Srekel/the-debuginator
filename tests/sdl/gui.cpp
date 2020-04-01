@@ -156,6 +156,7 @@ void gui_draw_text(GuiHandle gui_handle, const char* text, Vector2 position, Fon
 	rectangle.x = (int)position.x;
 	rectangle.y = (int)position.y;
 	TTF_SizeText(font_template->font, text, &rectangle.w, &rectangle.h);
+	rectangle.y -= rectangle.h / 2;
 
 	SDL_SetRenderDrawColor(gui->renderer, 255, 255, 255, 255);
 	SDL_RenderCopy(gui->renderer, text_texture, NULL, &rectangle);
