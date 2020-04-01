@@ -700,6 +700,20 @@ typedef struct NumberRangeFloatState {
 #define DEBUGINATOR_SORTED_ITEM_COUNT 4
 #endif
 
+static float debuginator__ceil(float v) {
+	if ((int)v == v) {
+		return v;
+	}
+	return (float)((int)v) + 1;
+}
+
+static float debuginator__floor(float v) {
+	if ((int)v == v) {
+		return v;
+	}
+	return (float)((int)v);
+}
+
 typedef struct DebuginatorBlockAllocator DebuginatorBlockAllocator;
 
 typedef struct DebuginatorBlockAllocatorStaticData {
@@ -1032,26 +1046,27 @@ static void debuginator__quick_draw_colorpicker(TheDebuginator* debuginator, Deb
 	(void)debuginator, item, position;
 
 	float anim_t = (float)(DEBUGINATOR_sin(debuginator->draw_timer * 0.2) + 1) * 0.5f;
+	float margin = 3.0f;
+	float square_side_size = debuginator->item_height - margin * 2.0f;
 	DebuginatorVector2 square_pos = debuginator__vector2(debuginator->top_left.x + debuginator->size.x - debuginator->quick_draw_size, position->y);
 	square_pos.x = square_pos.x;
-	square_pos.y -= 2;
+	square_pos.y += margin;
 	DebuginatorVector2 square_size;
-	square_size.x = debuginator->item_height - 4;
-	square_size.y = (debuginator->item_height - 4) * anim_t;
+	square_size.x = square_side_size;
+	square_size.y = debuginator__floor(square_side_size * anim_t);
 
 	DebuginatorColor square_color = debuginator__color(255, 255, 255, 255);
 	debuginator->draw_rect(&square_pos, &square_size, &square_color, debuginator->app_user_data);
 
-	// square_pos.x -= 5;
 	square_pos.y += square_size.y;
-	square_size.y = (debuginator->item_height - 4) * (1 - anim_t);
+	square_size.y = debuginator__ceil(square_side_size * (1 - anim_t));
 	square_color = debuginator__color(0, 0, 0, 255);
 	debuginator->draw_rect(&square_pos, &square_size, &square_color, debuginator->app_user_data);
 
-	square_pos.x += 4;
-	square_pos.y = position->y - 2 + 4;
-	square_size.x -= 8;
-	square_size.y = debuginator->item_height - 4 - 8;
+	square_pos.x += margin;
+	square_pos.y = position->y + 2.0f * margin;
+	square_size.x -= margin * 2.0f;
+	square_size.y = square_side_size - margin * 2.0f;
 	square_color = *(DebuginatorColor*)item->leaf.values;
 	debuginator->draw_rect(&square_pos, &square_size, &square_color, debuginator->app_user_data);
 }
