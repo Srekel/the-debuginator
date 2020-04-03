@@ -388,7 +388,8 @@ typedef struct DebuginatorFolderData {
 	DebuginatorItem* first_child;
 	DebuginatorItem* hot_child;
 	int num_visible_children;
-	bool is_collapsed; // Note collapsed as opposed to expanded - because I want false/0 to be default
+	bool is_collapsed;           // Note collapsed as opposed to expanded - because I want false/0 to be default
+	bool is_sorted;              // Uses alphanumeric sorting
 } DebuginatorFolderData;
 
 typedef struct DebuginatorLeafData {
@@ -525,6 +526,9 @@ typedef struct TheDebuginatorConfig {
 	// Set to -1 to put The Debuginator on the right side of the screen.
 	// Remember to keep screen_resolution up to date.
 	int open_direction;
+
+	// If items should be sorted automatically or not
+	bool sort_items;
 
 	// Where the hot item should be, height-wise, on the screen.
 	float focus_height;
@@ -850,6 +854,8 @@ typedef struct TheDebuginator {
 	char open_direction; // char so I can be lazy and use copy_1_byte.
 	float focus_height;
 	float current_height_offset;
+
+	bool sort_items;
 
 	DebuginatorAnimation animations[8];
 	int animation_count;
@@ -1459,14 +1465,29 @@ static void debuginator__set_parent(DebuginatorItem* item, DebuginatorItem* pare
 	}
 	else {
 		DebuginatorItem* last_sibling = parent->folder.first_child;
-		while (last_sibling != NULL)
-		{
+		while (last_sibling != NULL) {
 			if (last_sibling == item) {
 				// Item was already in parent
 				return;
 			}
 
-			// TODO do alphanumerical comparison here for sorting
+			if (parent->folder.is_sorted) {
+				// TODO: Alphanumeric sorting
+				if (DEBUGINATOR_strcmp(last_sibling->title, item->title) > 0) {
+					// Add before the existing item
+					if (last_sibling->prev_sibling == NULL) {
+						parent->folder.first_child = item;
+					}
+					else {
+						last_sibling->prev_sibling->next_sibling = item;
+					}
+
+					item->next_sibling = last_sibling;
+					item->prev_sibling = last_sibling->prev_sibling;
+					last_sibling->prev_sibling = item;
+					return;
+				}
+			}
 
 			if (last_sibling->next_sibling == NULL) {
 				// Found the last child, set item as the new last one
@@ -1561,6 +1582,7 @@ DebuginatorItem* debuginator_new_folder_item(TheDebuginator* debuginator, Debugi
 	DebuginatorItem* folder_item = (DebuginatorItem*)debuginator__allocate(debuginator, sizeof(DebuginatorItem));
 	folder_item->is_folder = true;
 	folder_item->folder.num_visible_children = 0;
+	folder_item->folder.is_sorted = debuginator->sort_items;
 	debuginator__set_title(debuginator, folder_item, title, title_length);
 	debuginator__set_parent(folder_item, parent);
 	debuginator__set_total_height(folder_item, debuginator->item_height);
@@ -1579,6 +1601,7 @@ DebuginatorItem* debuginator_create_folder_item(TheDebuginator* debuginator, Deb
 	bool create_if_not_exist;
 	DebuginatorItem* folder_item = debuginator_get_item(debuginator, parent, path, &create_if_not_exist);
 	folder_item->is_folder = true;
+	folder_item->folder.is_sorted = debuginator->sort_items;
 	debuginator__set_total_height(folder_item, debuginator->item_height);
 
 	const char* full_path = debuginator__compute_path(debuginator, parent, path, 0);
@@ -2788,6 +2811,7 @@ void debuginator_get_default_config(TheDebuginatorConfig* config) {
 
 	config->create_default_debuginator_items = true;
 	config->open_direction = 1;
+	config->sort_items = true;
 	config->focus_height = 0.25f;
 	config->item_height = 30;
 	config->quick_draw_size = 200;
@@ -2938,6 +2962,7 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 	debuginator->item_height = config->item_height;
 	debuginator->quick_draw_size = config->quick_draw_size;
 	debuginator->draw_mode = DEBUGINATOR_DrawModeHierarchy;
+	debuginator->sort_items = config->sort_items;
 
 	debuginator->root_position.x = -debuginator->size.x;
 	debuginator->top_left = debuginator__vector2(debuginator->root_position.x + debuginator->size.x * debuginator->openness * debuginator->open_direction, 0);
@@ -2963,21 +2988,21 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 	if (config->create_default_debuginator_items) {
 		{
 			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/About",
-				"The Debuginator is an open source debug menu. New versions can be found here: https://github.com/Srekel/the-debuginator", NULL, NULL,
+				"The Debuginator is an open source debug menu made by Anders 'Srekel' Elfgren.\nLatest version can be found here: https://github.com/Srekel/the-debuginator", NULL, NULL,
 				NULL, NULL, 0, 0);
 
 			// Not sure if this should be here or in each app/plugin that uses The Debuginator.. but I'll put it here for now.
-			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/Keyboard default usage",
+			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/Keyboard default usage (1)",
 				"Open the menu with Right Arrow. \nClose it with Left Arrow. \nUse all arrow keys to navigate. \nRight Arrow is also used to change value on a menu item.", NULL, NULL,
 				NULL, NULL, 0, 0);
-			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/Keyboard default advanced usage",
+			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/Keyboard default usage (2)",
 				"Hold CTRL for faster navigation and item toggling. \nEscape to quickly close the menu.\nBackspace to toggle search.", NULL, NULL,
 				NULL, NULL, 0, 0);
 
-			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/Gamepad default usage",
+			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/Gamepad default usage (1)",
 				"Open the menu with Start/Options button. \nClose it with Left D-Pad. \nUse D-Pad to navigate. \nD-Pad Right is used to change value on a menu item.", NULL, NULL,
 				NULL, NULL, 0, 0);
-			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/Gamepad default advanced usage",
+			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/Gamepad default usage (2)",
 				"Use the corresponding AXBY buttons to do the same things as the D-Pad, but faster!", NULL, NULL,
 				NULL, NULL, 0, 0);
 		}
@@ -2993,6 +3018,15 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 			debuginator_create_array_item(debuginator, NULL, "Debuginator/Alignment",
 				"Right alignment is not fully tested and has some visual glitches.", debuginator_copy_1byte, &debuginator->open_direction,
 				string_titles, directions, 2, sizeof(directions[0]));
+		}
+		{
+			char* directions = (char*)debuginator__allocate(debuginator, 2); // char as in byte
+			directions[0] = 1;
+			directions[1] = -1;
+			const char** string_titles = (const char**)debuginator__allocate(debuginator, sizeof(char*) * 2);
+			string_titles[0] = "Left";
+			string_titles[1] = "Right";
+			debuginator_create_bool_item(debuginator, "Debuginator/Sort items", "Makes items be sorted alphabetically by default.", &debuginator->sort_items);
 		}
 		{
 			int* theme_indices = (int*)debuginator__allocate(debuginator, 4 * sizeof(int)); //
