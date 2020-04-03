@@ -3333,6 +3333,12 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 		}
 	}
 	else {
+		if (item->leaf.is_expanded && mouse_over && debuginator->hot_mouse_item_index == DEBUGINATOR_NO_HOT_INDEX) {
+			DebuginatorVector2 highlight_pos = debuginator__vector2(debuginator->top_left.x, offset.y);
+			DebuginatorVector2 highlight_size = debuginator__vector2(debuginator->size.x, (float)debuginator->item_height * (1 + item->leaf.description_line_count));
+			debuginator->draw_rect(&highlight_pos, &highlight_size, &debuginator->theme.colors[DEBUGINATOR_LineHighlightMouse], debuginator->app_user_data);
+		}
+
 		if (hot && (!item->leaf.is_expanded || item->leaf.num_values == 0)) {
 			DebuginatorVector2 highlight_pos = debuginator__vector2(debuginator->top_left.x, offset.y);
 			DebuginatorVector2 highlight_size = debuginator__vector2(debuginator->size.x, (float)debuginator->item_height);
@@ -3341,7 +3347,7 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 
 		bool is_overriden = item->leaf.active_index != item->leaf.default_index && !debuginator->edit_types[item->leaf.edit_type].forget_state;
 		unsigned default_color_index = is_overriden ? DEBUGINATOR_ItemTitleOverridden : DEBUGINATOR_ItemTitle;
-		unsigned color_index = hot && !item->leaf.is_expanded ? DEBUGINATOR_ItemTitleActive : (hot ? DEBUGINATOR_ItemTitleHot : default_color_index);
+		unsigned color_index = hot ? DEBUGINATOR_ItemTitleActive : default_color_index;
 		DebuginatorFont* font = &debuginator->theme.fonts[DEBUGINATOR_ItemTitle];
 		DebuginatorVector2 text_pos = debuginator__vector2(offset.x, offset.y + half_height);
 		debuginator->draw_text(item->title, &text_pos, &debuginator->theme.colors[color_index], font, debuginator->app_user_data);
@@ -3376,7 +3382,6 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 		}
 
 		if (item->leaf.is_expanded) {
-			float item_y = offset.y;
 			offset.x += DEBUGINATOR_INDENT;
 
 			const char* description = item->leaf.description;
@@ -3405,12 +3410,6 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 			debuginator__set_total_height(item, debuginator->item_height + description_height + debuginator->item_height * (item->leaf.num_values));
 
 			debuginator->edit_types[item->leaf.edit_type].expanded_draw(debuginator, item, &offset);
-
-			if (mouse_over && debuginator->hot_mouse_item_index == DEBUGINATOR_NO_HOT_INDEX) {
-				DebuginatorVector2 highlight_pos = debuginator__vector2(debuginator->top_left.x, item_y);
-				DebuginatorVector2 highlight_size = debuginator__vector2(debuginator->size.x, (float)debuginator->item_height * (1 + item->leaf.description_line_count));
-				debuginator->draw_rect(&highlight_pos, &highlight_size, &debuginator->theme.colors[DEBUGINATOR_LineHighlightMouse], debuginator->app_user_data);
-			}
 		}
 	}
 
