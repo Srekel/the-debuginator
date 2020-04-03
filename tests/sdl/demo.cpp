@@ -73,6 +73,10 @@ static DemoData s_demo_data;
 static void presentation_setup(DemoData* data) {
 	{
 		DemoSlide& slide = data->slides[data->num_slides++];
+		slide.texts[slide.num_texts++] = "Click to start slideshow!";
+	}
+	{
+		DemoSlide& slide = data->slides[data->num_slides++];
 		slide.texts[slide.num_texts++] = "What is it?";
 		slide.texts[slide.num_texts++] = "- Open source C library";
 		slide.texts[slide.num_texts++] = "- Debug menu for games";
@@ -169,6 +173,7 @@ DemoData* demo_init(GuiHandle gui, TheDebuginator* debuginator) {
 	s_demo_data.font_handle = gui_register_font_template(gui, "LiberationMono-Regular.ttf", 24);
 	debug_menu_setup(debuginator, &s_demo_data);
 	presentation_setup(&s_demo_data);
+	demo_trigger_next(&s_demo_data);
 
 	return &s_demo_data;
 }
@@ -203,7 +208,7 @@ void demo_update(DemoData* data, float dt, Vector2 offset) {
 	unsigned char progress_bar_brightness = slide.num_texts_visible == slide.num_texts ? 250 : 150;
 	Color progress_bar_background_color(100, 0, 100, 200);
 	Color progress_bar_color(progress_bar_brightness, 0, progress_bar_brightness, progress_bar_brightness);
-	Vector2 progress_bar_pos(offset.x + 50, offset.y + 30);
+	Vector2 progress_bar_pos(offset.x + 50, offset.y + 20);
 	Vector2 progress_bar_background_size(350, 5);
 	Vector2 progress_bar_size(350.f * slide.num_texts_visible / slide.num_texts, 5);
 	gui_draw_rect_filled(data->gui, progress_bar_pos, progress_bar_background_size, progress_bar_background_color);
