@@ -83,6 +83,11 @@ static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
 		debuginator_create_colorpicker_item(debuginator, "SDL Demo/Colorpicker Test",
 			"Example of the colorpicker edit type.", on_colorpicker, data, &start);
 	}
+	{
+		DebuginatorColor start = { 200, 0, 200, 200 };
+		debuginator_create_colorpicker_item(debuginator, "SDL Demo/Colorpicker Test",
+			"Example of the colorpicker edit type.", on_colorpicker, data, &start);
+	}
 
 	debuginator_create_bool_item(debuginator, "SDL Demo/Draw boxes", "Whether to draw the animated boxes or not.", &data->draw_boxes);
 
@@ -105,28 +110,40 @@ static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
 	// debuginator_create_bool_item(debuginator, "SimpleBool 1", "Change a bool.", &data->mybool);
 	// debuginator_create_bool_item(debuginator, "Folder/SimpleBool 2", "Change a bool.", &data->mybool);
 	// debuginator_create_bool_item(debuginator, "Folder/SimpleBool 3", "Change a bool.", &data->mybool);
-	debuginator_create_bool_item(debuginator, "Folder/Subfolder with a long name ololololol/SimpleBool 4 with a really long long title", "Change a bool.", &data->mybool);
+	// debuginator_create_bool_item(debuginator, "Folder/Subfolder with a long name ololololol/SimpleBool 4 with a really long long title", "Change a bool.", &data->mybool);
 	// debuginator_create_bool_item(debuginator, "SDL Demo/Load test", "Change a bool.", &data->load_test);
-
 
 	debuginator_create_folder_item(debuginator, NULL, "Folder 2");
 	char folder[64] = { 0 };
 	for (int i = 0; i < 5; i++) {
 		for (int j = 0; j < 5; j++) {
-			sprintf_s(folder, 64, "Game/Test%02d/GameBool%02d", i, j);
-			debuginator_create_bool_item(debuginator, folder, "Change a bool.", &data->gamebool);
+			for (int l = 0; l < 5; l++) {
+				sprintf_s(folder, 64, "Test/Hierarchy/Test%02d/Folder%02d/GameBool%02d", i, j, l);
+				debuginator_create_bool_item(debuginator, folder, "Change a bool.", &data->gamebool);
+			}
 		}
 	}
 
-	for (int i = 0; i < 1; i++) {
-		for (int j = 0; j < 1; j++) {
-			sprintf_s(folder, 64, "Game/Test%02d/GameBool%02d", i, j);
-			DebuginatorItem* item = debuginator_get_item(debuginator, NULL, folder, false);
-			debuginator_remove_item(debuginator, item);
-		}
-	}
+	// for (int i = 0; i < 1; i++) {
+	// 	for (int j = 0; j < 1; j++) {
+	// 		sprintf_s(folder, 64, "Game/Test%02d/GameBool%02d", i, j);
+	// 		DebuginatorItem* item = debuginator_get_item(debuginator, NULL, folder, false);
+	// 		debuginator_remove_item(debuginator, item);
+	// 	}
+	// }
 
-	//debuginator_create_bool_item(debuginator, "Game/Test10/GameBool00", "Change a bool.", &data->gamebool);
+	debuginator_create_bool_item(debuginator, "Test/Hierarchy/First", "Change a bool.", &data->gamebool);
+	debuginator_create_bool_item(debuginator, "Test/Hierarchy/Second", "Change a bool.", &data->gamebool);
+	debuginator_create_bool_item(debuginator, "Test/Hierarchy/Folder/Third", "Change a bool.", &data->gamebool);
+	debuginator_create_bool_item(debuginator, "Test/Hierarchy/Fourth", "Change a bool.", &data->gamebool);
+	debuginator_create_bool_item(debuginator, "Test/Hierarchy/Fifth", "Change a bool.", &data->gamebool);
+	debuginator_create_bool_item(debuginator, "Test/Leaf/First/Enable", "Change a bool.", &data->gamebool);
+	debuginator_create_bool_item(debuginator, "Test/Leaf/Second/Enable", "Change a bool.", &data->gamebool);
+	debuginator_create_bool_item(debuginator, "Test/Leaf/Folder/Third/Enable", "Change a bool.", &data->gamebool);
+	debuginator_create_bool_item(debuginator, "Test/Leaf/Folder/Fourth/Enable", "Change a bool.", &data->gamebool);
+	debuginator_create_bool_item(debuginator, "Test/Leaf/Fifth/Enable", "Change a bool.", &data->gamebool);
+
+	debuginator_set_collapsed(debuginator, debuginator_get_item(debuginator, NULL, "Test", NULL), true);
 }
 
 static GameData s_game_data;
