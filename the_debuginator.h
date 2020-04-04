@@ -1092,9 +1092,9 @@ static void debuginator__expanded_draw_colorpicker(TheDebuginator* debuginator, 
 static void debuginator__quick_draw_numberrange(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
 	(void)debuginator, item, position;
 
-	float* state = (float*)item->leaf.values;
+	// float* state = (float*)item->leaf.values;
 
-	float default_value = state[2];
+	// float default_value = state[2];
 	float current_value = *(float*)item->user_data;
 	char value_str[64];
 	DEBUGINATOR_sprintf_s(value_str, sizeof(value_str), "%.4f", current_value);
@@ -1111,7 +1111,7 @@ static void debuginator__expanded_draw_numberrange(TheDebuginator* debuginator, 
 }
 
 static void debuginator__modify_value_numberrange(TheDebuginator* debuginator, DebuginatorItem* item, float x_axis, float y_axis, bool snap) {
-	(void)debuginator, item, snap;
+	(void)debuginator, item, snap, x_axis;
 	float* state = (float*)item->leaf.values;
 	float min_value = state[0];
 	float max_value = state[1];
@@ -1679,11 +1679,13 @@ DebuginatorItem* debuginator_get_root_item(TheDebuginator* debuginator) {
 }
 
 DebuginatorItem* debuginator_get_first_child(TheDebuginator* debuginator, DebuginatorItem* item) {
+	DEBUGINATOR_UNUSED(debuginator);
 	DEBUGINATOR_assert(item->is_folder);
 	return item->folder.first_child;
 }
 
 DebuginatorItem* debuginator_get_next_sibling(TheDebuginator* debuginator, DebuginatorItem* item) {
+	DEBUGINATOR_UNUSED(debuginator);
 	return item->next_sibling;
 }
 
@@ -3154,6 +3156,7 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 }
 
 void debuginator__draw_hierarchy(TheDebuginator* debuginator, float dt, DebuginatorVector2 offset){
+	DEBUGINATOR_UNUSED(dt);
 	offset.y = debuginator->current_height_offset;
 
 	// Draw all items within the debuginator's draw area
@@ -3475,6 +3478,7 @@ void debuginator_set_open(TheDebuginator* debuginator, bool is_open) {
 void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item, bool animate) {
 	item->leaf.draw_t = 0;
 	if (item->leaf.num_values <= 0) {
+		// "Action" items doesn't have a list of values, they just get triggered
 		if (item->leaf.on_item_changed_callback != NULL) {
 			void* value = item->leaf.num_values == DEBUGINATOR_CUSTOM_VALUE_STATE_COUNT ? item->leaf.values : NULL;
 			item->leaf.on_item_changed_callback(item, item->leaf.values, NULL, debuginator->app_user_data);
