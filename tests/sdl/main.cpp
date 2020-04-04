@@ -202,22 +202,24 @@ bool handle_debuginator_keyboard_input_event(SDL_Event* event, TheDebuginator* d
 	switch (event->type) {
 		case SDL_KEYDOWN:
 		{
-			debuginator_reset_scrolling(debuginator);
 			if (event->key.keysym.scancode == SDL_SCANCODE_LCTRL || event->key.keysym.scancode == SDL_SCANCODE_RCTRL) {
 				return true;
 			}
 
 			if (event->key.keysym.sym == SDLK_UP) {
+				debuginator_reset_scrolling(debuginator);
 				bool long_move = (event->key.keysym.mod & SDLK_LCTRL) > 0;
 				debuginator_move_to_prev_leaf(debuginator, long_move);
 				return true;
 			}
 			else if (event->key.keysym.sym == SDLK_DOWN) {
+				debuginator_reset_scrolling(debuginator);
 				bool long_move = (event->key.keysym.mod & SDLK_LCTRL) > 0;
 				debuginator_move_to_next_leaf(debuginator, long_move);
 				return true;
 			}
 			else if (event->key.keysym.sym == SDLK_LEFT || event->key.keysym.sym == SDLK_ESCAPE) {
+				debuginator_reset_scrolling(debuginator);
 				if (debuginator->is_open && (debuginator_is_folder(hot_item) || !hot_item->leaf.is_expanded)) {
 					debuginator_set_open(debuginator, false);
 					save(debuginator);
@@ -229,6 +231,7 @@ bool handle_debuginator_keyboard_input_event(SDL_Event* event, TheDebuginator* d
 				}
 			}
 			else if (event->key.keysym.sym == SDLK_RIGHT) {
+				debuginator_reset_scrolling(debuginator);
 				if (debuginator_is_folder(hot_item)) {
 					debuginator_set_collapsed(debuginator, hot_item, !debuginator_is_collapsed(hot_item));
 					return true;
