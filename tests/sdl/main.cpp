@@ -179,11 +179,10 @@ bool handle_debuginator_keyboard_input_event(SDL_Event* event, TheDebuginator* d
 	}
 
 	if (!debuginator_is_open(debuginator)) {
-
 		if (event->type == SDL_TEXTINPUT) {
 			int text_length = (int)strlen(event->text.text);
 			if (text_length > 0) {
-				char key[] = { event->text.text[0], 0 }; // Small hack
+				char key[] = { event->text.text[0], 0 };
 				debuginator_activate_hot_key(debuginator, key);
 			}
 
@@ -204,6 +203,9 @@ bool handle_debuginator_keyboard_input_event(SDL_Event* event, TheDebuginator* d
 		case SDL_KEYDOWN:
 		{
 			debuginator_reset_scrolling(debuginator);
+			if (event->key.keysym.scancode == SDL_SCANCODE_LCTRL || event->key.keysym.scancode == SDL_SCANCODE_RCTRL) {
+				return true;
+			}
 
 			if (event->key.keysym.sym == SDLK_UP) {
 				bool long_move = (event->key.keysym.mod & SDLK_LCTRL) > 0;
@@ -252,6 +254,36 @@ bool handle_debuginator_keyboard_input_event(SDL_Event* event, TheDebuginator* d
 					debuginator_set_filtering_enabled(debuginator, true);
 				}
 			}
+			else if (event->key.keysym.sym >= 'a' && event->key.keysym.sym <= 'z') {
+				int hot_mouse_item_index;
+				DebuginatorItem* hot_mouse_item = debuginator_get_item_at_mouse_cursor(debuginator, &hot_mouse_item_index);
+				if (hot_mouse_item != NULL) {
+					hot_item = hot_mouse_item;
+					hot_item_index = hot_mouse_item_index;
+				}
+
+				int buffer_size = 256;
+				char path[256];
+				debuginator_get_path(debuginator, hot_item, path, &buffer_size);
+				ASSERT(buffer_size == 256);
+				char key[] = { (char)event->key.keysym.sym, 0 };
+
+      			DebuginatorItem* prev_hot_key_item = debuginator_get_first_assigned_hot_key_item(debuginator, key);
+      			if ( prev_hot_key_item == hot_item ) {
+      				// Key was already assigned to this item, toggle it off
+      				debuginator_unassign_hot_key(debuginator, key);
+					break;
+      			}
+
+				bool multi_add_key_held = SDL_GetModState() & (KMOD_LCTRL | KMOD_RCTRL);
+				if (prev_hot_key_item && !multi_add_key_held) {
+					// Item was already assigned to something and user just wants the new one assigned,
+					// so unassign the old one first.
+			        debuginator_unassign_hot_key(debuginator, key);
+				}
+
+				debuginator_assign_hot_key(debuginator, key, path, hot_item_index, NULL);
+			}
 			break;
 		}
 		case SDL_TEXTINPUT:
@@ -268,22 +300,6 @@ bool handle_debuginator_keyboard_input_event(SDL_Event* event, TheDebuginator* d
 				debuginator->filter_length = (int)strlen(filter);
 				debuginator_update_filter(debuginator, filter);
 			}
-			else if (new_text_length > 0) {
-				int hot_mouse_item_index;
-				DebuginatorItem* hot_mouse_item = debuginator_get_item_at_mouse_cursor(debuginator, &hot_mouse_item_index);
-				if (hot_mouse_item != NULL) {
-					hot_item = hot_mouse_item;
-					hot_item_index = hot_mouse_item_index;
-				}
-
-				int buffer_size = 256;
-				char path[256];
-				debuginator_get_path(debuginator, hot_item, path, &buffer_size);
-				ASSERT(buffer_size == 256);
-				char key[] = { event->text.text[0], 0 }; // Small hack
-				debuginator_assign_hot_key(debuginator, key, path, hot_item_index, NULL);
-			}
-
 			break;
 		}
 		case SDL_MOUSEMOTION: {

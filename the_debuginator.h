@@ -359,7 +359,8 @@ bool debuginator_is_mouse_over(TheDebuginator* debuginator, bool* out_over_quick
 // Hot key API
 // Activate returns true if there was an item bound to that key
 void debuginator_assign_hot_key(TheDebuginator* debuginator, const char* key, const char* path, int value_index, const char* optional_value_title);
-DebuginatorItem* debuginator_unassign_hot_key(TheDebuginator* debuginator, const char* key);
+void debuginator_unassign_hot_key(TheDebuginator* debuginator, const char* key);
+DebuginatorItem* debuginator_get_first_assigned_hot_key_item(TheDebuginator* debuginator, const char* key);
 bool debuginator_activate_hot_key(TheDebuginator* debuginator, const char* key);
 void debuginator_clear_hot_keys(TheDebuginator* debuginator);
 
@@ -2589,14 +2590,7 @@ void debuginator_assign_hot_key(TheDebuginator* debuginator, const char* _key, c
 	const char* key = _key;
 #endif
 
-	DebuginatorItem* unassigned_item = debuginator_unassign_hot_key(debuginator, key);
-
-	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, false);
-	if (item == unassigned_item) {
-		// User toggled it off, we're done.
-		return;
-	}
-
+	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, NULL);
 	if (optional_value_title != NULL) {
 		if (!item->is_folder) {
 			for (int vt_i = 0; vt_i < item->leaf.num_values; ++vt_i) {
@@ -2607,25 +2601,7 @@ void debuginator_assign_hot_key(TheDebuginator* debuginator, const char* _key, c
 			}
 		}
 	}
-	/*
-	for (int i = 0; i < debuginator->num_hot_keys; ++i) {
-		if (DEBUGINATOR_strcmp(key, debuginator->hot_keys[i].key) == 0) {
-			debuginator->hot_keys[i].path = path;
-			debuginator->hot_keys[i].value_index = value_index;
 
-			DebuginatorItem* old_item = debuginator_get_item(debuginator, NULL, debuginator->hot_keys[i].path, false);
-			if (old_item != NULL) {
-				old_item->leaf.hot_key_index = DEBUGINATOR_NO_HOT_INDEX;
-			}
-
-			if (item != NULL) {
-				item->leaf.hot_key_index = i;
-			}
-
-			return;
-		}
-	}
-*/
 	if (debuginator->num_hot_keys == DEBUGINATOR_MAX_NUM_HOT_KEYS) {
 		return;
 	}
@@ -2643,7 +2619,7 @@ void debuginator_assign_hot_key(TheDebuginator* debuginator, const char* _key, c
 	}
 }
 
-DebuginatorItem* debuginator_unassign_hot_key(TheDebuginator* debuginator, const char* _key) {
+void debuginator_unassign_hot_key(TheDebuginator* debuginator, const char* _key) {
 #if DEBUGINATOR_DO_HOT_KEY_UPPERCASING
 	char key[128] = { 0 };
 	DEBUGINATOR_strcpy_s(key, 128, _key);
@@ -2670,6 +2646,25 @@ DebuginatorItem* debuginator_unassign_hot_key(TheDebuginator* debuginator, const
 				swap_item->leaf.hot_key_index = i;
 			}
 			debuginator->hot_keys[i] = debuginator->hot_keys[last_index];
+			--i;
+		}
+	}
+}
+
+DebuginatorItem* debuginator_get_first_assigned_hot_key_item(TheDebuginator* debuginator, const char* _key) {
+#if DEBUGINATOR_DO_HOT_KEY_UPPERCASING
+	char key[128] = { 0 };
+	DEBUGINATOR_strcpy_s(key, 128, _key);
+	for (size_t i = 0; i < DEBUGINATOR_strlen(key); i++) {
+		key[i] = (char)DEBUGINATOR_toupper(key[i]);
+	}
+#else
+	const char* key = _key;
+#endif
+
+	for (int i = 0; i < debuginator->num_hot_keys; ++i) {
+		if (DEBUGINATOR_strcmp(key, debuginator->hot_keys[i].key) == 0) {
+			DebuginatorItem* item = debuginator_get_item(debuginator, NULL, debuginator->hot_keys[i].path, NULL);
 			return item;
 		}
 	}
@@ -2688,15 +2683,16 @@ bool debuginator_activate_hot_key(TheDebuginator* debuginator, const char* _key)
 	const char* key = _key;
 #endif
 
+	bool success = false;
 	for (int i = 0; i < debuginator->num_hot_keys; ++i) {
 		if (DEBUGINATOR_strcmp(key, debuginator->hot_keys[i].key) == 0) {
 			DebuginatorItem* item = debuginator_get_item(debuginator, NULL, debuginator->hot_keys[i].path, NULL);
 			if (item == NULL) {
-				return false;
+				continue;
 			}
 
 			if (item->is_folder || item->leaf.num_values < debuginator->hot_keys[i].value_index) {
-				return false;
+				continue;
 			}
 
 			if (debuginator->hot_keys[i].value_index == DEBUGINATOR_NO_HOT_INDEX) {
@@ -2710,11 +2706,11 @@ bool debuginator_activate_hot_key(TheDebuginator* debuginator, const char* _key)
 				debuginator_activate(debuginator, item, true);
 			}
 
-			return true;
+			success = true;
 		}
 	}
 
-	return false;
+	return success;
 }
 
 void debuginator_clear_hot_keys(TheDebuginator* debuginator) {
@@ -3045,6 +3041,11 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 				"Change color theme of The Debuginator. \nNote that only Classic is currently polished.", debuginator__on_change_theme, debuginator,
 				string_titles, (void*)theme_indices, 4, sizeof(theme_indices[0]));
 		}
+
+		// {
+		// 	debuginator_create_bool_item(debuginator, "Debuginator/Settings/Enable notifications",
+		// 		"Get popups... or not!", &debuginator->notifications_enabled);
+		// }
 	}
 }
 
@@ -3453,7 +3454,8 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 	return offset.y;
 }
 
-void debuginator__draw_sorted_filter(TheDebuginator* debuginator, float dt, DebuginatorVector2 offset){
+void debuginator__draw_sorted_filter(TheDebuginator* debuginator, float dt, DebuginatorVector2 offset) {
+	DEBUGINATOR_UNUSED(dt);
 	DebuginatorSortedItem* sorted_item = debuginator->best_sorted_item;
 	while (sorted_item && sorted_item->score > 0) {
 		DebuginatorItem* item = sorted_item->item;
