@@ -390,7 +390,7 @@ typedef struct DebuginatorFolderData {
 	DebuginatorItem* hot_child;
 	int num_visible_children;
 	bool is_collapsed;           // Note collapsed as opposed to expanded - because I want false/0 to be default
-	bool is_sorted;              // Uses alphanumeric sorting
+	bool is_sorted;              // Uses alphabetic sorting
 } DebuginatorFolderData;
 
 typedef struct DebuginatorLeafData {
@@ -1474,7 +1474,9 @@ static void debuginator__set_parent(DebuginatorItem* item, DebuginatorItem* pare
 
 			if (parent->folder.is_sorted) {
 				// TODO: Alphanumeric sorting
-				if (DEBUGINATOR_strcmp(last_sibling->title, item->title) > 0) {
+				bool item_before_folder = !item->is_folder && last_sibling->is_folder;
+				bool same_type = item->is_folder == last_sibling->is_folder;
+				if (item_before_folder || (same_type && DEBUGINATOR_strcmp(last_sibling->title, item->title) > 0)) {
 					// Add before the existing item
 					if (last_sibling->prev_sibling == NULL) {
 						parent->folder.first_child = item;
