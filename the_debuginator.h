@@ -2034,6 +2034,11 @@ void debuginator_remove_item(TheDebuginator* debuginator, DebuginatorItem* item)
 	if (debuginator->hot_item == item) {
 		debuginator->hot_item = debuginator__nearest_visible_item(item);
 	}
+	
+	// Only update the height of the parent if we were visible
+	if (item->parent->is_folder && !item->parent->folder.is_collapsed) {
+		debuginator__set_total_height(item->parent, item->parent->total_height - item->total_height);
+	}
 
 	debuginator__set_total_height(item->parent, item->parent->total_height - item->total_height);
 
