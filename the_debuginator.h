@@ -1007,11 +1007,12 @@ static void debuginator__expanded_draw_boolean(TheDebuginator* debuginator, Debu
 		if (mouse_over || debuginator->hot_item == item && item->leaf.hot_index == i) {
 			DebuginatorVector2 pos = debuginator__vector2(debuginator->top_left.x, position->y);
 			DebuginatorVector2 size = debuginator__vector2(debuginator->size.x, (float)debuginator->item_height);
-			debuginator->draw_rect(&pos, &size, &debuginator->theme.colors[mouse_over ? DEBUGINATOR_LineHighlightMouse : DEBUGINATOR_LineHighlight], debuginator->app_user_data);
+			unsigned color_index = mouse_over ? DEBUGINATOR_LineHighlightMouse : DEBUGINATOR_LineHighlight;
+			debuginator->draw_rect(&pos, &size, &debuginator->theme.colors[color_index], debuginator->app_user_data);
 		}
 
 		const char* value_title = item->leaf.value_titles[i];
-		bool value_hot = i == item->leaf.hot_index;
+		bool value_hot = i == item->leaf.hot_index || mouse_over;
 		bool value_overridden = i == item->leaf.active_index;
 		unsigned value_color_index = value_hot ? DEBUGINATOR_ItemValueHot : (value_overridden ? DEBUGINATOR_ItemTitleOverridden : DEBUGINATOR_ItemValueDefault);
 		DebuginatorVector2 text_pos = debuginator__vector2(position->x, position->y + debuginator->item_height / 2.0f);
