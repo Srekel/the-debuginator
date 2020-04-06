@@ -92,6 +92,7 @@ static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
 	debuginator_create_bool_item(debuginator, "SDL Demo/Draw boxes", "Whether to draw the animated boxes or not.", &data->draw_boxes);
 
 	{
+		sprintf_s(data->box_string, "Box count: %d", data->boxes_n);
 		static const char* string_titles[3] = { "Clear all boxes", "Add box", data->box_string };
 		debuginator_create_array_item(debuginator, NULL, "SDL Demo/Boxes",
 			"Box things", on_boxes_activated, data,
@@ -104,7 +105,7 @@ static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
 	debuginator_create_bool_item(debuginator, "Test/LOL2/YY", "Change a bool.", &data->mybool);
 	debuginator_create_bool_item(debuginator, "Test/LOL2/YYYY", "Change a bool.", &data->mybool);
 	debuginator_create_bool_item(debuginator, "Test/LOL2/GameBooool0", "Change a bool.", &data->mybool);
-	debuginator_create_bool_item(debuginator, "YYY", NULL, &data->mybool);
+	debuginator_create_bool_item(debuginator, "Test/YYY", NULL, &data->mybool);
 
 
 	// debuginator_create_bool_item(debuginator, "SimpleBool 1", "Change a bool.", &data->mybool);
@@ -132,11 +133,18 @@ static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
 	// 	}
 	// }
 
-	debuginator_create_bool_item(debuginator, "Test/Hierarchy/First", "Change a bool.", &data->gamebool);
-	debuginator_create_bool_item(debuginator, "Test/Hierarchy/Second", "Change a bool.", &data->gamebool);
-	debuginator_create_bool_item(debuginator, "Test/Hierarchy/Folder/Third", "Change a bool.", &data->gamebool);
-	debuginator_create_bool_item(debuginator, "Test/Hierarchy/Fourth", "Change a bool.", &data->gamebool);
-	debuginator_create_bool_item(debuginator, "Test/Hierarchy/Fifth", "Change a bool.", &data->gamebool);
+	DebuginatorItem* thu_item = debuginator_create_folder_item(debuginator, NULL, "Test/HierarchyUnsorted");
+	thu_item->folder.is_sorted = false;
+	debuginator_create_bool_item(debuginator, "Test/HierarchyUnsorted/First", "Change a bool.", &data->gamebool);
+	debuginator_create_bool_item(debuginator, "Test/HierarchyUnsorted/Second", "Change a bool.", &data->gamebool);
+	debuginator_create_bool_item(debuginator, "Test/HierarchyUnsorted/Folder/Third", "Change a bool.", &data->gamebool);
+	debuginator_create_bool_item(debuginator, "Test/HierarchyUnsorted/Fourth", "Change a bool.", &data->gamebool);
+	debuginator_create_bool_item(debuginator, "Test/HierarchyUnsorted/Fifth", "Change a bool.", &data->gamebool);
+	debuginator_create_bool_item(debuginator, "Test/Hierarchy/1 First", "Change a bool.", &data->gamebool);
+	debuginator_create_bool_item(debuginator, "Test/Hierarchy/2 Second", "Change a bool.", &data->gamebool);
+	debuginator_create_bool_item(debuginator, "Test/Hierarchy/3 Folder/Third", "Actually fifth.", &data->gamebool);
+	debuginator_create_bool_item(debuginator, "Test/Hierarchy/4 Fourth", "Change a bool.", &data->gamebool);
+	debuginator_create_bool_item(debuginator, "Test/Hierarchy/5 Fifth", "Change a bool.", &data->gamebool);
 	debuginator_create_bool_item(debuginator, "Test/Leaf/First/Enable", "Change a bool.", &data->gamebool);
 	debuginator_create_bool_item(debuginator, "Test/Leaf/Second/Enable", "Change a bool.", &data->gamebool);
 	debuginator_create_bool_item(debuginator, "Test/Leaf/Folder/Third/Enable", "Change a bool.", &data->gamebool);
