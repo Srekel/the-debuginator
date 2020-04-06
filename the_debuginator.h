@@ -1598,6 +1598,7 @@ DebuginatorItem* debuginator_new_folder_item(TheDebuginator* debuginator, Debugi
 		folder_item->folder.is_collapsed = true;
 	}
 	debuginator__deallocate(debuginator, item_setting);
+	debuginator__deallocate(debuginator, full_path);
 
 	return folder_item;
 }
@@ -1615,6 +1616,7 @@ DebuginatorItem* debuginator_create_folder_item(TheDebuginator* debuginator, Deb
 		folder_item->folder.is_collapsed = true;
 	}
 	debuginator__deallocate(debuginator, item_setting);
+	debuginator__deallocate(debuginator, full_path);
 
 	return folder_item;
 }
@@ -1792,6 +1794,8 @@ DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 			debuginator_assign_hot_key(debuginator, hot_key_key, full_path, DEBUGINATOR_NO_HOT_INDEX, NULL);
 		}
 	}
+
+	debuginator__deallocate(debuginator, full_path);
 
 	return item;
 }
@@ -2033,6 +2037,11 @@ void debuginator_remove_item(TheDebuginator* debuginator, DebuginatorItem* item)
 
 	if (debuginator->hot_item == item) {
 		debuginator->hot_item = debuginator__nearest_visible_item(item);
+	}
+	
+	// Only update the height of the parent if we were visible
+	if (item->parent->is_folder && !item->parent->folder.is_collapsed) {
+		debuginator__set_total_height(item->parent, item->parent->total_height - item->total_height);
 	}
 
 	debuginator__set_total_height(item->parent, item->parent->total_height - item->total_height);
@@ -2398,7 +2407,11 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 					next = next->next;
 				}
 
-				if (sorted_item->next == NULL && debuginator->best_sorted_item != NULL) {
+
+				if (sorted_item->prev == NULL) {
+					// We're the first item
+					debuginator->best_sorted_item = sorted_item;
+				} else if (sorted_item->next == NULL && debuginator->best_sorted_item != NULL) {
 					// We're the last item (worst scoring of the ones found so far)
 					next = debuginator->best_sorted_item;
 					while (next->next) {
@@ -2406,11 +2419,6 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 					}
 					next->next = sorted_item;
 					sorted_item->prev = next;
-				}
-
-				if (sorted_item->prev == NULL) {
-					// We're the first item
-					debuginator->best_sorted_item = sorted_item;
 				}
 			}
 		}
@@ -3487,7 +3495,6 @@ void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item, bo
 	if (item->leaf.num_values <= 0) {
 		// "Action" items doesn't have a list of values, they just get triggered
 		if (item->leaf.on_item_changed_callback != NULL) {
-			void* value = item->leaf.num_values == DEBUGINATOR_CUSTOM_VALUE_STATE_COUNT ? item->leaf.values : NULL;
 			item->leaf.on_item_changed_callback(item, item->leaf.values, NULL, debuginator->app_user_data);
 		}
 		return;
