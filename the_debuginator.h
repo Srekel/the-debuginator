@@ -2403,7 +2403,11 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 					next = next->next;
 				}
 
-				if (sorted_item->next == NULL && debuginator->best_sorted_item != NULL) {
+
+				if (sorted_item->prev == NULL) {
+					// We're the first item
+					debuginator->best_sorted_item = sorted_item;
+				} else if (sorted_item->next == NULL && debuginator->best_sorted_item != NULL) {
 					// We're the last item (worst scoring of the ones found so far)
 					next = debuginator->best_sorted_item;
 					while (next->next) {
@@ -2411,11 +2415,6 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 					}
 					next->next = sorted_item;
 					sorted_item->prev = next;
-				}
-
-				if (sorted_item->prev == NULL) {
-					// We're the first item
-					debuginator->best_sorted_item = sorted_item;
 				}
 			}
 		}
