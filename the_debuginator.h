@@ -364,7 +364,8 @@ DebuginatorItem* debuginator_get_first_assigned_hot_key_item(TheDebuginator* deb
 bool debuginator_activate_hot_key(TheDebuginator* debuginator, const char* key);
 void debuginator_clear_hot_keys(TheDebuginator* debuginator);
 
-// Sets the height of all items. Default 30.
+// Sets the height of all items. Default 32.
+// Recommended to use a power of 2
 void debuginator_set_item_height(TheDebuginator* debuginator, int item_height);
 
 // Sets width and height of The Debuginator
@@ -657,11 +658,11 @@ typedef struct NumberRangeFloatState {
 #endif
 
 #ifndef DEBUGINATOR_LEFT_MARGIN
-#define DEBUGINATOR_LEFT_MARGIN 10
+#define DEBUGINATOR_LEFT_MARGIN 24
 #endif
 
 #ifndef DEBUGINATOR_INDENT
-#define DEBUGINATOR_INDENT 20
+#define DEBUGINATOR_INDENT 16
 #endif
 
 #ifndef DEBUGINATOR_FILTER_HEIGHT
@@ -2813,7 +2814,7 @@ void debuginator_get_default_config(TheDebuginatorConfig* config) {
 	config->open_direction = 1;
 	config->sort_items = true;
 	config->focus_height = 0.25f;
-	config->item_height = 30;
+	config->item_height = 32;
 	config->quick_draw_size = 200;
 
 	// Initialize default themes
@@ -3332,6 +3333,7 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 	// Set hot mouse item here. Yes, in draw.. it's easiest!
 	debuginator->hot_mouse_item = mouse_over ? item : debuginator->hot_mouse_item;
 	float half_height = debuginator->item_height / 2.0f;
+	float quarter_height = debuginator->item_height / 4.0f;
 
 	if (item->is_folder) {
 		mouse_over =
@@ -3349,10 +3351,10 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 		DebuginatorVector2 text_pos = debuginator__vector2(offset.x, offset.y + half_height);
 		debuginator->draw_text(item->title, &text_pos, &debuginator->theme.colors[color_index], &debuginator->theme.fonts[DEBUGINATOR_ItemTitle], debuginator->app_user_data);
 		if (item->folder.is_collapsed) {
-			DebuginatorVector2 collapsed_box_pos1 = debuginator__vector2(offset.x - debuginator->item_height / 2.0f , offset.y + debuginator->item_height / 4.0f);
-			DebuginatorVector2 collapsed_box_size1 = debuginator__vector2(debuginator->item_height / 2.0f, debuginator->item_height / 4.0f);
-			DebuginatorVector2 collapsed_box_pos2 = debuginator__vector2(offset.x - debuginator->item_height / 4.0f, offset.y + debuginator->item_height / 8.0f);
-			DebuginatorVector2 collapsed_box_size2 = debuginator__vector2(debuginator->item_height / 4.0f, debuginator->item_height / 8.0f);
+			DebuginatorVector2 collapsed_box_pos1 = debuginator__vector2(offset.x - half_height - quarter_height / 2.0, offset.y + half_height - quarter_height / 2.0);
+			DebuginatorVector2 collapsed_box_size1 = debuginator__vector2(half_height, quarter_height);
+			DebuginatorVector2 collapsed_box_size2 = debuginator__vector2(quarter_height, quarter_height / 2.0);
+			DebuginatorVector2 collapsed_box_pos2 = debuginator__vector2(collapsed_box_pos1.x + quarter_height / 4.0, collapsed_box_pos1.y - collapsed_box_size2.y + quarter_height / 8);
 			debuginator->draw_rect(&collapsed_box_pos1, &collapsed_box_size1, &debuginator->theme.colors[color_index], debuginator->app_user_data);
 			debuginator->draw_rect(&collapsed_box_pos2, &collapsed_box_size2, &debuginator->theme.colors[color_index], debuginator->app_user_data);
 		}
