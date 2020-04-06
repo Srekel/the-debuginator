@@ -3570,6 +3570,27 @@ void debuginator_set_collapsed(TheDebuginator* debuginator, DebuginatorItem* ite
 	}
 }
 
+void debuginator__collapse_recursive(TheDebuginator* debuginator, DebuginatorItem *item, int collapse_depth, int depth) {
+	if (!item->is_folder)
+		return;
+
+	DebuginatorItem* child = debuginator__first_visible_child(item);
+	while (child != NULL) {
+		debuginator__collapse_recursive(debuginator, child, collapse_depth, depth + 1);
+		child = debuginator__next_visible_sibling(child);
+	}
+
+	if (depth >= collapse_depth) {
+		debuginator_set_collapsed(debuginator, item, true);
+	}
+}
+
+void debuginator_collapse_to_depth(TheDebuginator* debuginator, int depth) {
+	DebuginatorItem *item = debuginator->root;
+	
+	debuginator__collapse_recursive(debuginator, item, depth, 0);
+}
+
 void debuginator_move_sibling_previous(TheDebuginator* debuginator) {
 	DebuginatorItem* hot_item = debuginator->hot_item;
 
