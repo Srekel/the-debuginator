@@ -189,12 +189,14 @@ bool handle_debuginator_keyboard_input_event(SDL_Event* event, TheDebuginator* d
 			return true;
 		}
 
-		if (event->type != SDL_KEYDOWN || event->key.keysym.sym != SDLK_RIGHT) {
-			return false;
+		if (event->type == SDL_KEYDOWN) {
+			if (event->key.keysym.sym == SDLK_RIGHT || event->key.keysym.scancode == SDL_SCANCODE_GRAVE) {
+				debuginator_set_open(debuginator, true);
+				return true;
+			}
 		}
 
-		debuginator_set_open(debuginator, true);
-		return true;
+		return false;
 	}
 
 	int hot_item_index;
@@ -218,7 +220,7 @@ bool handle_debuginator_keyboard_input_event(SDL_Event* event, TheDebuginator* d
 				debuginator_move_to_next_leaf(debuginator, long_move);
 				return true;
 			}
-			else if (event->key.keysym.sym == SDLK_LEFT || event->key.keysym.sym == SDLK_ESCAPE) {
+			else if (event->key.keysym.sym == SDLK_LEFT || event->key.keysym.sym == SDLK_ESCAPE || event->key.keysym.scancode == SDL_SCANCODE_GRAVE) {
 				debuginator_reset_scrolling(debuginator);
 				if (debuginator->is_open && (debuginator_is_folder(hot_item) || !hot_item->leaf.is_expanded)) {
 					debuginator_set_open(debuginator, false);
@@ -298,8 +300,10 @@ bool handle_debuginator_keyboard_input_event(SDL_Event* event, TheDebuginator* d
 				}
 
 				char filter[64] = { 0 };
+				ASSERT(sizeof(filter) >= sizeof(debuginator->filter));
 				strcpy_s(filter, sizeof(debuginator->filter), debuginator->filter);
 				strcat_s(filter, sizeof(debuginator->filter), event->text.text);
+				// if (SDL_GetModState() & (KMOD_LCTRL | KMOD_RCTRL);)
 				debuginator->filter_length = (int)strlen(filter);
 				debuginator_update_filter(debuginator, filter);
 			}
