@@ -669,6 +669,10 @@ typedef struct NumberRangeFloatState {
 #define DEBUGINATOR_FILTER_HEIGHT 50.0f
 #endif
 
+#ifndef DEBUGINATOR_FILTER_MAX_LENGTH
+#define DEBUGINATOR_FILTER_MAX_LENGTH 32
+#endif
+
 #ifndef DEBUGINATOR_SCORE_OVERRIDE
 #define DEBUGINATOR_SCORE_WORD_BREAK_START 10
 #define DEBUGINATOR_SCORE_WORD_BREAK_END 5
@@ -863,7 +867,7 @@ typedef struct TheDebuginator {
 	int animation_count;
 
 	bool filter_enabled;
-	char filter[32];
+	char filter[DEBUGINATOR_FILTER_MAX_LENGTH];
 	int filter_length;
 	DebuginatorSortedItem sorted_items[DEBUGINATOR_SORTED_ITEM_COUNT];
 	DebuginatorSortedItem* best_sorted_item;
@@ -2038,7 +2042,7 @@ void debuginator_remove_item(TheDebuginator* debuginator, DebuginatorItem* item)
 	if (debuginator->hot_item == item) {
 		debuginator->hot_item = debuginator__nearest_visible_item(item);
 	}
-	
+
 	// Only update the height of the parent if we were visible
 	if (item->parent->is_folder && !item->parent->folder.is_collapsed) {
 		debuginator__set_total_height(item->parent, item->parent->total_height - item->total_height);
@@ -2152,11 +2156,16 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 		}
 	}
 
-	char filter[32] = { 0 };
-	for (int i = 0; i < 20; i++) {
-		// TODO fix loop counter
-		filter[i] = (char)DEBUGINATOR_tolower(wanted_filter[i]);
+	char filter[DEBUGINATOR_FILTER_MAX_LENGTH] = { 0 };
+	DEBUGINATOR_strcpy_s(filter, sizeof(filter), wanted_filter);
+	int filter_len = DEBUGINATOR_strlen(filter);
+	bool case_sensitive = false;
+	for(int i=0; i < filter_len; ++i) {
+		if ('A' <= filter[i] && filter[i] <= 'Z') {
+			case_sensitive = true;
+		}
 	}
+
 
 	DEBUGINATOR_memset(debuginator->sorted_items, 0, sizeof(debuginator->sorted_items));
 
@@ -2183,9 +2192,12 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 				path_indices[current_path_index + 1]++;
 				DEBUGINATOR_assert(path_indices[current_path_index + 1] < sizeof(current_full_path));
 
-				for (int i = path_indices[current_path_index]; i < path_indices[current_path_index + 1]; i++) {
-					current_full_path_lowercase[i] = (char)DEBUGINATOR_tolower(current_full_path_lowercase[i]);
+				if (!case_sensitive) {
+					for (int i = path_indices[current_path_index]; i < path_indices[current_path_index + 1]; i++) {
+						current_full_path_lowercase[i] = (char)DEBUGINATOR_tolower(current_full_path_lowercase[i]);
+					}
 				}
+
 
 				++current_path_index;
 				DEBUGINATOR_assert(current_path_index + 1 < sizeof(path_indices) / sizeof(path_indices[0]));
@@ -2203,8 +2215,10 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 			DEBUGINATOR_assert(path_indices[current_path_index + 1] < sizeof(current_full_path));
 			int current_path_length = path_indices[current_path_index + 1];
 
-			for (int i = path_indices[current_path_index]; i < current_path_length; i++) {
-				current_full_path_lowercase[i] = (char)DEBUGINATOR_tolower(current_full_path_lowercase[i]);
+			if (!case_sensitive) {
+				for (int i = path_indices[current_path_index]; i < current_path_length; i++) {
+					current_full_path_lowercase[i] = (char)DEBUGINATOR_tolower(current_full_path_lowercase[i]);
+				}
 			}
 
 			int score = -1;
@@ -3280,11 +3294,11 @@ void debuginator__draw_search_filter(TheDebuginator* debuginator, float dt) {
 		debuginator->draw_rect(&filter_pos, &filter_size, &filter_color, debuginator->app_user_data);
 
 		DebuginatorVector2 header_text_size = debuginator->text_size("Search: ", &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
-		filter_size.x = header_text_size.x + 40;
+		filter_size.x = header_text_size.x + DEBUGINATOR_FILTER_HEIGHT / 2;
 		debuginator->draw_rect(&filter_pos, &filter_size, &filter_color, debuginator->app_user_data);
 
-		filter_pos.x += 20;
-		filter_pos.y = filter_pos.y + filter_size.y / 2 - header_text_size.y / 2;
+		filter_pos.x += DEBUGINATOR_FILTER_HEIGHT / 4;
+		filter_pos.y = filter_pos.y + filter_size.y / 2;
 
 		DebuginatorColor header_color = debuginator->theme.colors[DEBUGINATOR_ItemTitleActive];
 		header_color.a = (unsigned char)(header_color.a * alpha);
@@ -3317,7 +3331,7 @@ void debuginator__draw_search_filter(TheDebuginator* debuginator, float dt) {
 
 		if (debuginator->filter_enabled) {
 			DebuginatorVector2 caret_size = debuginator__vector2(10, header_text_size.y);
-			DebuginatorVector2 caret_pos = debuginator__vector2(filter_pos.x, filter_pos.y);
+			DebuginatorVector2 caret_pos = debuginator__vector2(filter_pos.x, filter_pos.y - header_text_size.y / 2);
 			filter_color.r = 150;
 			filter_color.g = 250;
 			filter_color.b = 150;
@@ -3592,7 +3606,7 @@ void debuginator__collapse_recursive(TheDebuginator* debuginator, DebuginatorIte
 
 void debuginator_collapse_to_depth(TheDebuginator* debuginator, int depth) {
 	DebuginatorItem *item = debuginator->root;
-	
+
 	debuginator__collapse_recursive(debuginator, item, depth, 0);
 }
 
