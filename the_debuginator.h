@@ -1743,7 +1743,7 @@ DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 		item->leaf.hot_index = num_values - 1;
 	}
 
-	if (debuginator->hot_item == NULL && !item->is_folder) {
+	if (debuginator->hot_item == NULL && !item->is_folder && !item->parent->folder.is_collapsed) {
 		item->parent->folder.hot_child = item;
 		debuginator->hot_item = item;
 	}
@@ -3553,6 +3553,19 @@ bool debuginator_is_collapsed(DebuginatorItem* item) {
 	return item->is_folder && item->folder.is_collapsed;
 }
 
+bool debuginator__is_parent_recursive(DebuginatorItem* item, DebuginatorItem* parent) {
+	DEBUGINATOR_assert(parent->is_folder);
+	while (item->parent != NULL) {
+		if (item->parent == parent) {
+			return true;
+		}
+
+		item = item->parent;
+	}
+
+	return false;
+}
+
 void debuginator_set_collapsed(TheDebuginator* debuginator, DebuginatorItem* item, bool collapsed) {
 	if (!item->is_folder) {
 		return;
@@ -3565,7 +3578,7 @@ void debuginator_set_collapsed(TheDebuginator* debuginator, DebuginatorItem* ite
 	item->folder.is_collapsed = collapsed;
 	if (collapsed) {
 		debuginator__set_total_height(item, debuginator->item_height);
-		if (item->folder.hot_child == debuginator->hot_item) {
+		if (debuginator__is_parent_recursive(debuginator->hot_item, item)) {
 			DebuginatorItem* temp_item = item;
 			while (temp_item->folder.is_collapsed) {
 				temp_item = temp_item->parent;
