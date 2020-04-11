@@ -3519,7 +3519,12 @@ static float debuginator__draw_item(TheDebuginator* debuginator, DebuginatorItem
 			const char* key = debuginator->hot_keys[item->leaf.hot_key_index].key;
 			int hot_key_value_index = debuginator->hot_keys[item->leaf.hot_key_index].value_index;
 			char hot_key_text[DEBUGINATOR_MAX_PATH_LENGTH];
-			DEBUGINATOR_sprintf_s(hot_key_text, DEBUGINATOR_MAX_PATH_LENGTH, "[%s] %s", key, hot_key_value_index == DEBUGINATOR_NO_HOT_INDEX ? "Toggle" : item->leaf.value_titles[hot_key_value_index]);
+			if (hot_key_value_index == DEBUGINATOR_NO_HOT_INDEX) {
+				DEBUGINATOR_sprintf_s(hot_key_text, DEBUGINATOR_MAX_PATH_LENGTH, "%s", key);
+			}
+			else {
+				DEBUGINATOR_sprintf_s(hot_key_text, DEBUGINATOR_MAX_PATH_LENGTH, "%s: %s", key, item->leaf.value_titles[hot_key_value_index]);
+			}
 
 			if (debuginator->open_direction == 1) {
 				DebuginatorVector2 key_rect_pos = debuginator__vector2(debuginator->top_left.x + debuginator->size.x, offset.y);
