@@ -533,10 +533,10 @@ int main(int argc, char **argv)
 
 	const char* preset_paths[2] = { "SDL Demo/Throttle framerate", "SDL Demo/Show framerate" };
 	const char* preset_value_titles[2] = { "True", "False" };
-	debuginator_create_preset_item(&debuginator, "SDL Demo/Preset example", preset_paths, preset_value_titles, NULL, 2);
+	debuginator_create_preset_item(&debuginator, "SDL Demo/Edit types/Preset", preset_paths, preset_value_titles, NULL, 2);
 
 	float demo_y_offset = 0;
-	debuginator_create_numberrange_float_item(&debuginator, "SDL Demo/Number Range", "Example of the NumberRange edit type", &demo_y_offset, -100, 200);
+	debuginator_create_numberrange_float_item(&debuginator, "SDL Demo/Edit types/Number slider", "Example of the NumberRange edit type", &demo_y_offset, -100, 200);
 
 	Uint64 START = SDL_GetPerformanceCounter();
 	Uint64 NOW = START;

@@ -61,10 +61,10 @@ static void debug_menu_setup(TheDebuginator* debuginator, DemoData* data) {
 	(void)data;
 	{
 		static const char* string_titles[4] = { "Start", "Stop", "Prev", "Next" };
-		debuginator_create_array_item(debuginator, NULL, "SDL Demo/Demonstration",
+		debuginator_create_array_item(debuginator, NULL, "SDL Demo/Slide show",
 			"Presentation demo", on_demo_action, data,
 			string_titles, NULL, 4, 0);
-		debuginator_set_edit_type(debuginator, "SDL Demo/Demonstration", DEBUGINATOR_EditTypeActionArray);
+		debuginator_set_edit_type(debuginator, "SDL Demo/Slide show", DEBUGINATOR_EditTypeActionArray);
 	}
 }
 

@@ -73,19 +73,14 @@ static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
 	(void)data;
 	{
 		static const char* string_titles[5] = { "String A", "String B", "String C", "String D", "String E" };
-		debuginator_create_array_item(debuginator, NULL, "SDL Demo/String Test",
+		debuginator_create_array_item(debuginator, NULL, "SDL Demo/Edit types/String list",
 			"Example of an item having multiple strings to choose from.", NULL, NULL,
 			string_titles, NULL, 5, 0);
 	}
 
 	{
 		DebuginatorColor start = { 200, 0, 200, 200 };
-		debuginator_create_colorpicker_item(debuginator, "SDL Demo/Colorpicker Test",
-			"Example of the colorpicker edit type.", on_colorpicker, data, &start);
-	}
-	{
-		DebuginatorColor start = { 200, 0, 200, 200 };
-		debuginator_create_colorpicker_item(debuginator, "SDL Demo/Colorpicker Test",
+		debuginator_create_colorpicker_item(debuginator, "SDL Demo/Edit types/Colorpicker",
 			"Example of the colorpicker edit type.", on_colorpicker, data, &start);
 	}
 
@@ -94,10 +89,10 @@ static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
 	{
 		sprintf_s(data->box_string, "Box count: %d", data->boxes_n);
 		static const char* string_titles[3] = { "Clear all boxes", "Add box", data->box_string };
-		debuginator_create_array_item(debuginator, NULL, "SDL Demo/Boxes",
-			"Box things", on_boxes_activated, data,
+		debuginator_create_array_item(debuginator, NULL, "SDL Demo/Edit types/Box action list",
+			"Various things to do with the demo boxes. Expand the item to see all the actions.", on_boxes_activated, data,
 			string_titles, NULL, 3, 0);
-		debuginator_set_edit_type(debuginator, "SDL Demo/Boxes", DEBUGINATOR_EditTypeActionArray);
+		debuginator_set_edit_type(debuginator, "SDL Demo/Edit types/Box action list", DEBUGINATOR_EditTypeActionArray);
 	}
 
 	debuginator_create_bool_item(debuginator, "Test/LOL/XXZZ", "Change a bool.", &data->mybool);

@@ -3023,22 +3023,32 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 
 	if (config->create_default_debuginator_items) {
 		{
+			DebuginatorItem* help_folder = debuginator_create_folder_item(debuginator, NULL, "Debuginator/Help");
+			help_folder->folder.is_sorted = false;
+
 			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/About",
-				"The Debuginator is an open source debug menu made by Anders 'Srekel' Elfgren.\nLatest version can be found here: https://github.com/Srekel/the-debuginator", NULL, NULL,
+				"The Debuginator is an open source debug menu made by Anders 'Srekel' Elfgren.\nLatest version can be found here: https://github.com/Srekel/the-debuginator\nSuggestions, feedback, and bug reports are welcome!", NULL, NULL,
 				NULL, NULL, 0, 0);
 
-			// Not sure if this should be here or in each app/plugin that uses The Debuginator.. but I'll put it here for now.
-			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/Keyboard default usage (1)",
+			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/General",
+				"Some items can be 'expanded' to show more details or provide a richer editing experience. Folders can be collapsed to reduce clutter. To find stuff quickly, use the search function.", NULL, NULL,
+				NULL, NULL, 0, 0);
+
+			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/Input/Mouse",
+				"Click around! :). Right button expands items. Hover over items for tooltips.", NULL, NULL,
+				NULL, NULL, 0, 0);
+
+			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/Input/Keyboard (1)",
 				"Open the menu with Right Arrow. \nClose it with Left Arrow. \nUse all arrow keys to navigate. \nRight Arrow is also used to change value on a menu item.", NULL, NULL,
 				NULL, NULL, 0, 0);
-			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/Keyboard default usage (2)",
+			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/Input/Keyboard (2)",
 				"Hold CTRL for faster navigation and item toggling. \nEscape to quickly close the menu.\nBackspace to toggle search.", NULL, NULL,
 				NULL, NULL, 0, 0);
 
-			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/Gamepad default usage (1)",
+			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/Input/Gamepad (1)",
 				"Open the menu with Start/Options button. \nClose it with Left D-Pad. \nUse D-Pad to navigate. \nD-Pad Right is used to change value on a menu item.", NULL, NULL,
 				NULL, NULL, 0, 0);
-			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/Gamepad default usage (2)",
+			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/Input/Gamepad (2)",
 				"Use the corresponding AXBY buttons to do the same things as the D-Pad, but faster!", NULL, NULL,
 				NULL, NULL, 0, 0);
 		}
@@ -3051,18 +3061,12 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 			const char** string_titles = (const char**)debuginator__allocate(debuginator, sizeof(char*) * 2);
 			string_titles[0] = "Left";
 			string_titles[1] = "Right";
-			debuginator_create_array_item(debuginator, NULL, "Debuginator/Alignment",
-				"Right alignment is not fully tested and has some visual glitches.", debuginator_copy_1byte, &debuginator->open_direction,
+			debuginator_create_array_item(debuginator, NULL, "Debuginator/Settings/Alignment",
+				"Determines if the menu is on the left or right side.", debuginator_copy_1byte, &debuginator->open_direction,
 				string_titles, directions, 2, sizeof(directions[0]));
 		}
 		{
-			char* directions = (char*)debuginator__allocate(debuginator, 2); // char as in byte
-			directions[0] = 1;
-			directions[1] = -1;
-			const char** string_titles = (const char**)debuginator__allocate(debuginator, sizeof(char*) * 2);
-			string_titles[0] = "Left";
-			string_titles[1] = "Right";
-			debuginator_create_bool_item(debuginator, "Debuginator/Sort items", "Makes items be sorted alphabetically by default.", &debuginator->sort_items);
+			debuginator_create_bool_item(debuginator, "Debuginator/Settings/Sort items", "Makes items be sorted alphabetically by default.", &debuginator->sort_items);
 		}
 		{
 			int* theme_indices = (int*)debuginator__allocate(debuginator, 4 * sizeof(int)); //
@@ -3075,7 +3079,7 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 			string_titles[1] = "Blue";
 			string_titles[2] = "High Contrast Dark";
 			string_titles[3] = "High Contrast Light";
-			debuginator_create_array_item(debuginator, NULL, "Debuginator/Theme",
+			debuginator_create_array_item(debuginator, NULL, "Debuginator/Settings/Theme",
 				"Change color theme of The Debuginator. \nNote that only Classic is currently polished.", debuginator__on_change_theme, debuginator,
 				string_titles, (void*)theme_indices, 4, sizeof(theme_indices[0]));
 		}
