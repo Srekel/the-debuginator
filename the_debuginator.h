@@ -710,6 +710,11 @@ typedef struct NumberRangeFloatState {
 #define DEBUGINATOR_SORTED_ITEM_COUNT 4
 #endif
 
+#ifndef DEBUGINATOR_TOOLTIP_DELAY
+#define DEBUGINATOR_TOOLTIP_DELAY -1
+#define DEBUGINATOR_TOOLTIP_FADEIN 0.25
+#endif
+
 static float debuginator__ceil(float v) {
 	if ((int)v == v) {
 		return v;
@@ -840,6 +845,7 @@ typedef struct TheDebuginator {
 	float dt;
 	float draw_timer;
 	float filter_timer;
+	float tooltip_timer;
 	void* app_user_data;
 	DebuginatorDrawImageCallback draw_image;
 	DebuginatorDrawRectCallback draw_rect;
@@ -2501,6 +2507,12 @@ void debuginator_reset_scrolling(TheDebuginator* debuginator) {
 }
 
 void debuginator_set_mouse_cursor_pos(TheDebuginator* debuginator, DebuginatorVector2* mouse_cursor_pos) {
+	if (debuginator->mouse_cursor_pos.x != mouse_cursor_pos->x && debuginator->mouse_cursor_pos.y != mouse_cursor_pos->y) {
+		// Mouse moved
+		if (debuginator->tooltip_timer < 0) {
+			debuginator->tooltip_timer = DEBUGINATOR_TOOLTIP_DELAY;
+		}
+	}
 	debuginator->mouse_cursor_pos = *mouse_cursor_pos;
 }
 
@@ -3133,11 +3145,12 @@ void debuginator_update(TheDebuginator* debuginator, float dt) {
 }
 
 
-float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2 offset, bool hot);
-void debuginator__draw_hierarchy(TheDebuginator* debuginator, float dt, DebuginatorVector2 offset);
-void debuginator__draw_sorted_filter(TheDebuginator* debuginator, float dt, DebuginatorVector2 offset);
-void debuginator__draw_animations(TheDebuginator* debuginator, float dt);
-void debuginator__draw_search_filter(TheDebuginator* debuginator, float dt);
+static float debuginator__draw_item(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2 offset, bool hot);
+static void debuginator__draw_hierarchy(TheDebuginator* debuginator, float dt, DebuginatorVector2 offset);
+static void debuginator__draw_sorted_filter(TheDebuginator* debuginator, float dt, DebuginatorVector2 offset);
+static void debuginator__draw_animations(TheDebuginator* debuginator, float dt);
+static void debuginator__draw_search_filter(TheDebuginator* debuginator, float dt);
+static void debuginator__draw_tooltip(TheDebuginator* debuginator, float dt);
 
 void debuginator_draw(TheDebuginator* debuginator, float dt) {
 	// Don't do anything if we're fully closed
@@ -3180,9 +3193,10 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 	}
 
 	debuginator__draw_search_filter(debuginator, dt);
+	debuginator__draw_tooltip(debuginator, dt);
 }
 
-void debuginator__draw_hierarchy(TheDebuginator* debuginator, float dt, DebuginatorVector2 offset){
+static void debuginator__draw_hierarchy(TheDebuginator* debuginator, float dt, DebuginatorVector2 offset){
 	DEBUGINATOR_UNUSED(dt);
 	offset.y = debuginator->current_height_offset;
 
@@ -3210,7 +3224,7 @@ void debuginator__draw_hierarchy(TheDebuginator* debuginator, float dt, Debugina
 	// item_to_draw is now the first item (folder most likely) who is at least partly
 	// within the rendering area.
 	while (item_to_draw && offset.y < debuginator->size.y) {
-		debuginator_draw_item(debuginator, item_to_draw, offset, debuginator->hot_item == item_to_draw);
+		debuginator__draw_item(debuginator, item_to_draw, offset, debuginator->hot_item == item_to_draw);
 		offset.y += item_to_draw->total_height;
 		while (item_to_draw && debuginator__next_visible_sibling(item_to_draw) == NULL) {
 			offset.x -= DEBUGINATOR_INDENT;
@@ -3225,7 +3239,7 @@ void debuginator__draw_hierarchy(TheDebuginator* debuginator, float dt, Debugina
 	}
 }
 
-void debuginator__draw_animations(TheDebuginator* debuginator, float dt) {
+static void debuginator__draw_animations(TheDebuginator* debuginator, float dt) {
 	// Update animations
 	int running_animations = debuginator->animation_count; // Can be cleverer I guess
 	for (int i = 0; i < debuginator->animation_count; i++) {
@@ -3268,7 +3282,7 @@ void debuginator__draw_animations(TheDebuginator* debuginator, float dt) {
 	}
 }
 
-void debuginator__draw_search_filter(TheDebuginator* debuginator, float dt) {
+static void debuginator__draw_search_filter(TheDebuginator* debuginator, float dt) {
 	bool filter_hint_mode = !debuginator->filter_enabled && debuginator->current_height_offset > 100;
 	if (debuginator->filter_enabled || filter_hint_mode) {
 		debuginator->filter_timer += dt * 5;
@@ -3347,7 +3361,86 @@ void debuginator__draw_search_filter(TheDebuginator* debuginator, float dt) {
 	}
 }
 
-float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2 offset, bool hot) {
+static void debuginator__draw_tooltip(TheDebuginator* debuginator, float dt) {
+	DebuginatorItem* item = debuginator->hot_mouse_item;
+	if (item == NULL) {
+		debuginator->tooltip_timer = DEBUGINATOR_max(DEBUGINATOR_TOOLTIP_DELAY, debuginator->tooltip_timer - dt);
+	}
+	else if (item->is_folder) {
+		if (debuginator->tooltip_timer >= 0) {
+			debuginator->tooltip_timer = DEBUGINATOR_max(0.f, debuginator->tooltip_timer - dt);
+		}
+		else {
+			debuginator->tooltip_timer = DEBUGINATOR_max(DEBUGINATOR_TOOLTIP_DELAY, debuginator->tooltip_timer - dt);
+		}
+	}
+	else {
+		debuginator->tooltip_timer = DEBUGINATOR_min(DEBUGINATOR_TOOLTIP_FADEIN, debuginator->tooltip_timer + dt);
+	}
+
+	if (debuginator->tooltip_timer <= 0) {
+		return;
+	}
+
+	if (item == NULL) {
+		return;
+	}
+
+	DebuginatorColor bg_color1 = debuginator->theme.colors[DEBUGINATOR_Background];
+	DebuginatorColor bg_color2 = debuginator->theme.colors[DEBUGINATOR_LineHighlightMouse];
+	DebuginatorColor text_color = debuginator->theme.colors[DEBUGINATOR_ItemTitleHot];
+	bg_color1.a = (unsigned char)(debuginator->tooltip_timer * 4 * bg_color1.a);
+	bg_color2.a = (unsigned char)(debuginator->tooltip_timer * 4 * bg_color2.a);
+	text_color.a = (unsigned char)(debuginator->tooltip_timer * 4 * 255);
+
+	int row_count = 0;
+	char description_line_to_draw[256];
+	int description_height = 0;
+	int row_lengths[32];
+	const char* description = "";
+	if (!item->is_folder) {
+		description = item->leaf.description;
+		float description_width = debuginator->size.x - DEBUGINATOR_LEFT_MARGIN * 2;
+		debuginator->word_wrap(description, debuginator->theme.fonts[DEBUGINATOR_ItemDescription], description_width, &row_count, row_lengths, 32, debuginator->app_user_data);
+	}
+
+	DebuginatorVector2 bg_size = debuginator__vector2(debuginator->size.x, row_count * debuginator->item_height + DEBUGINATOR_LEFT_MARGIN * 2);
+	DebuginatorVector2 bg_pos = debuginator__vector2(debuginator->mouse_cursor_pos.x + DEBUGINATOR_LEFT_MARGIN, debuginator->mouse_cursor_pos.y - bg_size.y / 2.0f);
+	if (debuginator->open_direction == -1) {
+		bg_pos.x = debuginator->top_left.x - debuginator->size.x;
+	}
+
+	debuginator->draw_rect(&bg_pos, &bg_size, &bg_color1, debuginator->app_user_data);
+
+	float border_size = DEBUGINATOR_LEFT_MARGIN / 4.0f;
+	DebuginatorVector2 bg_border_h_size = {bg_size.x,  border_size};
+	DebuginatorVector2 bg_border_v_size = {border_size,  bg_size.y - border_size * 2};
+	DebuginatorVector2 bg_border_t_pos = bg_pos;
+	DebuginatorVector2 bg_border_b_pos = {bg_pos.x, bg_pos.y + bg_size.y - border_size};
+	DebuginatorVector2 bg_border_l_pos = {bg_pos.x, bg_pos.y + border_size};
+	DebuginatorVector2 bg_border_r_pos = {bg_pos.x + bg_size.x - border_size, bg_pos.y + border_size};
+	debuginator->draw_rect(&bg_border_t_pos, &bg_border_h_size, &bg_color2, debuginator->app_user_data);
+	debuginator->draw_rect(&bg_border_b_pos, &bg_border_h_size, &bg_color2, debuginator->app_user_data);
+	debuginator->draw_rect(&bg_border_l_pos, &bg_border_v_size, &bg_color2, debuginator->app_user_data);
+	debuginator->draw_rect(&bg_border_r_pos, &bg_border_v_size, &bg_color2, debuginator->app_user_data);
+
+	DebuginatorVector2 text_pos = debuginator__vector2(bg_pos.x + DEBUGINATOR_LEFT_MARGIN, bg_pos.y + DEBUGINATOR_LEFT_MARGIN);
+
+	int row_index = 0;
+	for (int i = 0; i < row_count; i++) {
+		int row_index_end = row_index + row_lengths[i];
+		const char* description_line = description + row_index;
+		DEBUGINATOR_strncpy_s(description_line_to_draw, 256u, description_line, DEBUGINATOR_min(row_index_end - row_index, 256u));
+		row_index = row_index_end;
+		while (description[row_index] == '\n') {
+			++row_index;
+		}
+		DebuginatorVector2 description_pos = debuginator__vector2(text_pos.x, text_pos.y + i * debuginator->item_height + debuginator->item_height / 2.0f);
+		debuginator->draw_text(description_line_to_draw, &description_pos, &text_color, &debuginator->theme.fonts[DEBUGINATOR_ItemDescription], debuginator->app_user_data);
+	}
+}
+
+static float debuginator__draw_item(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2 offset, bool hot) {
 	bool mouse_over =
 		debuginator->top_left.x <= debuginator->mouse_cursor_pos.x && debuginator->mouse_cursor_pos.x < debuginator->top_left.x + debuginator->size.x &&
 		offset.y <= debuginator->mouse_cursor_pos.y && debuginator->mouse_cursor_pos.y < offset.y + item->total_height;
@@ -3391,7 +3484,7 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 			}
 
 			if (offset.y + child->total_height > 0) {
-				debuginator_draw_item(debuginator, child, offset, debuginator->hot_item == child);
+				debuginator__draw_item(debuginator, child, offset, debuginator->hot_item == child);
 			}
 			offset.y += child->total_height;
 			child = debuginator__next_visible_sibling(child);
@@ -3451,7 +3544,7 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 
 			const char* description = item->leaf.description;
 			float description_width = debuginator->size.x - 50 + debuginator->top_left.x - offset.x;
-			char description_line_to_draw[64];
+			char description_line_to_draw[256];
 			int description_height = 0;
 			int row_lengths[32];
 			int row_count = 0;
@@ -3460,7 +3553,7 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 			for (int i = 0; i < row_count; i++) {
 				int row_index_end = row_index + row_lengths[i];
 				const char* description_line = description + row_index;
-				DEBUGINATOR_strncpy_s(description_line_to_draw, 64u, description_line, DEBUGINATOR_min(row_index_end - row_index, 64u));
+				DEBUGINATOR_strncpy_s(description_line_to_draw, 256u, description_line, DEBUGINATOR_min(row_index_end - row_index, 256u));
 				row_index = row_index_end;
 				while (description[row_index] == '\n') {
 					++row_index;
@@ -3481,7 +3574,7 @@ float debuginator_draw_item(TheDebuginator* debuginator, DebuginatorItem* item, 
 	return offset.y;
 }
 
-void debuginator__draw_sorted_filter(TheDebuginator* debuginator, float dt, DebuginatorVector2 offset) {
+static void debuginator__draw_sorted_filter(TheDebuginator* debuginator, float dt, DebuginatorVector2 offset) {
 	DEBUGINATOR_UNUSED(dt);
 	DebuginatorSortedItem* sorted_item = debuginator->best_sorted_item;
 	while (sorted_item && sorted_item->score > 0) {
