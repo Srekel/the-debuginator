@@ -3411,7 +3411,7 @@ static void debuginator__draw_tooltip(TheDebuginator* debuginator, float dt) {
 	DebuginatorVector2 bg_size = debuginator__vector2(debuginator->size.x, row_count * debuginator->item_height + DEBUGINATOR_LEFT_MARGIN * 2);
 	DebuginatorVector2 bg_pos = debuginator__vector2(debuginator->mouse_cursor_pos.x + DEBUGINATOR_LEFT_MARGIN, debuginator->mouse_cursor_pos.y - bg_size.y / 2.0f);
 	if (debuginator->open_direction == -1) {
-		bg_pos.x = debuginator->top_left.x - debuginator->size.x;
+		bg_pos.x = debuginator->mouse_cursor_pos.x - debuginator->size.x - DEBUGINATOR_LEFT_MARGIN;
 	}
 
 	debuginator->draw_rect(&bg_pos, &bg_size, &bg_color1, debuginator->app_user_data);
