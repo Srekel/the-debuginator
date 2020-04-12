@@ -25,11 +25,11 @@ static void unittest_debuginator_assert(bool test) {
 #include "game.h"
 #include "demo.h"
 
-enum FontTemplates {
+enum FontTemplate {
 	FONT_DemoHeader,
 	FONT_ItemTitle,
 	FONT_ItemDescription,
-	FONT_count
+	FONT_Count
 };
 
 static FontTemplateHandle s_fonts[16];
@@ -38,9 +38,9 @@ static bool theme_setup(GuiHandle gui) {
 	memset(s_fonts, 0, sizeof(*s_fonts));
 	s_fonts[FONT_DemoHeader] = gui_register_font_template(gui, "LiberationMono-Bold.ttf", 72);
 	s_fonts[FONT_ItemTitle] = gui_register_font_template(gui, "LiberationMono-Regular.ttf", 18);
-	s_fonts[FONT_ItemDescription] = gui_register_font_template(gui, "LiberationSerif-Italic.ttf", 18);
+	s_fonts[FONT_ItemDescription] = gui_register_font_template(gui, "LiberationSerif-Regular.ttf", 18);
 
-	for (size_t i = 0; i < FONT_count; i++) {
+	for (size_t i = 0; i < FONT_Count; i++) {
 		if (s_fonts[i] == 0) {
 			return false;
 		}
@@ -51,7 +51,7 @@ static bool theme_setup(GuiHandle gui) {
 
 void draw_text(const char* text, DebuginatorVector2* position, DebuginatorColor* color, DebuginatorFont* font, void* userdata) {
 	GuiHandle gui = (GuiHandle)userdata;
-	int color_index = font->italic ? (int)FONT_ItemDescription : (int)FONT_ItemTitle;
+	int color_index = font->draw_type == DEBUGINATOR_ItemDescription ? (int)FONT_ItemDescription : (int)FONT_ItemTitle;
 	gui_draw_text(gui, text, *(Vector2*)position, s_fonts[color_index], *(Color*)color);
 }
 
@@ -63,9 +63,9 @@ void draw_image(DebuginatorVector2* position, DebuginatorVector2* size, Debugina
 	gui_draw_texture((GuiHandle)userdata, handle.h.ull_value, *(Vector2*)position, *(Vector2*)size);
 }
 
-void word_wrap(const char* text, DebuginatorFont font, float max_width, int* row_count, int* row_lengths, int row_lengths_buffer_size, void* app_userdata) {
-	(void)text, font, max_width, row_count, row_lengths, row_lengths_buffer_size, row_lengths_buffer_size, app_userdata;
-	gui_word_wrap((GuiHandle)app_userdata, text, s_fonts[font.italic ? FONT_ItemDescription : FONT_ItemTitle], max_width, row_count, row_lengths, row_lengths_buffer_size);
+void word_wrap(const char* text, DebuginatorFont* font, float max_width, int* row_count, int* row_lengths, int row_lengths_buffer_size, void* app_userdata) {
+	int color_index = font->draw_type == DEBUGINATOR_ItemDescription ? (int)FONT_ItemDescription : (int)FONT_ItemTitle;
+	gui_word_wrap((GuiHandle)app_userdata, text, s_fonts[color_index], max_width, row_count, row_lengths, row_lengths_buffer_size);
 }
 
 DebuginatorVector2 text_size(const char* text, DebuginatorFont* font, void* userdata) {

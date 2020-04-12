@@ -83,37 +83,13 @@ extern "C" {
 #endif
 #endif // DEBUGINATOR_ENABLE_WARNINGS
 
-typedef struct DebuginatorItem DebuginatorItem;
+#ifndef DEBUGINATOR_THEMES_MAX
+#define DEBUGINATOR_THEMES_MAX 16
+#endif
 
-typedef struct DebuginatorVector2 {
-	float x;
-	float y;
-} DebuginatorVector2;
-
-typedef struct DebuginatorColor {
-	unsigned char r;
-	unsigned char g;
-	unsigned char b;
-	unsigned char a;
-} DebuginatorColor;
-
-// TODO: Do something better with this
-typedef struct DebuginatorFont {
-	void* userdata;
-	int size;
-	bool bold;
-	bool italic;
-} DebuginatorFont;
-
-typedef struct DebuginatorSortedItem {
-	DebuginatorItem* item;
-	int score;
-	DebuginatorSortedItem* prev;
-	DebuginatorSortedItem* next;
-} DebuginatorSortedItem;
-
-typedef enum DebuginatorDrawTypes {
+typedef enum DebuginatorDrawType {
 	DEBUGINATOR_Background,
+	DEBUGINATOR_BackgroundAlt,
 	DEBUGINATOR_FolderTitle,
 	DEBUGINATOR_ItemTitle,
 	DEBUGINATOR_ItemTitleOverridden,
@@ -132,7 +108,7 @@ typedef enum DebuginatorDrawTypes {
 	DEBUGINATOR_ItemEditorBackground,
 	DEBUGINATOR_ItemEditorForeground,
 	DEBUGINATOR_NumDrawTypes
-} DebuginatorDrawTypes;
+} DebuginatorDrawType;
 
 typedef enum DebuginatorExpand {
 	DEBUGINATOR_Collapse = 0,
@@ -140,10 +116,39 @@ typedef enum DebuginatorExpand {
 	DEBUGINATOR_Toggle
 } DebuginatorExpand;
 
+typedef struct DebuginatorItem DebuginatorItem;
+
+typedef struct DebuginatorVector2 {
+	float x;
+	float y;
+} DebuginatorVector2;
+
+typedef struct DebuginatorColor {
+	unsigned char r;
+	unsigned char g;
+	unsigned char b;
+	unsigned char a;
+} DebuginatorColor;
+
+typedef struct DebuginatorFont {
+	void* userdata;
+	DebuginatorDrawType draw_type;
+	int size;
+	bool bold;
+	bool italic;
+} DebuginatorFont;
+
 typedef struct DebuginatorTheme {
 	DebuginatorColor colors[DEBUGINATOR_NumDrawTypes];
 	DebuginatorFont fonts[DEBUGINATOR_NumDrawTypes];
 } DebuginatorTheme;
+
+typedef struct DebuginatorSortedItem {
+	DebuginatorItem* item;
+	int score;
+	DebuginatorSortedItem* prev;
+	DebuginatorSortedItem* next;
+} DebuginatorSortedItem;
 
 typedef struct DebuginatorItem DebuginatorItem;
 typedef struct TheDebuginator TheDebuginator;
@@ -167,7 +172,7 @@ typedef void (*DebuginatorDrawImageCallback)
 
 // Of note: New line characters should be at the beginning of any row rather than at the end of them.
 typedef void(*DebuginatorWordWrapCallback)
-	(const char* text, DebuginatorFont font, float max_width, int* row_count, int* row_lengths, int row_lengths_buffer_size, void* app_userdata);
+	(const char* text, DebuginatorFont* font, float max_width, int* row_count, int* row_lengths, int row_lengths_buffer_size, void* app_userdata);
 typedef DebuginatorVector2 (*DebuginatorTextSizeCallback)
 	(const char* text, DebuginatorFont* font, void* userdata);
 typedef void (*DebuginatorOnOpenChangedCallback)
@@ -496,7 +501,7 @@ typedef struct TheDebuginatorConfig {
 	int memory_arena_capacity;
 
 	// Color and font themes
-	DebuginatorTheme themes[16];
+	DebuginatorTheme themes[DEBUGINATOR_THEMES_MAX];
 
 	// Edit types.
 	DebuginatorItemEditorData edit_types[DEBUGINATOR_EditTypeCount];
@@ -836,7 +841,7 @@ typedef struct TheDebuginator {
 	float openness_timer; // range [0,1]
 	float openness; // range [0,1]
 
-	DebuginatorTheme themes[16];
+	DebuginatorTheme themes[DEBUGINATOR_THEMES_MAX];
 	DebuginatorTheme theme; // current theme
 	int theme_index;
 
@@ -1784,7 +1789,7 @@ DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 		float description_width = debuginator->size.x - 50 - indent;
 		int row_lengths[32];
 		int row_count = 0;
-		debuginator->word_wrap(item->leaf.description, debuginator->theme.fonts[DEBUGINATOR_ItemDescription], description_width, &row_count, row_lengths, 32, debuginator->app_user_data);
+		debuginator->word_wrap(item->leaf.description, &debuginator->theme.fonts[DEBUGINATOR_ItemDescription], description_width, &row_count, row_lengths, 32, debuginator->app_user_data);
 		item->leaf.description_line_count = row_count;
 	} else if (!item->is_folder) {
 		item->leaf.description_line_count = 0;
@@ -2872,7 +2877,6 @@ void debuginator_get_default_config(TheDebuginatorConfig* config) {
 	themes[0].colors[DEBUGINATOR_LineHighlightMouse] = debuginator__color(100, 100, 50, 100);
 	themes[0].colors[DEBUGINATOR_ItemEditorOff] = debuginator__color(250, 100, 100, 200);
 	themes[0].colors[DEBUGINATOR_ItemEditorOn] = debuginator__color(130, 220, 255, 200);
-	themes[0].fonts[DEBUGINATOR_ItemDescription].italic = true;
 
 	// Neon theme
 	themes[1].colors[DEBUGINATOR_Background] = debuginator__color(15, 15, 30, 220);
@@ -2891,7 +2895,6 @@ void debuginator_get_default_config(TheDebuginatorConfig* config) {
 	themes[1].colors[DEBUGINATOR_LineHighlightMouse] = debuginator__color(70, 70, 130, 100);
 	themes[1].colors[DEBUGINATOR_ItemEditorOff] = debuginator__color(0, 0, 255, 200);
 	themes[1].colors[DEBUGINATOR_ItemEditorOn] = debuginator__color(130, 220, 255, 200);
-	themes[1].fonts[DEBUGINATOR_ItemDescription].italic = true;
 
 	// High contrast dark theme
 	themes[2].colors[DEBUGINATOR_Background] = debuginator__color(25, 25, 25, 220);
@@ -2930,6 +2933,13 @@ void debuginator_get_default_config(TheDebuginatorConfig* config) {
 	themes[3].colors[DEBUGINATOR_ItemEditorOff] = debuginator__color(200, 150, 100, 200);
 	themes[3].colors[DEBUGINATOR_ItemEditorOn] = debuginator__color(250, 250, 100, 200);
 	themes[3].fonts[DEBUGINATOR_ItemDescription].italic = true;
+
+
+	for(int i_theme=0; i_theme < DEBUGINATOR_THEMES_MAX; ++i_theme) {
+		for(int i_dt=0; i_dt < DEBUGINATOR_THEMES_MAX; ++i_dt) {
+			themes[i_theme].fonts[i_dt].draw_type = (DebuginatorDrawType)i_dt;
+		}
+	}
 
 	config->edit_types[DEBUGINATOR_EditTypeArray].quick_draw = debuginator__quick_draw_default;
 	config->edit_types[DEBUGINATOR_EditTypeArray].expanded_draw = debuginator__expanded_draw_default;
@@ -3405,7 +3415,7 @@ static void debuginator__draw_tooltip(TheDebuginator* debuginator, float dt) {
 	if (!item->is_folder) {
 		description = item->leaf.description;
 		float description_width = debuginator->size.x - DEBUGINATOR_LEFT_MARGIN * 2;
-		debuginator->word_wrap(description, debuginator->theme.fonts[DEBUGINATOR_ItemDescription], description_width, &row_count, row_lengths, 32, debuginator->app_user_data);
+		debuginator->word_wrap(description, &debuginator->theme.fonts[DEBUGINATOR_ItemDescription], description_width, &row_count, row_lengths, 32, debuginator->app_user_data);
 	}
 
 	DebuginatorVector2 bg_size = debuginator__vector2(debuginator->size.x, row_count * debuginator->item_height + DEBUGINATOR_LEFT_MARGIN * 2);
@@ -3557,7 +3567,7 @@ static float debuginator__draw_item(TheDebuginator* debuginator, DebuginatorItem
 			int description_height = 0;
 			int row_lengths[32];
 			int row_count = 0;
-			debuginator->word_wrap(description, debuginator->theme.fonts[DEBUGINATOR_ItemDescription], description_width, &row_count, row_lengths, 32, debuginator->app_user_data);
+			debuginator->word_wrap(description, &debuginator->theme.fonts[DEBUGINATOR_ItemDescription], description_width, &row_count, row_lengths, 32, debuginator->app_user_data);
 			int row_index = 0;
 			for (int i = 0; i < row_count; i++) {
 				int row_index_end = row_index + row_lengths[i];

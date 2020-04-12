@@ -72,7 +72,7 @@ typedef struct DebuginatorFont {
 	bool italic;
 } DebuginatorFont;
 
-typedef enum DebuginatorDrawTypes {
+typedef enum DebuginatorDrawType {
 	DEBUGINATOR_Background,
 	DEBUGINATOR_FolderTitle,
 	DEBUGINATOR_ItemTitle,
@@ -91,7 +91,7 @@ typedef enum DebuginatorDrawTypes {
 	DEBUGINATOR_ItemEditorBackground,
 	DEBUGINATOR_ItemEditorForeground,
 	DEBUGINATOR_NumDrawTypes
-} DebuginatorDrawTypes;
+} DebuginatorDrawType;
 
 typedef struct DebuginatorTheme {
 	DebuginatorColor colors[DEBUGINATOR_NumDrawTypes];

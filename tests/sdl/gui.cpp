@@ -99,6 +99,7 @@ void gui_frame_end(GuiHandle gui_handle){
 TextureHandle gui_load_texture(GuiHandle gui_handle, const char* texture_filename) {
 	Gui* gui = (Gui*)gui_handle;
 	SDL_Texture* texture = IMG_LoadTexture(gui->renderer, texture_filename);
+	// TODO Assert
 	gui->textures[gui->num_textures] = texture;
 	return (TextureHandle)gui->num_textures++;
 }
