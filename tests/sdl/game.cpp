@@ -95,6 +95,10 @@ static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
 		debuginator_set_edit_type(debuginator, "SDL Demo/Edit types/Box action list", DEBUGINATOR_EditTypeActionArray);
 	}
 
+	debuginator_create_bool_item(debuginator, "Test/Description/Empty", "", &data->mybool);
+	debuginator_create_bool_item(debuginator, "Test/Description/NULL", "", &data->mybool);
+	debuginator_create_bool_item(debuginator, "Test/Description/Long", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaa bbbbbbbbbbbbbbbbbbbbbbbb cccccccccccccccccccccccc", &data->mybool);
+	debuginator_create_bool_item(debuginator, "Test/Description/Newlines", "* A\n* B\n* C\n* D\n* E\n* F\n* G\n* H\n* I\n* J\n", &data->mybool);
 	debuginator_create_bool_item(debuginator, "Test/LOL/XXZZ", "Change a bool.", &data->mybool);
 	debuginator_create_bool_item(debuginator, "Test/LOL2/YY XX", "Change a bool.", &data->mybool);
 	debuginator_create_bool_item(debuginator, "Test/LOL2/YY", "Change a bool.", &data->mybool);

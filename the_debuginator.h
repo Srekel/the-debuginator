@@ -2862,6 +2862,7 @@ void debuginator_get_default_config(TheDebuginatorConfig* config) {
 
 	// Classic theme
 	themes[0].colors[DEBUGINATOR_Background] = debuginator__color(25, 50, 25, 220);
+	themes[0].colors[DEBUGINATOR_BackgroundAlt] = debuginator__color(10, 30, 10, 220);
 	themes[0].colors[DEBUGINATOR_FolderTitle] = debuginator__color(255, 255, 255, 255);
 	themes[0].colors[DEBUGINATOR_ItemTitle] = debuginator__color(120, 120, 0, 250);
 	themes[0].colors[DEBUGINATOR_ItemTitleOverridden] = debuginator__color(200, 200, 0, 255);
@@ -2880,6 +2881,7 @@ void debuginator_get_default_config(TheDebuginatorConfig* config) {
 
 	// Neon theme
 	themes[1].colors[DEBUGINATOR_Background] = debuginator__color(15, 15, 30, 220);
+	themes[1].colors[DEBUGINATOR_BackgroundAlt] = debuginator__color(5, 5, 10, 220);
 	themes[1].colors[DEBUGINATOR_FolderTitle] = debuginator__color(255, 255, 255, 255);
 	themes[1].colors[DEBUGINATOR_ItemTitle] = debuginator__color(120, 120, 180, 250);
 	themes[1].colors[DEBUGINATOR_ItemTitleOverridden] = debuginator__color(150, 150, 200, 255);
@@ -2898,6 +2900,7 @@ void debuginator_get_default_config(TheDebuginatorConfig* config) {
 
 	// High contrast dark theme
 	themes[2].colors[DEBUGINATOR_Background] = debuginator__color(25, 25, 25, 220);
+	themes[2].colors[DEBUGINATOR_BackgroundAlt] = debuginator__color(5, 5, 5, 220);
 	themes[2].colors[DEBUGINATOR_FolderTitle] = debuginator__color(130, 180, 220, 255);
 	themes[2].colors[DEBUGINATOR_ItemTitle] = debuginator__color(140, 140, 140, 250);
 	themes[2].colors[DEBUGINATOR_ItemTitleOverridden] = debuginator__color(230, 230, 200, 255);
@@ -2917,6 +2920,7 @@ void debuginator_get_default_config(TheDebuginatorConfig* config) {
 
 	// High contrast light theme
 	themes[3].colors[DEBUGINATOR_Background] = debuginator__color(255, 255, 255, 240);
+	themes[3].colors[DEBUGINATOR_BackgroundAlt] = debuginator__color(205, 205, 205, 220);
 	themes[3].colors[DEBUGINATOR_FolderTitle] = debuginator__color(0, 50, 00, 255);
 	themes[3].colors[DEBUGINATOR_ItemTitle] = debuginator__color(80, 80, 80, 250);
 	themes[3].colors[DEBUGINATOR_ItemTitleOverridden] = debuginator__color(80, 80, 255, 255);
@@ -3380,7 +3384,7 @@ static void debuginator__draw_tooltip(TheDebuginator* debuginator, float dt) {
 	if (item == NULL) {
 		debuginator->tooltip_timer = DEBUGINATOR_max(DEBUGINATOR_TOOLTIP_DELAY, debuginator->tooltip_timer - dt);
 	}
-	else if (item->is_folder) {
+	else if (item->is_folder || item->leaf.description[0] == '\0' ) {
 		if (debuginator->tooltip_timer >= 0) {
 			debuginator->tooltip_timer = DEBUGINATOR_max(0.f, debuginator->tooltip_timer - dt);
 		}
@@ -3401,10 +3405,12 @@ static void debuginator__draw_tooltip(TheDebuginator* debuginator, float dt) {
 	}
 
 	DebuginatorColor bg_color1 = debuginator->theme.colors[DEBUGINATOR_Background];
-	DebuginatorColor bg_color2 = debuginator->theme.colors[DEBUGINATOR_LineHighlightMouse];
+	DebuginatorColor bg_color2 = debuginator->theme.colors[DEBUGINATOR_BackgroundAlt];
+	DebuginatorColor bg_color3 = debuginator->theme.colors[DEBUGINATOR_LineHighlightMouse];
 	DebuginatorColor text_color = debuginator->theme.colors[DEBUGINATOR_ItemTitleHot];
 	bg_color1.a = (unsigned char)(debuginator->tooltip_timer * 4 * bg_color1.a);
 	bg_color2.a = (unsigned char)(debuginator->tooltip_timer * 4 * bg_color2.a);
+	bg_color3.a = (unsigned char)(debuginator->tooltip_timer * 4 * bg_color3.a);
 	text_color.a = (unsigned char)(debuginator->tooltip_timer * 4 * 255);
 
 	int row_count = 0;
@@ -3424,7 +3430,7 @@ static void debuginator__draw_tooltip(TheDebuginator* debuginator, float dt) {
 		bg_pos.x = debuginator->mouse_cursor_pos.x - debuginator->size.x - DEBUGINATOR_LEFT_MARGIN;
 	}
 
-	debuginator->draw_rect(&bg_pos, &bg_size, &bg_color1, debuginator->app_user_data);
+	debuginator->draw_rect(&bg_pos, &bg_size, &bg_color2, debuginator->app_user_data);
 
 	float border_size = DEBUGINATOR_LEFT_MARGIN / 4.0f;
 	DebuginatorVector2 bg_border_h_size = {bg_size.x,  border_size};
@@ -3433,10 +3439,14 @@ static void debuginator__draw_tooltip(TheDebuginator* debuginator, float dt) {
 	DebuginatorVector2 bg_border_b_pos = {bg_pos.x, bg_pos.y + bg_size.y - border_size};
 	DebuginatorVector2 bg_border_l_pos = {bg_pos.x, bg_pos.y + border_size};
 	DebuginatorVector2 bg_border_r_pos = {bg_pos.x + bg_size.x - border_size, bg_pos.y + border_size};
-	debuginator->draw_rect(&bg_border_t_pos, &bg_border_h_size, &bg_color2, debuginator->app_user_data);
-	debuginator->draw_rect(&bg_border_b_pos, &bg_border_h_size, &bg_color2, debuginator->app_user_data);
-	debuginator->draw_rect(&bg_border_l_pos, &bg_border_v_size, &bg_color2, debuginator->app_user_data);
-	debuginator->draw_rect(&bg_border_r_pos, &bg_border_v_size, &bg_color2, debuginator->app_user_data);
+	debuginator->draw_rect(&bg_border_t_pos, &bg_border_h_size, &bg_color1, debuginator->app_user_data);
+	debuginator->draw_rect(&bg_border_b_pos, &bg_border_h_size, &bg_color1, debuginator->app_user_data);
+	debuginator->draw_rect(&bg_border_l_pos, &bg_border_v_size, &bg_color1, debuginator->app_user_data);
+	debuginator->draw_rect(&bg_border_r_pos, &bg_border_v_size, &bg_color1, debuginator->app_user_data);
+	debuginator->draw_rect(&bg_border_t_pos, &bg_border_h_size, &bg_color3, debuginator->app_user_data);
+	debuginator->draw_rect(&bg_border_b_pos, &bg_border_h_size, &bg_color3, debuginator->app_user_data);
+	debuginator->draw_rect(&bg_border_l_pos, &bg_border_v_size, &bg_color3, debuginator->app_user_data);
+	debuginator->draw_rect(&bg_border_r_pos, &bg_border_v_size, &bg_color3, debuginator->app_user_data);
 
 	DebuginatorVector2 text_pos = debuginator__vector2(bg_pos.x + DEBUGINATOR_LEFT_MARGIN, bg_pos.y + DEBUGINATOR_LEFT_MARGIN);
 
