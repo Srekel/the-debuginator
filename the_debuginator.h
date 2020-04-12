@@ -387,6 +387,10 @@ void debuginator_set_left_aligned(TheDebuginator* debuginator, bool left_aligned
 bool debuginator_is_left_aligned(TheDebuginator* debuginator);
 float debuginator_distance_from_edge(TheDebuginator* debuginator);
 
+// Notification API
+void debuginator_set_notifications_enabled(TheDebuginator* debuginator, bool enabled);
+void debuginator_trigger_nondefault_notifications(TheDebuginator* debuginator);
+
 // Copies a string and returns a pointer to one that the debuginator owns and will
 // free if assigned as the description. (TODO: Add for value_titles)
 char* debuginator_copy_string(TheDebuginator* debuginator, const char* string, int length);
@@ -545,6 +549,12 @@ typedef struct TheDebuginatorConfig {
 
 	// Optional, use if you want to use a color picker editor.
 	DebuginatorImageHandle colorpicker_image;
+
+	// Whether or not notifications should be shown when items are activated
+	bool notifications_enabled;
+
+	// The root position for the notifications
+	DebuginatorVector2 notification_position;
 } TheDebuginatorConfig;
 
 typedef struct NumberRangeFloatState {
@@ -686,6 +696,22 @@ typedef struct NumberRangeFloatState {
 
 #ifndef DEBUGINATOR_MAX_NUM_HOT_KEYS
 #define DEBUGINATOR_MAX_NUM_HOT_KEYS 128
+#endif
+
+#ifndef DEBUGINATOR_MAX_NOTIFICATIONS
+#define DEBUGINATOR_MAX_NOTIFICATIONS 64
+#endif
+
+#ifndef DEBUGINATOR_MAX_NOTIFICATION_TEXT
+#define DEBUGINATOR_MAX_NOTIFICATION_TEXT 32
+#endif
+
+#ifndef DEBUGINATOR_NOTIFICATION_WIDTH
+#define DEBUGINATOR_NOTIFICATION_WIDTH 700
+#endif
+
+#ifndef DEBUGINATOR_NOTIFICATION_VALUE_WIDTH
+#define DEBUGINATOR_NOTIFICATION_VALUE_WIDTH 200
 #endif
 
 #ifndef DEBUGINATOR_MAX_HIERARCHY_SIZE
@@ -904,6 +930,14 @@ typedef struct TheDebuginator {
 	const char* bool_titles[2];
 
 	DebuginatorImageHandle colorpicker_image;
+
+	int notification_count;
+	DebuginatorVector2 notification_position;
+	float notification_anims[DEBUGINATOR_MAX_NOTIFICATIONS];
+	char notification_texts[DEBUGINATOR_MAX_NOTIFICATIONS][DEBUGINATOR_MAX_NOTIFICATION_TEXT];
+	char notification_paths[DEBUGINATOR_MAX_NOTIFICATIONS][DEBUGINATOR_MAX_PATH_LENGTH];
+	DebuginatorItem* notification_items[DEBUGINATOR_MAX_NOTIFICATIONS];
+	bool notifications_enabled;
 
 } TheDebuginator;
 
@@ -1738,6 +1772,8 @@ DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 	DebuginatorOnItemChangedCallback on_item_changed_callback, void* user_data,
 	const char** value_titles, void* values, int num_values, int value_size) {
 
+	bool old_notifications_enabled = debuginator->notifications_enabled;
+	debuginator->notifications_enabled = false;
 	bool create_if_not_exist;
 	DebuginatorItem* item = debuginator_get_item(debuginator, parent, path, &create_if_not_exist);
 	item->is_folder = false;
@@ -1811,6 +1847,7 @@ DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 	}
 
 	debuginator__deallocate(debuginator, full_path);
+	debuginator->notifications_enabled = old_notifications_enabled;
 
 	return item;
 }
@@ -2175,7 +2212,6 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 		}
 	}
 
-
 	DEBUGINATOR_memset(debuginator->sorted_items, 0, sizeof(debuginator->sorted_items));
 
 	char current_full_path[DEBUGINATOR_MAX_PATH_LENGTH] = { 0 };
@@ -2206,7 +2242,6 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 						current_full_path_lowercase[i] = (char)DEBUGINATOR_tolower(current_full_path_lowercase[i]);
 					}
 				}
-
 
 				++current_path_index;
 				DEBUGINATOR_assert(current_path_index + 1 < sizeof(path_indices) / sizeof(path_indices[0]));
@@ -2845,6 +2880,14 @@ float debuginator_distance_from_edge(TheDebuginator* debuginator) {
 	return debuginator->openness * debuginator->size.x;
 }
 
+void debuginator_set_notifications_enabled(TheDebuginator* debuginator, bool enabled) {
+	debuginator->notifications_enabled = enabled;
+}
+
+void debuginator_trigger_nondefault_notifications(TheDebuginator* debuginator) {
+	DEBUGINATOR_UNUSED(debuginator);
+}
+
 void debuginator_get_default_config(TheDebuginatorConfig* config) {
 	DEBUGINATOR_memset(config, 0, sizeof(*config));
 
@@ -2854,6 +2897,7 @@ void debuginator_get_default_config(TheDebuginatorConfig* config) {
 	config->focus_height = 0.25f;
 	config->item_height = 32;
 	config->quick_draw_size = 200;
+	config->notifications_enabled = true;
 
 	// Initialize default themes
 	DebuginatorTheme* themes = config->themes;
@@ -3025,6 +3069,9 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 	debuginator->bool_titles[0] = "False";
 	debuginator->bool_titles[1] = "True";
 
+	debuginator->notifications_enabled = config->notifications_enabled;
+	debuginator->notification_position = config->notification_position;
+
 	// Ensure mouse interaction starts disabled
 	DebuginatorVector2 mouse_cursor_pos = debuginator__vector2(-1.f, -1.f);
 	debuginator_set_mouse_cursor_pos(debuginator, &mouse_cursor_pos);
@@ -3095,11 +3142,10 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 				"Change color theme of The Debuginator. \nNote that only Classic is currently polished.", debuginator__on_change_theme, debuginator,
 				string_titles, (void*)theme_indices, 4, sizeof(theme_indices[0]));
 		}
-
-		// {
-		// 	debuginator_create_bool_item(debuginator, "Debuginator/Settings/Enable notifications",
-		// 		"Get popups... or not!", &debuginator->notifications_enabled);
-		// }
+		{
+			debuginator_create_bool_item(debuginator, "Debuginator/Settings/Enable notifications",
+				"Get popups... or not!", &debuginator->notifications_enabled);
+		}
 	}
 }
 
@@ -3166,9 +3212,13 @@ static void debuginator__draw_hierarchy(TheDebuginator* debuginator, float dt, D
 static void debuginator__draw_sorted_filter(TheDebuginator* debuginator, float dt, DebuginatorVector2 offset);
 static void debuginator__draw_animations(TheDebuginator* debuginator, float dt);
 static void debuginator__draw_search_filter(TheDebuginator* debuginator, float dt);
+static void debuginator__draw_notifications(TheDebuginator* debuginator, float dt);
 static void debuginator__draw_tooltip(TheDebuginator* debuginator, float dt);
 
 void debuginator_draw(TheDebuginator* debuginator, float dt) {
+	// Always draw notifications
+	debuginator__draw_notifications(debuginator, dt);
+
 	// Don't do anything if we're fully closed
 	if (!debuginator->is_open && debuginator->openness == 0) {
 		return;
@@ -3374,6 +3424,54 @@ static void debuginator__draw_search_filter(TheDebuginator* debuginator, float d
 			hint_color.a = (unsigned char)(hint_color.a * alpha);
 			debuginator->draw_text("(backspace)", &filter_pos, &hint_color, &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
 		}
+	}
+}
+
+void debuginator__draw_notifications(TheDebuginator* debuginator, float dt) {
+	if (!debuginator->notifications_enabled) {
+		debuginator->notification_count = 0;
+		return;
+	}
+
+	if (debuginator->openness == 1) {
+		return;
+	}
+
+	bool all_done = true;
+	for (int i=0; i < debuginator->notification_count; ++i) {
+		float alpha = 240 * DEBUGINATOR_min(1, debuginator->notification_anims[i] * 2);
+		DebuginatorVector2 pos = debuginator__vector2(debuginator->notification_position.x, debuginator->notification_position.y + i * debuginator->item_height);
+		DebuginatorVector2 size = debuginator__vector2(DEBUGINATOR_NOTIFICATION_WIDTH, debuginator->item_height);
+		DebuginatorColor color = debuginator->theme.colors[DEBUGINATOR_Background];
+		color.a = (unsigned char)alpha;
+		debuginator->draw_rect(&pos, &size, &color, debuginator->app_user_data);
+
+		pos.x += DEBUGINATOR_LEFT_MARGIN;
+		pos.y += debuginator->item_height / 2.0f;
+		color = debuginator->theme.colors[DEBUGINATOR_FolderTitle];
+		color.a = (unsigned char)alpha;
+		DebuginatorFont* font = &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive];
+		debuginator->draw_text(debuginator->notification_paths[i], &pos, &color, font, debuginator->app_user_data);
+
+		pos.x += DEBUGINATOR_NOTIFICATION_WIDTH - DEBUGINATOR_NOTIFICATION_VALUE_WIDTH - DEBUGINATOR_LEFT_MARGIN;
+		color = debuginator->theme.colors[DEBUGINATOR_ItemTitleOverridden];
+		DebuginatorItem* item = debuginator->notification_items[i];
+		if (item->leaf.num_values > 0) {
+			if (DEBUGINATOR_strcmp(debuginator->notification_texts[i], item->leaf.value_titles[item->leaf.default_index]) == 0) {
+				color = debuginator->theme.colors[DEBUGINATOR_ItemTitle];
+			}
+		}
+		color.a = (unsigned char)alpha;
+		debuginator->draw_text(debuginator->notification_texts[i], &pos, &color, font, debuginator->app_user_data);
+
+		debuginator->notification_anims[i] += dt;
+		if (debuginator->notification_anims[i] < 2) {
+			all_done = false;
+		}
+	}
+
+	if (all_done) {
+		debuginator->notification_count = 0;
 	}
 }
 
@@ -3624,11 +3722,42 @@ void debuginator_set_open(TheDebuginator* debuginator, bool is_open) {
 	}
 }
 
+static void debuginator__add_notification(TheDebuginator* debuginator, DebuginatorItem* item){
+	if (debuginator->notification_count == DEBUGINATOR_MAX_NOTIFICATIONS) {
+		return;
+	}
+
+	for ( int i_ntf = 0; i_ntf < debuginator->notification_count; ++i_ntf ) {
+		DebuginatorItem* ntf_item = debuginator->notification_items[i_ntf];
+		if (ntf_item == item) {
+			debuginator->notification_anims[i_ntf] = 0;
+			DEBUGINATOR_strcpy_s(debuginator->notification_texts[i_ntf], DEBUGINATOR_MAX_NOTIFICATION_TEXT, item->leaf.value_titles[item->leaf.hot_index]);
+			return;
+		}
+	}
+
+	debuginator->notification_anims[debuginator->notification_count] = 0;
+	debuginator->notification_items[debuginator->notification_count] = item;
+	int failboat = DEBUGINATOR_MAX_PATH_LENGTH;
+	debuginator_get_path(debuginator, item, debuginator->notification_paths[debuginator->notification_count], &failboat);
+	DEBUGINATOR_strcpy_s(debuginator->notification_texts[debuginator->notification_count], DEBUGINATOR_MAX_NOTIFICATION_TEXT, item->leaf.value_titles[item->leaf.hot_index]);
+	debuginator->notification_count++;
+}
+
 void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item, bool animate) {
 	item->leaf.draw_t = 0;
 	if (item->leaf.num_values <= 0) {
 		// "Action" items doesn't have a list of values, they just get triggered
 		if (item->leaf.on_item_changed_callback != NULL) {
+			// void* value = item->leaf.num_values == DEBUGINATOR_CUSTOM_VALUE_STATE_COUNT ? item->leaf.values : NULL;
+			if (animate && debuginator->notification_count < DEBUGINATOR_MAX_NOTIFICATIONS) {
+				debuginator->notification_anims[debuginator->notification_count] = 0;
+				debuginator->notification_items[debuginator->notification_count] = item;
+				int failboat = DEBUGINATOR_MAX_PATH_LENGTH;
+				debuginator_get_path(debuginator, item, debuginator->notification_paths[debuginator->notification_count], &failboat);
+				DEBUGINATOR_strcpy_s(debuginator->notification_texts[debuginator->notification_count], DEBUGINATOR_MAX_NOTIFICATION_TEXT, "Triggered");
+				debuginator->notification_count++;
+			}
 			item->leaf.on_item_changed_callback(item, item->leaf.values, NULL, debuginator->app_user_data);
 		}
 		return;
@@ -3663,6 +3792,10 @@ void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item, bo
 
 	if (item->leaf.on_item_changed_callback == NULL) {
 		return;
+	}
+
+	if (animate) {
+		debuginator__add_notification(debuginator, item);
 	}
 
 	void* value = ((char*)item->leaf.values) + hot_index * item->leaf.array_element_size;
