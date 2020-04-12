@@ -2059,8 +2059,6 @@ void debuginator_remove_item(TheDebuginator* debuginator, DebuginatorItem* item)
 		debuginator__set_total_height(item->parent, item->parent->total_height - item->total_height);
 	}
 
-	debuginator__set_total_height(item->parent, item->parent->total_height - item->total_height);
-
 	if (!item->is_folder && !item->is_filtered) {
 		// If it's a folder we've already adjusted the parent's count when we removed the item's children above.
 		debuginator__adjust_num_visible_children(item->parent, -1);
