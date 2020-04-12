@@ -525,7 +525,7 @@ int main(int argc, char **argv)
 	GameData* gamedata = game_init(gui, &debuginator);
 	DemoData* demodata = demo_init(gui, &debuginator);
 
-	bool limit_framerate = true;
+	bool limit_framerate = false;
 	debuginator_create_bool_item(&debuginator, "SDL Demo/Throttle framerate", "Disables sleeping between frames.", &limit_framerate);
 
 	bool show_framerate = false;
@@ -537,6 +537,8 @@ int main(int argc, char **argv)
 
 	float demo_y_offset = 0;
 	debuginator_create_numberrange_float_item(&debuginator, "SDL Demo/Edit types/Number slider", "Example of the NumberRange edit type", &demo_y_offset, -100, 200);
+
+	// TextureHandle bg_texture = gui_load_texture(gui, "A_Girl_and_her_Wyvern.jpg");
 
 	Uint64 START = SDL_GetPerformanceCounter();
 	Uint64 NOW = START;
@@ -589,6 +591,10 @@ int main(int argc, char **argv)
 		debuginator_update(&debuginator, (float)dt);
 
 		gui_frame_begin(gui);
+
+		// Vector2 bg_texture_pos = {0,0};
+		// Vector2 bg_texture_size = {(float)res_x, (float)res_y};
+		// gui_draw_texture(gui, bg_texture, bg_texture_pos, bg_texture_size);
 
 		Vector2 main_text_size = gui_text_size(gui, "The Debuginator", s_fonts[FONT_DemoHeader]);
 		Vector2 main_text_pos(res_x / 2 - main_text_size.x / 2, res_y / 4 - main_text_size.y / 2 + demo_y_offset);
