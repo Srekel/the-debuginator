@@ -1653,7 +1653,6 @@ DebuginatorItem* debuginator_new_folder_item(TheDebuginator* debuginator, Debugi
 	if (DEBUGINATOR_strcmp(item_setting, DEBUGINATOR_FOLDER_COLLAPSED_STRING) == 0) {
 		folder_item->folder.is_collapsed = true;
 	}
-	debuginator__deallocate(debuginator, item_setting);
 	debuginator__deallocate(debuginator, full_path);
 
 	return folder_item;
@@ -1671,7 +1670,6 @@ DebuginatorItem* debuginator_create_folder_item(TheDebuginator* debuginator, Deb
 	if (DEBUGINATOR_strcmp(item_setting, DEBUGINATOR_FOLDER_COLLAPSED_STRING) == 0) {
 		folder_item->folder.is_collapsed = true;
 	}
-	debuginator__deallocate(debuginator, item_setting);
 	debuginator__deallocate(debuginator, full_path);
 
 	return folder_item;
@@ -3022,6 +3020,7 @@ void debuginator_get_default_config(TheDebuginatorConfig* config) {
 void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginator) {
 	DEBUGINATOR_assert(config->draw_rect != NULL);
 	DEBUGINATOR_assert(config->draw_text != NULL);
+	DEBUGINATOR_assert(config->text_size != NULL);
 	DEBUGINATOR_assert(config->app_user_data != NULL);
 	DEBUGINATOR_assert(config->word_wrap != NULL);
 	DEBUGINATOR_assert(config->memory_arena != NULL);
