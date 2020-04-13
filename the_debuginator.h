@@ -175,6 +175,8 @@ typedef void(*DebuginatorWordWrapCallback)
 	(const char* text, DebuginatorFont* font, float max_width, int* row_count, int* row_lengths, int row_lengths_buffer_size, void* app_userdata);
 typedef DebuginatorVector2 (*DebuginatorTextSizeCallback)
 	(const char* text, DebuginatorFont* font, void* userdata);
+typedef void (*DebuginatorLogCallback)
+	(const char* text, void* userdata);
 typedef void (*DebuginatorOnOpenChangedCallback)
 	(bool opened, bool done, void* app_userdata);
 
@@ -395,6 +397,9 @@ void debuginator_trigger_nondefault_notifications(TheDebuginator* debuginator);
 // free if assigned as the description. (TODO: Add for value_titles)
 char* debuginator_copy_string(TheDebuginator* debuginator, const char* string, int length);
 
+// Logs current value
+void debuginator_log_item(TheDebuginator* debuginator, DebuginatorItem* item);
+
 typedef struct DebuginatorFolderData {
 	DebuginatorItem* first_child;
 	DebuginatorItem* hot_child;
@@ -518,6 +523,7 @@ typedef struct TheDebuginatorConfig {
 	DebuginatorDrawRectCallback draw_rect;
 	DebuginatorWordWrapCallback word_wrap;
 	DebuginatorTextSizeCallback text_size;
+	DebuginatorLogCallback log;
 
 	// Optional. Will be called during draw.
 	DebuginatorDrawImageCallback draw_image;
@@ -883,6 +889,7 @@ typedef struct TheDebuginator {
 	DebuginatorDrawTextCallback draw_text;
 	DebuginatorWordWrapCallback word_wrap;
 	DebuginatorTextSizeCallback text_size;
+	DebuginatorLogCallback log;
 	DebuginatorOnOpenChangedCallback on_opened_changed;
 	int item_height;
 
@@ -3044,6 +3051,7 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 	debuginator->draw_text = config->draw_text;
 	debuginator->word_wrap = config->word_wrap;
 	debuginator->text_size = config->text_size;
+	debuginator->log = config->log;
 	debuginator->on_opened_changed = config->on_opened_changed;
 	debuginator->app_user_data = config->app_user_data;
 
@@ -3744,12 +3752,34 @@ static void debuginator__add_notification(TheDebuginator* debuginator, Debuginat
 	debuginator->notification_count++;
 }
 
+void debuginator_log_item(TheDebuginator* debuginator, DebuginatorItem* item) {
+	if (debuginator->log == NULL) {
+		return;
+	}
+
+	char logtxt[512];
+	const char* full_path = debuginator__compute_path(debuginator, item, "", 0);
+	if (item->leaf.num_values <= 0) {
+		DEBUGINATOR_sprintf_s(logtxt, sizeof(logtxt), "%s -> [action]", full_path);
+	}
+	else if (item->leaf.edit_type == DEBUGINATOR_EditTypePreset) {
+		DEBUGINATOR_sprintf_s(logtxt, sizeof(logtxt), "%s -> [preset]", full_path);
+	}
+	else {
+		DEBUGINATOR_sprintf_s(logtxt, sizeof(logtxt), "%s -> [%i]%s", full_path, item->leaf.active_index, item->leaf.value_titles[item->leaf.active_index]);
+	}
+	debuginator__deallocate(debuginator, full_path);
+	debuginator->log(logtxt, debuginator->app_user_data);
+}
+
+
 void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item, bool animate) {
 	item->leaf.draw_t = 0;
 	if (item->leaf.num_values <= 0) {
 		// "Action" items doesn't have a list of values, they just get triggered
 		if (item->leaf.on_item_changed_callback != NULL) {
 			// void* value = item->leaf.num_values == DEBUGINATOR_CUSTOM_VALUE_STATE_COUNT ? item->leaf.values : NULL;
+			debuginator_log_item(debuginator, item);
 			if (animate && debuginator->notification_count < DEBUGINATOR_MAX_NOTIFICATIONS) {
 				debuginator->notification_anims[debuginator->notification_count] = 0;
 				debuginator->notification_items[debuginator->notification_count] = item;
@@ -3765,6 +3795,7 @@ void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item, bo
 
 	int hot_index = item->leaf.hot_index;
 	item->leaf.active_index = hot_index;
+	debuginator_log_item(debuginator, item);
 
 	if (animate) {
 		DebuginatorAnimation* animation = debuginator__get_free_animation(debuginator);

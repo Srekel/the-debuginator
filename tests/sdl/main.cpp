@@ -69,8 +69,14 @@ void word_wrap(const char* text, DebuginatorFont* font, float max_width, int* ro
 }
 
 DebuginatorVector2 text_size(const char* text, DebuginatorFont* font, void* userdata) {
-	Vector2 text_size = gui_text_size((GuiHandle)userdata, text, s_fonts[font->italic ? FONT_ItemDescription : FONT_ItemTitle]);
+	int color_index = font->draw_type == DEBUGINATOR_ItemDescription ? (int)FONT_ItemDescription : (int)FONT_ItemTitle;
+	Vector2 text_size = gui_text_size((GuiHandle)userdata, text, s_fonts[color_index]);
 	return *(DebuginatorVector2*)&text_size;
+}
+
+void log(const char* text, void* userdata) {
+	(void)userdata;
+	printf("[Debuginator] %s\n", text);
 }
 
 struct SaveData {
@@ -503,6 +509,7 @@ int main(int argc, char **argv)
 	config.draw_text = draw_text;
 	config.word_wrap = word_wrap;
 	config.text_size = text_size;
+	config.log = log;
 	config.app_user_data = (void*)gui;
 	config.size.x = 500;
 	config.size.y = (float)res_y;
