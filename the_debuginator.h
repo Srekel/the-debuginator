@@ -3093,30 +3093,30 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 			help_folder->folder.is_sorted = false;
 
 			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/About",
-				"The Debuginator is an open source debug menu made by Anders 'Srekel' Elfgren.\nLatest version can be found here: https://github.com/Srekel/the-debuginator\nSuggestions, feedback, and bug reports are welcome!", NULL, NULL,
-				NULL, NULL, 0, 0);
+				"The Debuginator is an open source debug menu made by Anders 'Srekel' Elfgren.\nLatest version can be found here: https://github.com/Srekel/the-debuginator\nSuggestions, feedback, and bug reports are welcome!",
+				NULL, NULL, NULL, NULL, 0, 0);
 
 			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/General",
-				"Some items can be 'expanded' to show more details or provide a richer editing experience. Folders can be collapsed to reduce clutter. To find stuff quickly, use the search function.", NULL, NULL,
-				NULL, NULL, 0, 0);
+				"Some items can be 'expanded' to show more details or provide a richer editing experience. Folders can be collapsed to reduce clutter. To find stuff quickly, use the search function.",
+				NULL, NULL, NULL, NULL, 0, 0);
 
 			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/Input/Mouse",
-				"Click around! :). Right button expands items. Hover over items for tooltips.", NULL, NULL,
-				NULL, NULL, 0, 0);
+				"Click around! :). Right button expands items. Hover over items for tooltips.",
+				NULL, NULL, NULL, NULL, 0, 0);
 
 			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/Input/Keyboard (1)",
-				"Open the menu with Right Arrow. \nClose it with Left Arrow. \nUse all arrow keys to navigate. \nRight Arrow is also used to change value on a menu item.", NULL, NULL,
-				NULL, NULL, 0, 0);
+				"Open the menu with Right Arrow. \nClose it with Left Arrow. \nUse all arrow keys to navigate. \nRight Arrow is also used to change value on a menu item.",
+				NULL, NULL, NULL, NULL, 0, 0);
 			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/Input/Keyboard (2)",
-				"Hold CTRL for faster navigation and item toggling. \nEscape to quickly close the menu.\nBackspace to toggle search.", NULL, NULL,
-				NULL, NULL, 0, 0);
+				"Hold CTRL for faster navigation and item toggling. \nEscape to quickly close the menu.\nBackspace to toggle search.",
+				NULL, NULL, NULL, NULL, 0, 0);
 
 			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/Input/Gamepad (1)",
-				"Open the menu with Start/Options button. \nClose it with Left D-Pad. \nUse D-Pad to navigate. \nD-Pad Right is used to change value on a menu item.", NULL, NULL,
-				NULL, NULL, 0, 0);
+				"Open the menu with Start/Options button. \nClose it with Left D-Pad. \nUse D-Pad to navigate. \nD-Pad Right is used to change value on a menu item.",
+				NULL, NULL, NULL, NULL, 0, 0);
 			debuginator_create_array_item(debuginator, NULL, "Debuginator/Help/Input/Gamepad (2)",
-				"Use the corresponding AXBY buttons to do the same things as the D-Pad, but faster!", NULL, NULL,
-				NULL, NULL, 0, 0);
+				"Use the corresponding AXBY buttons to do the same things as the D-Pad, but faster!",
+				NULL, NULL, NULL, NULL, 0, 0);
 		}
 
 		{

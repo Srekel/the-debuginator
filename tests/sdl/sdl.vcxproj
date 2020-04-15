@@ -134,6 +134,8 @@ copy $(SolutionDir)..\..\external\SDL2_image-2.0.2\lib\x64\*.dll $(OutputPath)
 copy $(SolutionDir)3rdparty\liberation-fonts-ttf-2.00.1\*.ttf $(OutputPath)
 
 copy $(SolutionDir)..\color_picker.png $(OutputPath)
+copy $(SolutionDir)sk5.jpg $(OutputPath)
+copy $(SolutionDir)sk5.txt $(OutputPath)
 
 copy $(SolutionDir)3rdparty\SDL_GameControllerDB-master\gamecontrollerdb.txt $(OutputPath)</Command>
     </PostBuildEvent>

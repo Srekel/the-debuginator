@@ -112,6 +112,20 @@ void gui_draw_texture(GuiHandle gui_handle, TextureHandle handle, Vector2 positi
 	texture_rect.y = (int)position.y;
 	texture_rect.w = (int)size.x;
 	texture_rect.h = (int)size.y;
+	if (texture_rect.w == 0) {
+		int w, h;
+		int res = SDL_QueryTexture(texture, NULL, NULL, &w, &h);
+		(void)res;
+		float ratio = (float)w / h;
+		texture_rect.w = (int)(texture_rect.h * ratio);
+	}
+	if (texture_rect.h == 0) {
+		int w, h;
+		int res = SDL_QueryTexture(texture, NULL, NULL, &w, &h);
+		(void)res;
+		float ratio = (float)w / h;
+		texture_rect.h = (int)(texture_rect.w / ratio);
+	}
 	SDL_RenderCopy(gui->renderer, texture, NULL, &texture_rect);
 }
 

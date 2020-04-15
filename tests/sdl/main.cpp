@@ -545,7 +545,11 @@ int main(int argc, char **argv)
 	float demo_y_offset = 0;
 	debuginator_create_numberrange_float_item(&debuginator, "SDL Demo/Edit types/Number slider", "Example of the NumberRange edit type", &demo_y_offset, -100, 200);
 
-	// TextureHandle bg_texture = gui_load_texture(gui, "A_Girl_and_her_Wyvern.jpg");
+	bool show_background = true;
+	debuginator_create_bool_item(&debuginator, "SDL Demo/Show background image", "", &show_background);
+	debuginator_create_array_item(&debuginator, NULL, "SDL Demo/Attributions", "Background image: sk5.jpg. See sk5.txt.", NULL, NULL, NULL, NULL, 0, 0);
+
+	TextureHandle bg_texture = gui_load_texture(gui, "sk5.jpg");
 
 	Uint64 START = SDL_GetPerformanceCounter();
 	Uint64 NOW = START;
@@ -556,11 +560,14 @@ int main(int argc, char **argv)
 	double time_since_button_pressed = 0;
 	SDL_GameControllerButton current_button = SDL_CONTROLLER_BUTTON_INVALID;
 	float gamepad_scroll_speed = 0;
+	double time_now = 0;
+	double bg_height = 0;
 	while (!quit) {
 		LAST = NOW;
 		NOW = SDL_GetPerformanceCounter();
 		Uint64 freq = SDL_GetPerformanceFrequency();
 		double dt = (double)((NOW - LAST) * 1.0 / freq);
+		time_now += dt;
 		time_since_button_pressed += dt;
 
 		while (SDL_PollEvent(&event) != 0)
@@ -599,9 +606,12 @@ int main(int argc, char **argv)
 
 		gui_frame_begin(gui);
 
-		// Vector2 bg_texture_pos = {0,0};
-		// Vector2 bg_texture_size = {(float)res_x, (float)res_y};
-		// gui_draw_texture(gui, bg_texture, bg_texture_pos, bg_texture_size);
+		if (show_background) {
+			bg_height = bg_height * (1 - 0.02) - 200 * 0.02;
+			Vector2 bg_texture_pos = {0, (float)bg_height};
+			Vector2 bg_texture_size = {(float)res_x, 0};
+			gui_draw_texture(gui, bg_texture, bg_texture_pos, bg_texture_size);
+		}
 
 		Vector2 main_text_size = gui_text_size(gui, "The Debuginator", s_fonts[FONT_DemoHeader]);
 		Vector2 main_text_pos(res_x / 2 - main_text_size.x / 2, res_y / 4 - main_text_size.y / 2 + demo_y_offset);
