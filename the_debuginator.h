@@ -2147,7 +2147,8 @@ static bool debuginator__distance_to_hot_item(DebuginatorItem* item, Debuginator
 
 			child = debuginator__next_visible_sibling(child);
 		}
-	} else if (item->leaf.is_expanded && !item->is_filtered) {
+	}
+	else if (item->leaf.is_expanded && !item->is_filtered) {
 		*distance += item_height * item->leaf.num_values;
 		*distance += item->leaf.description_line_count * item_height;
 	}
@@ -3363,16 +3364,23 @@ static void debuginator__draw_animations(TheDebuginator* debuginator, float dt) 
 		}
 		if (animation->type == DEBUGINATOR_ItemActivate) {
 			DebuginatorItem* anim_item = animation->data.item_activate.item;
+
 			int distance_from_root_to_item = 0;
-			debuginator__distance_to_hot_item(debuginator->root, anim_item, debuginator->item_height, &distance_from_root_to_item);
+			if (anim_item->is_folder) {
+				debuginator__distance_to_hot_item(debuginator->root, anim_item, debuginator->item_height, &distance_from_root_to_item);
+			}
+			else {
+				// Ensure we don't take the hot index into account
+				bool old_is_expanded = anim_item->leaf.is_expanded;
+				anim_item->leaf.is_expanded = false;
+				debuginator__distance_to_hot_item(debuginator->root, anim_item, debuginator->item_height, &distance_from_root_to_item);
+				anim_item->leaf.is_expanded = old_is_expanded;
+			}
 
 			DebuginatorVector2 start_position = animation->data.item_activate.start_pos;
 			DebuginatorVector2 end_position;
 			end_position.x = debuginator->top_left.x + debuginator->size.x - debuginator->quick_draw_size;
 			end_position.y = distance_from_root_to_item + debuginator->current_height_offset - debuginator->item_height / 2.0f;
-			if (anim_item->leaf.is_expanded) {
-				end_position.y -= (anim_item->leaf.hot_index + anim_item->leaf.description_line_count - 1) * debuginator->item_height;
-			}
 
 			if (anim_item->leaf.num_values) {
 				DebuginatorVector2 position;
