@@ -2963,7 +2963,6 @@ void debuginator_get_default_config(TheDebuginatorConfig* config) {
 	themes[2].colors[DEBUGINATOR_LineHighlightMouse] = debuginator__color(100, 100, 100, 100);
 	themes[2].colors[DEBUGINATOR_ItemEditorOff] = debuginator__color(250, 100, 100, 200);
 	themes[2].colors[DEBUGINATOR_ItemEditorOn] = debuginator__color(130, 220, 255, 200);
-	themes[2].fonts[DEBUGINATOR_ItemDescription].italic = true;
 
 	// High contrast light theme
 	themes[3].colors[DEBUGINATOR_Background] = debuginator__color(255, 255, 255, 240);
@@ -2983,7 +2982,25 @@ void debuginator_get_default_config(TheDebuginatorConfig* config) {
 	themes[3].colors[DEBUGINATOR_LineHighlightMouse] = debuginator__color(100, 100, 150, 100);
 	themes[3].colors[DEBUGINATOR_ItemEditorOff] = debuginator__color(200, 150, 100, 200);
 	themes[3].colors[DEBUGINATOR_ItemEditorOn] = debuginator__color(250, 250, 100, 200);
-	themes[3].fonts[DEBUGINATOR_ItemDescription].italic = true;
+
+	// Pink
+	themes[4].colors[DEBUGINATOR_Background] = debuginator__color(63, 0, 59, 230);
+	themes[4].colors[DEBUGINATOR_BackgroundAlt] = debuginator__color(5, 5, 5, 220);
+	themes[4].colors[DEBUGINATOR_FolderTitle] = debuginator__color(200, 50, 150, 255);
+	themes[4].colors[DEBUGINATOR_ItemTitle] = debuginator__color(220, 150, 160, 250);
+	themes[4].colors[DEBUGINATOR_ItemTitleOverridden] = debuginator__color(230, 230, 200, 255);
+	themes[4].colors[DEBUGINATOR_ItemTitleHot] = debuginator__color(255, 190, 200, 255);
+	themes[4].colors[DEBUGINATOR_ItemTitleActive] = debuginator__color(255, 230, 240, 255);
+	themes[4].colors[DEBUGINATOR_ItemTitleActive1] = debuginator__color(140, 140, 140, 255);
+	themes[4].colors[DEBUGINATOR_ItemTitleActive2] = debuginator__color(220, 220, 200, 255);
+	themes[4].colors[DEBUGINATOR_ItemDescription] = debuginator__color(220, 150, 160, 250);
+	themes[4].colors[DEBUGINATOR_ItemValueDefault] = debuginator__color(181, 166, 66, 200);
+	themes[4].colors[DEBUGINATOR_ItemValueOverridden] = debuginator__color(181, 166, 66, 200);
+	themes[4].colors[DEBUGINATOR_ItemValueHot] = debuginator__color(250, 220, 100, 200);
+	themes[4].colors[DEBUGINATOR_LineHighlight] = debuginator__color(100, 100, 100, 150);
+	themes[4].colors[DEBUGINATOR_LineHighlightMouse] = debuginator__color(100, 100, 100, 100);
+	themes[4].colors[DEBUGINATOR_ItemEditorOff] = debuginator__color(250, 100, 100, 200);
+	themes[4].colors[DEBUGINATOR_ItemEditorOn] = debuginator__color(130, 220, 255, 200);
 
 
 	for(int i_theme=0; i_theme < DEBUGINATOR_THEMES_MAX; ++i_theme) {
@@ -3135,19 +3152,22 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 			debuginator_create_bool_item(debuginator, "Debuginator/Settings/Sort items", "Makes items be sorted alphabetically by default.", &debuginator->sort_items);
 		}
 		{
-			int* theme_indices = (int*)debuginator__allocate(debuginator, 4 * sizeof(int)); //
+			int theme_count = 5;
+			int* theme_indices = (int*)debuginator__allocate(debuginator, theme_count * sizeof(int)); //
 			theme_indices[0] = 0;
 			theme_indices[1] = 1;
 			theme_indices[2] = 2;
 			theme_indices[3] = 3;
-			const char** string_titles = (const char**)debuginator__allocate(debuginator, sizeof(char*) * 4);
+			theme_indices[4] = 4;
+			const char** string_titles = (const char**)debuginator__allocate(debuginator, sizeof(char*) * theme_count);
 			string_titles[0] = "Classic";
 			string_titles[1] = "Blue";
 			string_titles[2] = "High Contrast Dark";
 			string_titles[3] = "High Contrast Light";
+			string_titles[4] = "Pink";
 			debuginator_create_array_item(debuginator, NULL, "Debuginator/Settings/Theme",
 				"Change color theme of The Debuginator. \nNote that only Classic is currently polished.", debuginator__on_change_theme, debuginator,
-				string_titles, (void*)theme_indices, 4, sizeof(theme_indices[0]));
+				string_titles, (void*)theme_indices, theme_count, sizeof(theme_indices[0]));
 		}
 		{
 			debuginator_create_bool_item(debuginator, "Debuginator/Settings/Enable notifications",
