@@ -988,7 +988,7 @@ static void debuginator__expanded_draw_default(TheDebuginator* debuginator, Debu
 		position->y += debuginator->item_height;
 
 		bool mouse_over =
-			debuginator->top_left.x <= debuginator->mouse_cursor_pos.x && debuginator->mouse_cursor_pos.x < debuginator->top_left.x + debuginator->size.x - debuginator->quick_draw_size &&
+			debuginator->top_left.x <= debuginator->mouse_cursor_pos.x && debuginator->mouse_cursor_pos.x < debuginator->top_left.x + debuginator->size.x &&
 			position->y <= debuginator->mouse_cursor_pos.y && debuginator->mouse_cursor_pos.y < position->y + debuginator->item_height;
 
 		if (mouse_over || debuginator->hot_item == item && item->leaf.hot_index == i) {
@@ -1057,7 +1057,7 @@ static void debuginator__expanded_draw_boolean(TheDebuginator* debuginator, Debu
 		position->y += debuginator->item_height;
 
 		bool mouse_over =
-			debuginator->top_left.x <= debuginator->mouse_cursor_pos.x && debuginator->mouse_cursor_pos.x < debuginator->top_left.x + debuginator->size.x - debuginator->quick_draw_size &&
+			debuginator->top_left.x <= debuginator->mouse_cursor_pos.x && debuginator->mouse_cursor_pos.x < debuginator->top_left.x + debuginator->size.x &&
 			position->y <= debuginator->mouse_cursor_pos.y && debuginator->mouse_cursor_pos.y < position->y + debuginator->item_height;
 
 		if (mouse_over || debuginator->hot_item == item && item->leaf.hot_index == i) {
