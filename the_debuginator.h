@@ -2535,6 +2535,9 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 }
 
 void debuginator_apply_scroll(TheDebuginator* debuginator, int distance) {
+	if (debuginator->tooltip_timer < 0) {
+		debuginator->tooltip_timer = DEBUGINATOR_TOOLTIP_DELAY;
+	}
 	debuginator->scroll_wanted += distance;
 
 	// Make sure we don't scroll too far away from the menu's content.
@@ -2550,16 +2553,24 @@ void debuginator_reset_scrolling(TheDebuginator* debuginator) {
 }
 
 void debuginator_set_mouse_cursor_pos(TheDebuginator* debuginator, DebuginatorVector2* mouse_cursor_pos) {
-	if (debuginator->mouse_cursor_pos.x != mouse_cursor_pos->x && debuginator->mouse_cursor_pos.y != mouse_cursor_pos->y) {
-		// Mouse moved
-		if (debuginator->tooltip_timer < 0) {
+	if (debuginator->tooltip_timer < 0) {
+		if (debuginator->mouse_cursor_pos.x != mouse_cursor_pos->x && debuginator->mouse_cursor_pos.y != mouse_cursor_pos->y) {
+			// Mouse moved before tooltip visible, clear it
 			debuginator->tooltip_timer = DEBUGINATOR_TOOLTIP_DELAY;
 		}
+	}
+	if (!(debuginator->top_left.x <= debuginator->mouse_cursor_pos.x && debuginator->mouse_cursor_pos.x < debuginator->top_left.x + debuginator->size.x)) {
+		// Mouse went outside debuginator, clear tooltip
+		debuginator->tooltip_timer = DEBUGINATOR_TOOLTIP_DELAY;
 	}
 	debuginator->mouse_cursor_pos = *mouse_cursor_pos;
 }
 
 void debuginator_activate_item_at_mouse_cursor(TheDebuginator* debuginator) {
+	if (debuginator->tooltip_timer < 0) {
+		debuginator->tooltip_timer = DEBUGINATOR_TOOLTIP_DELAY;
+	}
+
 	DebuginatorItem* hot_item = debuginator->hot_mouse_item;
 	if (hot_item == NULL) {
 		return;
@@ -2599,6 +2610,10 @@ void debuginator_activate_item_at_mouse_cursor(TheDebuginator* debuginator) {
 }
 
 void debuginator_expand_item_at_mouse_cursor(TheDebuginator* debuginator, DebuginatorExpand expand) {
+	if (debuginator->tooltip_timer < 0) {
+		debuginator->tooltip_timer = DEBUGINATOR_TOOLTIP_DELAY;
+	}
+
 	DebuginatorItem* hot_item = debuginator->hot_mouse_item;
 	if (hot_item == NULL) {
 		return;
