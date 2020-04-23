@@ -3400,7 +3400,7 @@ static void debuginator__draw_animations(TheDebuginator* debuginator, float dt) 
 
 static void debuginator__draw_search_filter(TheDebuginator* debuginator, float dt) {
 	bool filter_hint_mode = !debuginator->filter_enabled && debuginator->current_height_offset > 100;
-	if (debuginator->filter_enabled || filter_hint_mode) {
+	if (debuginator->filter_enabled) {
 		debuginator->filter_timer += dt * 5;
 		if (debuginator->filter_timer > 1) {
 			debuginator->filter_timer = 1;
@@ -3409,15 +3409,29 @@ static void debuginator__draw_search_filter(TheDebuginator* debuginator, float d
 			debuginator->filter_timer = 0.5f;
 		}
 	}
+	else if (filter_hint_mode) {
+		if (debuginator->filter_timer > 0.5f) {
+			debuginator->filter_timer -= dt * 5;
+			if (debuginator->filter_timer < 0.5f) {
+				debuginator->filter_timer = 0.5f;
+			}
+		}
+		else {
+			debuginator->filter_timer += dt * 5;
+			if (debuginator->filter_timer > 0.5f) {
+				debuginator->filter_timer = 0.5f;
+			}
+		}
+	}
 	else {
-		debuginator->filter_timer -= dt * 10;
+		debuginator->filter_timer -= dt * 5;
 		if (debuginator->filter_timer < 0) {
 			debuginator->filter_timer = 0;
 		}
 	}
 
 	if (debuginator->filter_timer > 0) {
-		float alpha = debuginator->filter_timer * (filter_hint_mode ? 0.5f : 1);
+		float alpha = debuginator->filter_timer;
 		DebuginatorVector2 filter_pos = debuginator__vector2(debuginator->top_left.x + debuginator->size.x - 450, 25);
 		DebuginatorVector2 filter_size = debuginator__vector2(150 + (debuginator->size.x - 250) * debuginator->filter_timer, DEBUGINATOR_FILTER_HEIGHT);
 		DebuginatorColor filter_color = debuginator__color(50, 100, 50, (int)(200 * debuginator->filter_timer * alpha));
@@ -3469,9 +3483,7 @@ static void debuginator__draw_search_filter(TheDebuginator* debuginator, float d
 			debuginator->draw_rect(&caret_pos, &caret_size, &filter_color, debuginator->app_user_data);
 		}
 		else if (filter_hint_mode) {
-			//filter_pos.x += 50;
 			DebuginatorColor hint_color = header_color;
-			hint_color.a = (unsigned char)(hint_color.a * alpha);
 			debuginator->draw_text("(backspace)", &filter_pos, &hint_color, &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
 		}
 	}
