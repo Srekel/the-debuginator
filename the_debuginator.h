@@ -911,6 +911,8 @@ typedef struct TheDebuginator {
 	int animation_count;
 
 	bool filter_enabled;
+	DebuginatorVector2 filter_pos;
+	DebuginatorVector2 filter_size;
 	char filter[DEBUGINATOR_FILTER_MAX_LENGTH];
 	int filter_length;
 	DebuginatorSortedItem sorted_items[DEBUGINATOR_SORTED_ITEM_COUNT];
@@ -2574,6 +2576,11 @@ void debuginator_activate_item_at_mouse_cursor(TheDebuginator* debuginator) {
 
 	DebuginatorItem* hot_item = debuginator->hot_mouse_item;
 	if (hot_item == NULL) {
+		if (debuginator->filter_pos.x <= debuginator->mouse_cursor_pos.x && debuginator->mouse_cursor_pos.x <= debuginator->filter_pos.x + debuginator->filter_size.x &&
+			debuginator->filter_pos.y <= debuginator->mouse_cursor_pos.y && debuginator->mouse_cursor_pos.y <= debuginator->filter_pos.y + debuginator->filter_size.y) {
+
+			debuginator->filter_enabled = !debuginator->filter_enabled;
+		}
 		return;
 	}
 
@@ -3258,6 +3265,23 @@ static void debuginator__draw_search_filter(TheDebuginator* debuginator, float d
 static void debuginator__draw_notifications(TheDebuginator* debuginator, float dt);
 static void debuginator__draw_tooltip(TheDebuginator* debuginator, float dt);
 
+static void debuginator__draw_border(TheDebuginator* debuginator, DebuginatorVector2* position, DebuginatorVector2* size, int thickness, DebuginatorColor* color1, DebuginatorColor* color2) {
+	DebuginatorVector2 border_h_size = {size->x,  thickness};
+	DebuginatorVector2 border_v_size = {thickness,  size->y - thickness * 2};
+	DebuginatorVector2 border_t_pos = *position;
+	DebuginatorVector2 border_b_pos = {position->x, position->y + size->y - thickness};
+	DebuginatorVector2 border_l_pos = {position->x, position->y + thickness};
+	DebuginatorVector2 border_r_pos = {position->x + size->x - thickness, position->y + thickness};
+	debuginator->draw_rect(&border_t_pos, &border_h_size, color1, debuginator->app_user_data);
+	debuginator->draw_rect(&border_b_pos, &border_h_size, color1, debuginator->app_user_data);
+	debuginator->draw_rect(&border_l_pos, &border_v_size, color1, debuginator->app_user_data);
+	debuginator->draw_rect(&border_r_pos, &border_v_size, color1, debuginator->app_user_data);
+	debuginator->draw_rect(&border_t_pos, &border_h_size, color2, debuginator->app_user_data);
+	debuginator->draw_rect(&border_b_pos, &border_h_size, color2, debuginator->app_user_data);
+	debuginator->draw_rect(&border_l_pos, &border_v_size, color2, debuginator->app_user_data);
+	debuginator->draw_rect(&border_r_pos, &border_v_size, color2, debuginator->app_user_data);
+}
+
 void debuginator_draw(TheDebuginator* debuginator, float dt) {
 	// Always draw notifications
 	debuginator__draw_notifications(debuginator, dt);
@@ -3430,63 +3454,77 @@ static void debuginator__draw_search_filter(TheDebuginator* debuginator, float d
 		}
 	}
 
-	if (debuginator->filter_timer > 0) {
-		float alpha = debuginator->filter_timer;
-		DebuginatorVector2 filter_pos = debuginator__vector2(debuginator->top_left.x + debuginator->size.x - 450, 25);
-		DebuginatorVector2 filter_size = debuginator__vector2(150 + (debuginator->size.x - 250) * debuginator->filter_timer, DEBUGINATOR_FILTER_HEIGHT);
-		DebuginatorColor filter_color = debuginator__color(50, 100, 50, (int)(200 * debuginator->filter_timer * alpha));
-		debuginator->draw_rect(&filter_pos, &filter_size, &filter_color, debuginator->app_user_data);
+	if (debuginator->filter_timer <= 0) {
+		return;
+	}
 
-		DebuginatorVector2 header_text_size = debuginator->text_size("Search: ", &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
-		filter_size.x = header_text_size.x + DEBUGINATOR_FILTER_HEIGHT / 2;
-		debuginator->draw_rect(&filter_pos, &filter_size, &filter_color, debuginator->app_user_data);
+	float alpha = debuginator->filter_timer;
+	DebuginatorVector2 filter_pos = debuginator->filter_pos;
+	DebuginatorVector2 filter_size = debuginator->filter_size;
 
-		filter_pos.x += DEBUGINATOR_FILTER_HEIGHT / 4;
-		filter_pos.y = filter_pos.y + filter_size.y / 2;
+	filter_pos = debuginator__vector2(debuginator->top_left.x + debuginator->size.x - 450, 25);
+	filter_size = debuginator__vector2(150 + (debuginator->size.x - 250) * debuginator->filter_timer, DEBUGINATOR_FILTER_HEIGHT);
+	DebuginatorColor filter_color = debuginator__color(50, 100, 50, (int)(200 * debuginator->filter_timer * alpha));
+	debuginator->draw_rect(&filter_pos, &filter_size, &filter_color, debuginator->app_user_data);
 
-		DebuginatorColor header_color = debuginator->theme.colors[DEBUGINATOR_ItemTitleActive];
-		header_color.a = (unsigned char)(header_color.a * alpha);
-		debuginator->draw_text("Search: ", &filter_pos, &header_color, &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
+	DebuginatorVector2 header_text_size = debuginator->text_size("Search: ", &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
+	DebuginatorVector2 header_bg_size = debuginator__vector2(header_text_size.x + DEBUGINATOR_FILTER_HEIGHT / 2, filter_size.y);
+	debuginator->draw_rect(&filter_pos, &header_bg_size, &filter_color, debuginator->app_user_data);
 
-		filter_pos.x += 40;
-		filter_pos.x += header_text_size.x;
-		if (DEBUGINATOR_strchr(debuginator->filter, ' ')) {
-			// Exact search mode
-			DebuginatorVector2 underline_size;
-			underline_size.y = 1;
-			char letter[2] = { 0 };
-			for (size_t i = 0; i < DEBUGINATOR_strlen(debuginator->filter); i++) {
-				letter[0] = debuginator->filter[i];
-				debuginator->draw_text(letter, &filter_pos, &debuginator->theme.colors[DEBUGINATOR_ItemTitleActive], &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
-				DebuginatorVector2 letter_text_size = debuginator->text_size(letter, &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
-				underline_size.x = letter_text_size.x;
-				if (letter[0] != ' ') {
-					DebuginatorVector2 underline_pos = debuginator__vector2(filter_pos.x, filter_pos.y);
-					debuginator->draw_rect(&underline_pos, &underline_size, &debuginator->theme.colors[DEBUGINATOR_ItemValueHot], debuginator->app_user_data);
-				}
-				filter_pos.x += letter_text_size.x;
+	DebuginatorVector2 header_pos = debuginator__vector2(filter_pos.x + DEBUGINATOR_FILTER_HEIGHT / 4, filter_pos.y + filter_size.y / 2);
+	DebuginatorColor header_color = debuginator->theme.colors[DEBUGINATOR_ItemTitleActive];
+	header_color.a = (unsigned char)(header_color.a * alpha);
+	debuginator->draw_text("Search: ", &header_pos, &header_color, &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
+
+	DebuginatorVector2 text_pos = debuginator__vector2(filter_pos.x + header_bg_size.x + DEBUGINATOR_FILTER_HEIGHT / 4, header_pos.y);
+	if (DEBUGINATOR_strchr(debuginator->filter, ' ')) {
+		// Exact search mode
+		DebuginatorVector2 underline_size;
+		underline_size.y = 1;
+		char letter[2] = { 0 };
+		for (size_t i = 0; i < DEBUGINATOR_strlen(debuginator->filter); i++) {
+			letter[0] = debuginator->filter[i];
+			debuginator->draw_text(letter, &text_pos, &debuginator->theme.colors[DEBUGINATOR_ItemTitleActive], &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
+			DebuginatorVector2 letter_text_size = debuginator->text_size(letter, &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
+			underline_size.x = letter_text_size.x;
+			if (letter[0] != ' ') {
+				DebuginatorVector2 underline_pos = debuginator__vector2(text_pos.x, text_pos.y);
+				debuginator->draw_rect(&underline_pos, &underline_size, &debuginator->theme.colors[DEBUGINATOR_ItemValueHot], debuginator->app_user_data);
 			}
-		}
-		else {
-			debuginator->draw_text(debuginator->filter, &filter_pos, &debuginator->theme.colors[DEBUGINATOR_ItemTitleActive], &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
-			DebuginatorVector2 filter_text_size = debuginator->text_size(debuginator->filter, &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
-			filter_pos.x += filter_text_size.x;
-		}
-
-		if (debuginator->filter_enabled) {
-			DebuginatorVector2 caret_size = debuginator__vector2(10, header_text_size.y);
-			DebuginatorVector2 caret_pos = debuginator__vector2(filter_pos.x, filter_pos.y - header_text_size.y / 2);
-			filter_color.r = 150;
-			filter_color.g = 250;
-			filter_color.b = 150;
-			filter_color.a = alpha * DEBUGINATOR_sin(debuginator->draw_timer) < 0.5 ? 220u : 50u;
-			debuginator->draw_rect(&caret_pos, &caret_size, &filter_color, debuginator->app_user_data);
-		}
-		else if (filter_hint_mode) {
-			DebuginatorColor hint_color = header_color;
-			debuginator->draw_text("(backspace)", &filter_pos, &hint_color, &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
+			text_pos.x += letter_text_size.x;
 		}
 	}
+	else {
+		debuginator->draw_text(debuginator->filter, &text_pos, &debuginator->theme.colors[DEBUGINATOR_ItemTitleActive], &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
+		DebuginatorVector2 filter_text_size = debuginator->text_size(debuginator->filter, &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
+		text_pos.x += filter_text_size.x;
+	}
+
+	if (debuginator->filter_enabled) {
+		DebuginatorVector2 caret_size = debuginator__vector2(10, header_text_size.y);
+		DebuginatorVector2 caret_pos = debuginator__vector2(text_pos.x, text_pos.y - header_text_size.y / 2);
+		filter_color.r = 150;
+		filter_color.g = 250;
+		filter_color.b = 150;
+		filter_color.a = alpha * DEBUGINATOR_sin(debuginator->draw_timer) < 0.5 ? 220u : 50u;
+		debuginator->draw_rect(&caret_pos, &caret_size, &filter_color, debuginator->app_user_data);
+	}
+	else if (filter_hint_mode) {
+		DebuginatorColor hint_color = header_color;
+		debuginator->draw_text("(backspace)", &text_pos, &hint_color, &debuginator->theme.fonts[DEBUGINATOR_ItemTitleActive], debuginator->app_user_data);
+	}
+
+	if (filter_pos.x <= debuginator->mouse_cursor_pos.x && debuginator->mouse_cursor_pos.x <= filter_pos.x + filter_size.x &&
+		filter_pos.y <= debuginator->mouse_cursor_pos.y && debuginator->mouse_cursor_pos.y <= filter_pos.y + filter_size.y) {
+
+		int thickness = 1;
+		DebuginatorColor bg_color1 = debuginator->theme.colors[DEBUGINATOR_Background];
+		DebuginatorColor bg_color2 = debuginator->theme.colors[DEBUGINATOR_ItemTitleHot];
+		debuginator__draw_border(debuginator, &filter_pos, &filter_size, thickness, &bg_color1, &bg_color2);
+	}
+
+	debuginator->filter_pos = filter_pos;
+	debuginator->filter_size = filter_size;
 }
 
 void debuginator__draw_notifications(TheDebuginator* debuginator, float dt) {
@@ -3588,23 +3626,11 @@ static void debuginator__draw_tooltip(TheDebuginator* debuginator, float dt) {
 		bg_pos.x = debuginator->mouse_cursor_pos.x - debuginator->size.x - DEBUGINATOR_LEFT_MARGIN;
 	}
 
+
 	debuginator->draw_rect(&bg_pos, &bg_size, &bg_color2, debuginator->app_user_data);
 
-	float border_size = DEBUGINATOR_LEFT_MARGIN / 4.0f;
-	DebuginatorVector2 bg_border_h_size = {bg_size.x,  border_size};
-	DebuginatorVector2 bg_border_v_size = {border_size,  bg_size.y - border_size * 2};
-	DebuginatorVector2 bg_border_t_pos = bg_pos;
-	DebuginatorVector2 bg_border_b_pos = {bg_pos.x, bg_pos.y + bg_size.y - border_size};
-	DebuginatorVector2 bg_border_l_pos = {bg_pos.x, bg_pos.y + border_size};
-	DebuginatorVector2 bg_border_r_pos = {bg_pos.x + bg_size.x - border_size, bg_pos.y + border_size};
-	debuginator->draw_rect(&bg_border_t_pos, &bg_border_h_size, &bg_color1, debuginator->app_user_data);
-	debuginator->draw_rect(&bg_border_b_pos, &bg_border_h_size, &bg_color1, debuginator->app_user_data);
-	debuginator->draw_rect(&bg_border_l_pos, &bg_border_v_size, &bg_color1, debuginator->app_user_data);
-	debuginator->draw_rect(&bg_border_r_pos, &bg_border_v_size, &bg_color1, debuginator->app_user_data);
-	debuginator->draw_rect(&bg_border_t_pos, &bg_border_h_size, &bg_color3, debuginator->app_user_data);
-	debuginator->draw_rect(&bg_border_b_pos, &bg_border_h_size, &bg_color3, debuginator->app_user_data);
-	debuginator->draw_rect(&bg_border_l_pos, &bg_border_v_size, &bg_color3, debuginator->app_user_data);
-	debuginator->draw_rect(&bg_border_r_pos, &bg_border_v_size, &bg_color3, debuginator->app_user_data);
+	int border_size = (int)(DEBUGINATOR_LEFT_MARGIN / 4.0f);
+	debuginator__draw_border(debuginator, &bg_pos, &bg_size, border_size, &bg_color1, &bg_color3);
 
 	DebuginatorVector2 text_pos = debuginator__vector2(bg_pos.x + DEBUGINATOR_LEFT_MARGIN, bg_pos.y + DEBUGINATOR_LEFT_MARGIN);
 
