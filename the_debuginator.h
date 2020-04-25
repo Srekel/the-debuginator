@@ -300,7 +300,11 @@ bool debuginator_save(TheDebuginator* debuginator, DebuginatorSaveItemCallback c
 void debuginator_load_item(TheDebuginator* debuginator, const char* key, const char* value);
 
 // Set an item's default value. If value_title is NULL, value_index will be used instead.
-void debuginator_set_default_value(TheDebuginator* debuginator, const char* path, const char* value_title, int value_index); // value index is used if value_title == NULL
+// value index is used if value_title == NULL
+void debuginator_set_default_value(TheDebuginator* debuginator, const char* path, const char* value_title, int value_index);
+
+// Resets item and children to default values.
+void debuginator_reset_items_recursively(TheDebuginator* debuginator, DebuginatorItem* item);
 
 // For number range and color pickers etc
 void debuginator_modify_value(TheDebuginator* debuginator, DebuginatorItem* item, float x_axis, float y_axis, bool snap);
@@ -3057,6 +3061,36 @@ void debuginator_get_default_config(TheDebuginatorConfig* config) {
 	// config->edit_types[DEBUGINATOR_EditTypeNumberRange].activate = debuginator__activate_numberrange;
 }
 
+void debuginator_reset_items_recursively(TheDebuginator* debuginator, DebuginatorItem* item) {
+	if (item->is_folder) {
+		DebuginatorItem* child = item->folder.first_child;
+		while (child != NULL) {
+			debuginator_reset_items_recursively(debuginator, child);
+			child = child->next_sibling;
+		}
+	}
+	else {
+		if (item->leaf.active_index != item->leaf.default_index) {
+			item->leaf.hot_index = item->leaf.default_index;
+			debuginator_activate(debuginator, item, false);
+		}
+	}
+}
+
+static void debuginator_reset_all_items(DebuginatorItem* item, void* value, const char* value_title, void* app_userdata) {
+	(void)value;
+	(void)value_title;
+	(void)app_userdata;
+	TheDebuginator* debuginator = (TheDebuginator*)item->user_data;
+	DebuginatorItem* child = debuginator->root->folder.first_child;
+	while (child != NULL) {
+		if (DEBUGINATOR_strcmp("Debuginator", child->title) != 0) {
+			debuginator_reset_items_recursively(debuginator, child);
+		}
+		child = child->next_sibling;
+	}
+}
+
 void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginator) {
 	DEBUGINATOR_assert(config->draw_rect != NULL);
 	DEBUGINATOR_assert(config->draw_text != NULL);
@@ -3195,6 +3229,12 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 		{
 			debuginator_create_bool_item(debuginator, "Debuginator/Settings/Enable notifications",
 				"Get popups... or not!", &debuginator->notifications_enabled);
+		}
+		{
+			DebuginatorItem* reset_item = debuginator_create_array_item(debuginator, NULL, "Debuginator/Tools/Reset all items",
+				"Resets all menu items to default values.",
+				debuginator_reset_all_items, debuginator, NULL, NULL, 0, 0);
+			debuginator_set_edit_type(debuginator, "Debuginator/Tools/Reset all items", DEBUGINATOR_EditTypeActionArray);
 		}
 	}
 }
