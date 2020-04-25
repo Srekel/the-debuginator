@@ -593,6 +593,18 @@ int main(int argc, char **argv)
 					quit = true;
 					break;
 				}
+				case SDL_WINDOWEVENT : {
+					switch (event.window.event) {
+						case SDL_WINDOWEVENT_RESIZED: {
+							debuginator_set_size(&debuginator, (int)debuginator.size.x, event.window.data2 );
+							debuginator_set_screen_resolution(&debuginator, event.window.data1, event.window.data2 );
+							res_x = event.window.data1;
+							res_y = event.window.data2;
+						} break;
+					}
+
+					break;
+				}
 			}
 		}
 
