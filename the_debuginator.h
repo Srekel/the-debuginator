@@ -2578,13 +2578,17 @@ void debuginator_activate_item_at_mouse_cursor(TheDebuginator* debuginator) {
 		debuginator->tooltip_timer = DEBUGINATOR_TOOLTIP_DELAY;
 	}
 
+	if (debuginator->filter_pos.x <= debuginator->mouse_cursor_pos.x && debuginator->mouse_cursor_pos.x <= debuginator->filter_pos.x + debuginator->filter_size.x &&
+		debuginator->filter_pos.y <= debuginator->mouse_cursor_pos.y && debuginator->mouse_cursor_pos.y <= debuginator->filter_pos.y + debuginator->filter_size.y) {
+		debuginator->filter_enabled = !debuginator->filter_enabled;
+		if (!debuginator->filter_enabled) {
+			debuginator_update_filter(debuginator, "");
+		}
+		return;
+	}
+
 	DebuginatorItem* hot_item = debuginator->hot_mouse_item;
 	if (hot_item == NULL) {
-		if (debuginator->filter_pos.x <= debuginator->mouse_cursor_pos.x && debuginator->mouse_cursor_pos.x <= debuginator->filter_pos.x + debuginator->filter_size.x &&
-			debuginator->filter_pos.y <= debuginator->mouse_cursor_pos.y && debuginator->mouse_cursor_pos.y <= debuginator->filter_pos.y + debuginator->filter_size.y) {
-
-			debuginator->filter_enabled = !debuginator->filter_enabled;
-		}
 		return;
 	}
 
