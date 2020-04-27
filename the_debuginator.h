@@ -691,7 +691,7 @@ typedef struct NumberRangeFloatState {
 #endif
 
 #ifndef DEBUGINATOR_INDENT
-#define DEBUGINATOR_INDENT 16
+#define DEBUGINATOR_INDENT 24
 #endif
 
 #ifndef DEBUGINATOR_FILTER_HEIGHT
