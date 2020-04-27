@@ -80,6 +80,9 @@ extern "C" {
 // filter_color.a = alpha * DEBUGINATOR_sin(debuginator->draw_timer) < 0.5 ? 220u : 50u;
 #pragma clang diagnostic ignored "-Wdouble-promotion"
 
+// int filter_len = DEBUGINATOR_strlen(filter);
+#pragma clang diagnostic ignored "-Wshorten-64-to-32"
+
 #endif
 #endif // DEBUGINATOR_ENABLE_WARNINGS
 
@@ -330,6 +333,7 @@ void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item, bo
 // Collapsability (for folders)
 bool debuginator_is_collapsed(DebuginatorItem* item);
 void debuginator_set_collapsed(TheDebuginator* debuginator, DebuginatorItem* item, bool collapsed);
+void debuginator_collapse_to_depth(TheDebuginator* debuginator, int depth);
 
 // Navigation functions
 // Moves the hot item or hot index to the next/previous visible item or index.
@@ -3235,7 +3239,7 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 				"Get popups... or not!", &debuginator->notifications_enabled);
 		}
 		{
-			DebuginatorItem* reset_item = debuginator_create_array_item(debuginator, NULL, "Debuginator/Tools/Reset all items",
+			debuginator_create_array_item(debuginator, NULL, "Debuginator/Tools/Reset all items",
 				"Resets all menu items to default values.",
 				debuginator_reset_all_items, debuginator, NULL, NULL, 0, 0);
 			debuginator_set_edit_type(debuginator, "Debuginator/Tools/Reset all items", DEBUGINATOR_EditTypeActionArray);
@@ -3309,7 +3313,7 @@ static void debuginator__draw_search_filter(TheDebuginator* debuginator, float d
 static void debuginator__draw_notifications(TheDebuginator* debuginator, float dt);
 static void debuginator__draw_tooltip(TheDebuginator* debuginator, float dt);
 
-static void debuginator__draw_border(TheDebuginator* debuginator, DebuginatorVector2* position, DebuginatorVector2* size, int thickness, DebuginatorColor* color1, DebuginatorColor* color2) {
+static void debuginator__draw_border(TheDebuginator* debuginator, DebuginatorVector2* position, DebuginatorVector2* size, float thickness, DebuginatorColor* color1, DebuginatorColor* color2) {
 	DebuginatorVector2 border_h_size = {size->x,  thickness};
 	DebuginatorVector2 border_v_size = {thickness,  size->y - thickness * 2};
 	DebuginatorVector2 border_t_pos = *position;
@@ -3561,7 +3565,7 @@ static void debuginator__draw_search_filter(TheDebuginator* debuginator, float d
 	if (filter_pos.x <= debuginator->mouse_cursor_pos.x && debuginator->mouse_cursor_pos.x <= filter_pos.x + filter_size.x &&
 		filter_pos.y <= debuginator->mouse_cursor_pos.y && debuginator->mouse_cursor_pos.y <= filter_pos.y + filter_size.y) {
 
-		int thickness = 1;
+		float thickness = 1;
 		DebuginatorColor bg_color1 = debuginator->theme.colors[DEBUGINATOR_Background];
 		DebuginatorColor bg_color2 = debuginator->theme.colors[DEBUGINATOR_ItemTitleHot];
 		debuginator__draw_border(debuginator, &filter_pos, &filter_size, thickness, &bg_color1, &bg_color2);
@@ -3655,7 +3659,6 @@ static void debuginator__draw_tooltip(TheDebuginator* debuginator, float dt) {
 
 	int row_count = 0;
 	char description_line_to_draw[256];
-	int description_height = 0;
 	int row_lengths[32];
 	const char* description = "";
 	if (!item->is_folder) {
@@ -3673,7 +3676,7 @@ static void debuginator__draw_tooltip(TheDebuginator* debuginator, float dt) {
 
 	debuginator->draw_rect(&bg_pos, &bg_size, &bg_color2, debuginator->app_user_data);
 
-	int border_size = (int)(DEBUGINATOR_LEFT_MARGIN / 4.0f);
+	float border_size = DEBUGINATOR_LEFT_MARGIN / 4.0f;
 	debuginator__draw_border(debuginator, &bg_pos, &bg_size, border_size, &bg_color1, &bg_color3);
 
 	DebuginatorVector2 text_pos = debuginator__vector2(bg_pos.x + DEBUGINATOR_LEFT_MARGIN, bg_pos.y + DEBUGINATOR_LEFT_MARGIN);
@@ -3719,10 +3722,10 @@ static float debuginator__draw_item(TheDebuginator* debuginator, DebuginatorItem
 		DebuginatorVector2 text_pos = debuginator__vector2(offset.x, offset.y + half_height);
 		debuginator->draw_text(item->title, &text_pos, &debuginator->theme.colors[color_index], &debuginator->theme.fonts[DEBUGINATOR_ItemTitle], debuginator->app_user_data);
 		if (item->folder.is_collapsed) {
-			DebuginatorVector2 collapsed_box_pos1 = debuginator__vector2(offset.x - half_height - quarter_height / 2.0, offset.y + half_height - quarter_height / 2.0);
+			DebuginatorVector2 collapsed_box_pos1 = debuginator__vector2(offset.x - half_height - quarter_height / 2.0f, offset.y + half_height - quarter_height / 2.0f);
 			DebuginatorVector2 collapsed_box_size1 = debuginator__vector2(half_height, quarter_height);
-			DebuginatorVector2 collapsed_box_size2 = debuginator__vector2(quarter_height, quarter_height / 2.0);
-			DebuginatorVector2 collapsed_box_pos2 = debuginator__vector2(collapsed_box_pos1.x + quarter_height / 4.0, collapsed_box_pos1.y - collapsed_box_size2.y + quarter_height / 8);
+			DebuginatorVector2 collapsed_box_size2 = debuginator__vector2(quarter_height, quarter_height / 2.0f);
+			DebuginatorVector2 collapsed_box_pos2 = debuginator__vector2(collapsed_box_pos1.x + quarter_height / 4.0f, collapsed_box_pos1.y - collapsed_box_size2.y + quarter_height / 8);
 			debuginator->draw_rect(&collapsed_box_pos1, &collapsed_box_size1, &debuginator->theme.colors[color_index], debuginator->app_user_data);
 			debuginator->draw_rect(&collapsed_box_pos2, &collapsed_box_size2, &debuginator->theme.colors[color_index], debuginator->app_user_data);
 		}
@@ -3961,7 +3964,7 @@ bool debuginator_is_collapsed(DebuginatorItem* item) {
 	return item->is_folder && item->folder.is_collapsed;
 }
 
-bool debuginator__is_parent_recursive(DebuginatorItem* item, DebuginatorItem* parent) {
+static bool debuginator__is_parent_recursive(DebuginatorItem* item, DebuginatorItem* parent) {
 	DEBUGINATOR_assert(parent->is_folder);
 	while (item->parent != NULL) {
 		if (item->parent == parent) {
@@ -4010,7 +4013,7 @@ void debuginator_set_collapsed(TheDebuginator* debuginator, DebuginatorItem* ite
 	}
 }
 
-void debuginator__collapse_recursive(TheDebuginator* debuginator, DebuginatorItem *item, int collapse_depth, int depth) {
+static void debuginator__collapse_recursive(TheDebuginator* debuginator, DebuginatorItem *item, int collapse_depth, int depth) {
 	if (!item->is_folder)
 		return;
 
@@ -4027,7 +4030,6 @@ void debuginator__collapse_recursive(TheDebuginator* debuginator, DebuginatorIte
 
 void debuginator_collapse_to_depth(TheDebuginator* debuginator, int depth) {
 	DebuginatorItem *item = debuginator->root;
-
 	debuginator__collapse_recursive(debuginator, item, depth, 0);
 }
 
