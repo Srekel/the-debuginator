@@ -1822,7 +1822,8 @@ DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 		}
 	}
 
-	item->leaf.description = description == NULL ? "" : description;
+	const char* owned_description = description == NULL ? "" : debuginator_copy_string(debuginator, description, 0);
+	item->leaf.description = owned_description;
 
 	if (create_if_not_exist) {
 		// Only want to update this if the item didn't already exist.
@@ -4342,9 +4343,8 @@ DebuginatorItem* debuginator_create_preset_item(TheDebuginator* debuginator, con
 	}
 
 	DEBUGINATOR_assert(description_end < description + sizeof(description));
-	const char* owned_description = debuginator_copy_string(debuginator, description, (int)(description_end - description));
 	DebuginatorItem* item = debuginator_create_array_item(debuginator, NULL, path,
-		owned_description, debuginator__activate_preset, debuginator,
+		description, debuginator__activate_preset, debuginator,
 		paths, (void*)value_titles, num_paths, 0);
 
 	item->leaf.edit_type = DEBUGINATOR_EditTypePreset;

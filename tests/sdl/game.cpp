@@ -94,7 +94,15 @@ static void debug_menu_setup(TheDebuginator* debuginator, GameData* data) {
 			string_titles, NULL, 3, 0);
 		debuginator_set_edit_type(debuginator, "SDL Demo/Edit types/Box action list", DEBUGINATOR_EditTypeActionArray);
 	}
-
+{
+	char description_stack[256] = {};
+	sprintf_s(description_stack, "Hello from the stack!");
+	debuginator_create_bool_item(debuginator, "Test/Description/Stack allocated", description_stack, &data->mybool);
+	char* description_heap = (char*)malloc(256);
+	sprintf_s(description_heap, 256, "Hello from the heap!");
+	debuginator_create_bool_item(debuginator, "Test/Description/Heap allocated", description_heap, &data->mybool);
+	free(description_heap);
+}
 	debuginator_create_bool_item(debuginator, "Test/Description/Empty", "", &data->mybool);
 	debuginator_create_bool_item(debuginator, "Test/Description/NULL", "", &data->mybool);
 	debuginator_create_bool_item(debuginator, "Test/Description/Long", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaa bbbbbbbbbbbbbbbbbbbbbbbb cccccccccccccccccccccccc", &data->mybool);
