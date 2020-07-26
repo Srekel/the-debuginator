@@ -5,6 +5,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="game.cpp" />
     <ClCompile Include="demo.cpp" />
+    <ClCompile Include="..\3rdparty\Simple-SDL2-Audio\src\simple_audio.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\the_debuginator.h" />

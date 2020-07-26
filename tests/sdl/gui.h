@@ -2,15 +2,11 @@
 
 #include <SDL.h>
 #include <SDL_ttf.h>
-
-// Roughly matches Stingray's Gui API
-// Very simple API solely for this particular demo
+#include "../../the_debuginator.h"
 
 typedef intptr_t GuiHandle;
 typedef intptr_t FontTemplateHandle;
 typedef intptr_t TextureHandle;
-//typedef DebuginatorVector2 Vector2;
-
 
 struct Vector2 {
 	Vector2() : x(0), y(0) {}
@@ -49,3 +45,4 @@ Vector2 gui_text_size(GuiHandle gui_handle, const char* text, FontTemplateHandle
 Vector2 gui_get_window_size(GuiHandle gui_handle);
 SDL_GameController** gui_get_controllers(GuiHandle gui_handle);
 
+void gui_play_sound(DebuginatorSoundEvent event);

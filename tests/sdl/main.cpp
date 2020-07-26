@@ -79,6 +79,11 @@ void log(const char* text, void* userdata) {
 	printf("[Debuginator] %s\n", text);
 }
 
+void play_sound(DebuginatorSoundEvent event, void* userdata) {
+	(void)userdata;
+	gui_play_sound(event);
+}
+
 struct SaveData {
 	char* buffer;
 	int buffer_size;
@@ -322,7 +327,7 @@ bool handle_debuginator_keyboard_input_event(SDL_Event* event, TheDebuginator* d
 			break;
 		}
 		case SDL_MOUSEWHEEL: {
-			debuginator_apply_scroll(debuginator, event->wheel.y * 100);
+			debuginator_apply_scroll(debuginator, event->wheel.y * debuginator->item_height * 1);
 
 			break;
 		}
@@ -510,6 +515,7 @@ int main(int argc, char **argv)
 	config.word_wrap = word_wrap;
 	config.text_size = text_size;
 	config.log = log;
+	config.play_sound = play_sound;
 	config.app_user_data = (void*)gui;
 	config.size.x = 500;
 	config.size.y = (float)res_y;

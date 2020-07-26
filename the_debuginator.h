@@ -166,12 +166,24 @@ typedef struct DebuginatorImageHandle {
 	} h;
 } DebuginatorImageHandle;
 
+enum DebuginatorSoundEvent {
+	DEBUGINATOR_SoundEventEnter,
+	DEBUGINATOR_SoundEventActivate,
+	DEBUGINATOR_SoundEventCollapse,
+	DEBUGINATOR_SoundEventExpand,
+};
+
+#define PLAYSOUND(event) if (debuginator->play_sound) debuginator->play_sound((event), debuginator->app_user_data);
+
 typedef void (*DebuginatorDrawTextCallback)
 	(const char* text, DebuginatorVector2* position, DebuginatorColor* color, DebuginatorFont* font, void* userdata);
 typedef void (*DebuginatorDrawRectCallback)
 	(DebuginatorVector2* position, DebuginatorVector2* size, DebuginatorColor* color, void* userdata);
 typedef void (*DebuginatorDrawImageCallback)
 	(DebuginatorVector2* position, DebuginatorVector2* size, DebuginatorImageHandle handle, void* userdata);
+typedef void (*DebuginatorPlaySoundCallback)
+	(DebuginatorSoundEvent, void* userdata);
+
 
 // Of note: New line characters should be at the beginning of any row rather than at the end of them.
 typedef void(*DebuginatorWordWrapCallback)
@@ -536,6 +548,9 @@ typedef struct TheDebuginatorConfig {
 	// Optional. Will be called during draw.
 	DebuginatorDrawImageCallback draw_image;
 
+	// Optional.
+	DebuginatorPlaySoundCallback play_sound;
+
 	// Optional. Gets called when The Debuginator is opened or closed.
 	DebuginatorOnOpenChangedCallback on_opened_changed;
 
@@ -899,6 +914,7 @@ typedef struct TheDebuginator {
 	DebuginatorTextSizeCallback text_size;
 	DebuginatorLogCallback log;
 	DebuginatorOnOpenChangedCallback on_opened_changed;
+	DebuginatorPlaySoundCallback play_sound;
 	int item_height;
 
 	DebuginatorVector2 size;
@@ -2603,6 +2619,7 @@ void debuginator_activate_item_at_mouse_cursor(TheDebuginator* debuginator) {
 	if (hot_item->is_folder) {
 		debuginator->hot_item = hot_item;
 		bool collapse = !hot_item->folder.is_collapsed;
+		PLAYSOUND(collapse ? DEBUGINATOR_SoundEventCollapse : DEBUGINATOR_SoundEventExpand);
 		debuginator_set_collapsed(debuginator, hot_item, collapse);
 	}
 	else if (debuginator->hot_mouse_item_index == DEBUGINATOR_NO_HOT_INDEX) {
@@ -2615,11 +2632,13 @@ void debuginator_activate_item_at_mouse_cursor(TheDebuginator* debuginator) {
 		if (++hot_item->leaf.hot_index == hot_item->leaf.num_values) {
 			hot_item->leaf.hot_index = 0;
 		}
+		PLAYSOUND(DEBUGINATOR_SoundEventActivate);
 		debuginator_activate(debuginator, hot_item, true);
 	}
 	else {
 		debuginator->hot_item = hot_item;
 		hot_item->leaf.hot_index = debuginator->hot_mouse_item_index;
+		PLAYSOUND(DEBUGINATOR_SoundEventActivate);
 		debuginator_activate(debuginator, hot_item, true);
 	}
 
@@ -2651,10 +2670,12 @@ void debuginator_expand_item_at_mouse_cursor(TheDebuginator* debuginator, Debugi
 	debuginator->hot_item = hot_item;
 	if (hot_item->is_folder) {
 		bool collapse = expand == DEBUGINATOR_Toggle ? !hot_item->folder.is_collapsed : !(int)expand;
+		PLAYSOUND(collapse ? DEBUGINATOR_SoundEventCollapse : DEBUGINATOR_SoundEventExpand);
 		debuginator_set_collapsed(debuginator, hot_item, collapse);
 	}
 	else {
 		bool do_expand = expand == DEBUGINATOR_Toggle ? !hot_item->leaf.is_expanded : (int)expand;
+		PLAYSOUND((!do_expand) ? DEBUGINATOR_SoundEventCollapse : DEBUGINATOR_SoundEventExpand);
 		hot_item->leaf.is_expanded = do_expand;
 		if (do_expand) {
 			debuginator__set_total_height(hot_item, debuginator->item_height * (hot_item->leaf.num_values + hot_item->leaf.description_line_count));
@@ -3135,6 +3156,7 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 	debuginator->text_size = config->text_size;
 	debuginator->log = config->log;
 	debuginator->on_opened_changed = config->on_opened_changed;
+	debuginator->play_sound = config->play_sound;
 	debuginator->app_user_data = config->app_user_data;
 
 	debuginator->size = config->size;
@@ -3359,6 +3381,7 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 	}
 
 	// Clear mouse hot item. It gets set appropriately in draw_item.
+	DebuginatorItem* old_hot_mouse_item = debuginator->hot_mouse_item;
 	debuginator->hot_mouse_item = NULL;
 	debuginator->hot_mouse_item_index = DEBUGINATOR_NO_HOT_INDEX;
 
@@ -3376,6 +3399,10 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 
 	debuginator__draw_search_filter(debuginator, dt);
 	debuginator__draw_tooltip(debuginator, dt);
+
+	if (old_hot_mouse_item != debuginator->hot_mouse_item && debuginator->hot_mouse_item != NULL) {
+		PLAYSOUND(DEBUGINATOR_SoundEventEnter);
+	}
 }
 
 static void debuginator__draw_hierarchy(TheDebuginator* debuginator, float dt, DebuginatorVector2 offset){

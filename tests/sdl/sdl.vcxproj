@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\3rdparty\Simple-SDL2-Audio\src\simple_audio.c" />
     <ClCompile Include="demo.cpp" />
     <ClCompile Include="game.cpp" />
     <ClCompile Include="main.cpp" />
@@ -33,32 +34,32 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{56259B2E-7D95-4AB0-83E4-369B9361F8A2}</ProjectGuid>
     <RootNamespace>sdl</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -112,7 +113,7 @@
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\..\external\SDL2-2.0.9\include;$(SolutionDir)..\..\external\SDL2_image-2.0.2\include;$(SolutionDir)..\..\external\SDL2_ttf-2.0.14\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\external\SDL2-2.0.9\include;$(SolutionDir)..\..\external\SDL2_image-2.0.2\include;$(SolutionDir)..\..\external\SDL2_ttf-2.0.14\include;$(SolutionDir)3rdparty\Simple-SDL2-Audio\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
     </ClCompile>
     <Link>
@@ -137,7 +138,11 @@ copy $(SolutionDir)..\color_picker.png $(OutputPath)
 copy $(SolutionDir)sk5.jpg $(OutputPath)
 copy $(SolutionDir)sk5.txt $(OutputPath)
 
-copy $(SolutionDir)3rdparty\SDL_GameControllerDB-master\gamecontrollerdb.txt $(OutputPath)</Command>
+copy $(SolutionDir)3rdparty\SDL_GameControllerDB-master\gamecontrollerdb.txt $(OutputPath)
+
+copy $(SolutionDir)3rdparty\kenney_interfacesounds\*.wav $(OutputPath)
+
+</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -161,7 +166,7 @@ copy $(SolutionDir)3rdparty\SDL_GameControllerDB-master\gamecontrollerdb.txt $(O
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\..\external\SDL2-2.0.9\include;$(SolutionDir)..\..\external\SDL2_image-2.0.2\include;$(SolutionDir)..\..\external\SDL2_ttf-2.0.14\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\external\SDL2-2.0.9\include;$(SolutionDir)..\..\external\SDL2_image-2.0.2\include;$(SolutionDir)..\..\external\SDL2_ttf-2.0.14\include;$(SolutionDir)3rdparty\Simple-SDL2-Audio\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>

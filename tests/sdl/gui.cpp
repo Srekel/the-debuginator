@@ -1,6 +1,7 @@
 #include <SDL.h>
 #include <SDL_ttf.h>
 #include <SDL_image.h>
+#include <simple_audio.h>
 
 #include <string.h>
 
@@ -27,6 +28,7 @@ struct Gui {
 
 static Gui guis[1];
 static int gui_count = 0;
+static bool audio_enabled = false;
 
 
 GuiHandle gui_create_gui(int resx, int resy, const char* window_title, bool vsync_on) {
@@ -34,28 +36,40 @@ GuiHandle gui_create_gui(int resx, int resy, const char* window_title, bool vsyn
 		return (GuiHandle)nullptr;
 	}
 
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) != 0) {
-		SDL_Quit();
-		return (GuiHandle)nullptr;
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO) == 0) {
+		audio_enabled = true;
+		initAudio();
+	}
+	else if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) != 0) {
+		goto LABEL_error;
 	}
 
 	if (TTF_Init() != 0) {
-		SDL_Quit();
-		return (GuiHandle)nullptr;
+		goto LABEL_error;
 	}
 
 	SDL_Window* window = SDL_CreateWindow(window_title,
 		SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, resx, resy, SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE);
 	if (window == NULL) {
-		SDL_Quit();
-		return (GuiHandle)nullptr;
+		goto LABEL_error;
 	}
 
 	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | (SDL_RENDERER_PRESENTVSYNC & (vsync_on ? 0xFFFFFFFF : 0)));
 	if (renderer == NULL) {
-		SDL_Quit();
-		return (GuiHandle)nullptr;
+		goto LABEL_error;
 	}
+
+	goto LABEL_init_success;
+
+	LABEL_error:;
+	if (audio_enabled) {
+		endAudio();
+	}
+
+	SDL_Quit();
+	return (GuiHandle)nullptr;
+
+	LABEL_init_success:;
 
 	SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
@@ -294,4 +308,26 @@ Vector2 gui_get_window_size(GuiHandle gui_handle) {
 SDL_GameController** gui_get_controllers(GuiHandle gui_handle) {
 	Gui* gui = (Gui*)gui_handle;
 	return gui->game_controllers;
+}
+
+void gui_play_sound(DebuginatorSoundEvent event) {
+	switch (event) {
+		case DEBUGINATOR_SoundEventEnter: {
+			playSound("bong_001.wav", SDL_MIX_MAXVOLUME / 16);
+		}
+		break;
+		case DEBUGINATOR_SoundEventActivate: {
+			playSound("select_007.wav", SDL_MIX_MAXVOLUME / 4);
+		}
+		break;
+		case DEBUGINATOR_SoundEventCollapse: {
+			playSound("pluck_001.wav", SDL_MIX_MAXVOLUME / 6);
+		}
+		break;
+		case DEBUGINATOR_SoundEventExpand: {
+			playSound("pluck_002.wav", SDL_MIX_MAXVOLUME / 6);
+		}
+		break;
+
+	}
 }
