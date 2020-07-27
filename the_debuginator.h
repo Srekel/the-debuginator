@@ -218,6 +218,8 @@ typedef enum DebuginatorDrawMode {
 	DEBUGINATOR_DrawModeSortedFilter,
 } DebuginatorDrawMode;
 
+// API START
+
 // Call to create an instance of the debuginator. Make sure the config has
 // all the necessary stuff in it.
 // debuginator_get_default_config is recommended but not necessary.
@@ -419,6 +421,8 @@ char* debuginator_copy_string(TheDebuginator* debuginator, const char* string, i
 
 // Logs current value
 void debuginator_log_item(TheDebuginator* debuginator, DebuginatorItem* item);
+
+// API END
 
 typedef struct DebuginatorFolderData {
 	DebuginatorItem* first_child;
@@ -4420,6 +4424,86 @@ DebuginatorItem* debuginator_create_numberrange_float_item(TheDebuginator* debug
 }
 
 #endif // DEBUGINATOR_IMPLEMENTATION
+
+#ifdef DEBUGINATOR_STUB_IMPLEMENTATION
+
+void                 debuginator_create                                (TheDebuginatorConfig*, TheDebuginator*) {}
+void                 debuginator_get_default_config                    (TheDebuginatorConfig*) {}
+bool                 debuginator_is_open                               (TheDebuginator*) {}
+void                 debuginator_set_open                              (TheDebuginator*, bool) {}
+void                 debuginator_update                                (TheDebuginator*, float) {}
+void                 debuginator_draw                                  (TheDebuginator*, float) {}
+DebuginatorItem*     debuginator_create_array_item                     (TheDebuginator*, t, d_callback,, m_values,) {}
+DebuginatorItem*     debuginator_create_bool_item                      (TheDebuginator*, const, const, void*) {}
+DebuginatorItem*     debuginator_create_bool_item_with_callback        (TheDebuginator*, const, const, void*, DebuginatorOnItemChangedCallback) {}
+void                 debuginator_copy_1byte                            (DebuginatorItem*, void*, const, void*) {}
+DebuginatorItem*     debuginator_create_preset_item                    (TheDebuginator*, const, const, const, int**, int) {}
+DebuginatorItem*     debuginator_create_colorpicker_item               (TheDebuginator*, const, const, DebuginatorOnItemChangedCallback, void*, DebuginatorColor*) {}
+DebuginatorItem*     debuginator_create_numberrange_float_item         (TheDebuginator*, const, const, float*, float, float) {}
+DebuginatorItem*     debuginator_create_folder_item                    (TheDebuginator*, DebuginatorItem*, const) {}
+DebuginatorItem*     debuginator_new_folder_item                       (TheDebuginator*, DebuginatorItem*, const, int) {}
+DebuginatorItem*     debuginator_get_item                              (TheDebuginator*, DebuginatorItem*, const, bool*) {}
+DebuginatorItem*     debuginator_get_root_item                         (TheDebuginator*) {}
+DebuginatorItem*     debuginator_get_first_child                       (TheDebuginator*, DebuginatorItem*) {}
+DebuginatorItem*     debuginator_get_next_sibling                      (TheDebuginator*, DebuginatorItem*) {}
+void                 debuginator_remove_item                           (TheDebuginator*, DebuginatorItem*) {}
+void                 debuginator_remove_item_by_path                   (TheDebuginator*, const) {}
+void                 debuginator_set_hot_item                          (TheDebuginator*, DebuginatorItem*) {}
+DebuginatorItem*     debuginator_get_hot_item                          (TheDebuginator*, int*) {}
+DebuginatorItem*     debuginator_get_parent                            (DebuginatorItem*) {}
+void                 debuginator_get_path                              (TheDebuginator*, DebuginatorItem*, char*, int*) {}
+bool                 debuginator_is_folder                             (DebuginatorItem*) {}
+bool                 debuginator_save                                  (TheDebuginator*, DebuginatorSaveItemCallback, void*) {}
+void                 debuginator_load_item                             (TheDebuginator*, const, const) {}
+void                 debuginator_set_default_value                     (TheDebuginator*, const, const, int) {}
+void                 debuginator_reset_items_recursively               (TheDebuginator*, DebuginatorItem*) {}
+void                 debuginator_modify_value                          (TheDebuginator*, DebuginatorItem*, float, float, bool) {}
+void                 debuginator_set_edit_type                         (TheDebuginator*, const, DebuginatorItemEditorDataType) {}
+void                 debuginator_item_set_on_changed_callback_by_path  (TheDebuginator*, const, DebuginatorOnItemChangedCallback) {}
+void                 debuginator_item_set_on_changed_callback          (DebuginatorItem*, DebuginatorOnItemChangedCallback) {}
+void                 debuginator_item_set_user_data_by_path            (TheDebuginator*, const, void*) {}
+void                 debuginator_item_set_user_data                    (DebuginatorItem*, void*) {}
+void                 debuginator_activate                              (TheDebuginator*, DebuginatorItem*, bool) {}
+bool                 debuginator_is_collapsed                          (DebuginatorItem*) {}
+void                 debuginator_set_collapsed                         (TheDebuginator*, DebuginatorItem*, bool) {}
+void                 debuginator_collapse_to_depth                     (TheDebuginator*, int) {}
+void                 debuginator_move_to_next_leaf                     (TheDebuginator*, bool) {}
+void                 debuginator_move_to_prev_leaf                     (TheDebuginator*, bool) {}
+void                 debuginator_move_to_child                         (TheDebuginator*, bool) {}
+void                 debuginator_move_to_parent                        (TheDebuginator*) {}
+void                 debuginator_move_sibling_next                     (TheDebuginator*) {}
+void                 debuginator_move_sibling_previous                 (TheDebuginator*) {}
+void                 debuginator_move_to_root                          (TheDebuginator*) {}
+bool                 debuginator_is_filtering_enabled                  (TheDebuginator*) {}
+void                 debuginator_set_filtering_enabled                 (TheDebuginator*, bool) {}
+const                char* debuginator_get_filter                      (TheDebuginator*) {}
+void                 debuginator_set_filter                            (TheDebuginator*, const) {}
+void                 debuginator_update_filter                         (TheDebuginator*, const) {}
+void                 debuginator_apply_scroll                          (TheDebuginator*, int) {}
+void                 debuginator_reset_scrolling                       (TheDebuginator*) {}
+void                 debuginator_set_mouse_cursor_pos                  (TheDebuginator*, DebuginatorVector2*) {}
+void                 debuginator_activate_item_at_mouse_cursor         (TheDebuginator*) {}
+void                 debuginator_expand_item_at_mouse_cursor           (TheDebuginator*, DebuginatorExpand) {}
+DebuginatorItem*     debuginator_get_item_at_mouse_cursor              (TheDebuginator*, int*) {}
+bool                 debuginator_is_mouse_over                         (TheDebuginator*, bool*) {}
+void                 debuginator_assign_hot_key                        (TheDebuginator*, const, const, int, const) {}
+void                 debuginator_unassign_hot_key                      (TheDebuginator*, const) {}
+DebuginatorItem*     debuginator_get_first_assigned_hot_key_item       (TheDebuginator*, const) {}
+bool                 debuginator_activate_hot_key                      (TheDebuginator*, const) {}
+void                 debuginator_clear_hot_keys                        (TheDebuginator*) {}
+void                 debuginator_set_item_height                       (TheDebuginator*, int) {}
+void                 debuginator_set_size                              (TheDebuginator*, int, int) {}
+void                 debuginator_set_screen_resolution                 (TheDebuginator*, int, int) {}
+int                  debuginator_total_height                          (TheDebuginator*) {}
+void                 debuginator_set_left_aligned                      (TheDebuginator*, bool) {}
+bool                 debuginator_is_left_aligned                       (TheDebuginator*) {}
+float                debuginator_distance_from_edge                    (TheDebuginator*) {}
+void                 debuginator_set_notifications_enabled             (TheDebuginator*, bool) {}
+void                 debuginator_trigger_nondefault_notifications      (TheDebuginator*) {}
+char*                debuginator_copy_string                           (TheDebuginator*, const, int) {}
+void                 debuginator_log_item                              (TheDebuginator*, DebuginatorItem*) {}
+
+#endif // DEBUGINATOR_STUB_IMPLEMENTATION
 
 #ifndef DEBUGINATOR_ENABLE_WARNINGS
 #ifdef _MSC_VER
