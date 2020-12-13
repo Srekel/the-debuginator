@@ -2,3 +2,5 @@ tests/Build/
 *.VC.db
 *.VC.VC.opendb
 tests/.vs/
+tests/zig/src/zig-cache
+tests/zig/src/out
