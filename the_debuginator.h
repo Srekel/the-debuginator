@@ -160,8 +160,8 @@ typedef struct DebuginatorSortedItem {
 } DebuginatorSortedItem;
 
 typedef struct DebuginatorItem DebuginatorItem;
-typedef struct TheDebuginator TheDebuginator;
 typedef struct TheDebuginatorConfig TheDebuginatorConfig;
+struct TheDebuginator;
 
 typedef struct DebuginatorImageHandle {
 	union {
@@ -229,20 +229,20 @@ typedef enum DebuginatorDrawMode {
 // Call to create an instance of the debuginator. Make sure the config has
 // all the necessary stuff in it.
 // debuginator_get_default_config is recommended but not necessary.
-void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginator);
+void debuginator_create(TheDebuginatorConfig* config, struct TheDebuginator* debuginator);
 
 // Provides a decent default config for debuginator_create. NOTE Does not initialize
 // EVERYTHING that's needed, you still need to set some things.
 void debuginator_get_default_config(TheDebuginatorConfig* config);
 
 // Returns true when it's started to show, returns false as soon as it's closing.
-bool debuginator_is_open(TheDebuginator* debuginator);
+bool debuginator_is_open(struct TheDebuginator* debuginator);
 
 // Starts opening or closing
-void debuginator_set_open(TheDebuginator* debuginator, bool open);
+void debuginator_set_open(struct TheDebuginator* debuginator, bool open);
 
-void debuginator_update(TheDebuginator* debuginator, float dt);
-void debuginator_draw(TheDebuginator* debuginator, float dt);
+void debuginator_update(struct TheDebuginator* debuginator, float dt);
+void debuginator_draw(struct TheDebuginator* debuginator, float dt);
 
 // parent is optional, can be used for a bit of performance I suppose.
 // path is on the format a_parent/the_new_item
@@ -253,16 +253,16 @@ void debuginator_draw(TheDebuginator* debuginator, float dt);
 // values is optional if num_values == 0. Should otherwise be an array of num_values items that are value_size bytes large.
 // num_values can be >= 0.
 // value size can be 0 if num_values == 0
-DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
+DebuginatorItem* debuginator_create_array_item(struct TheDebuginator* debuginator,
 	DebuginatorItem* parent, const char* path, const char* description,
 	DebuginatorOnItemChangedCallback on_item_changed_callback, void* user_data,
 	const char** value_titles, void* values, int num_values, int value_size);
 
 // Wraps create_array_item. user_data should point to a single byte. It'll get 1 or 0 written to it.
-DebuginatorItem* debuginator_create_bool_item(TheDebuginator* debuginator, const char* path, const char* description, void* user_data);
+DebuginatorItem* debuginator_create_bool_item(struct TheDebuginator* debuginator, const char* path, const char* description, void* user_data);
 
 // Like above but when you want a custom callback
-DebuginatorItem* debuginator_create_bool_item_with_callback(TheDebuginator* debuginator, const char* path, const char* description, void* user_data, DebuginatorOnItemChangedCallback callback);
+DebuginatorItem* debuginator_create_bool_item_with_callback(struct TheDebuginator* debuginator, const char* path, const char* description, void* user_data, DebuginatorOnItemChangedCallback callback);
 
 // Useful simple callback function for setting a small value
 void debuginator_copy_1byte(DebuginatorItem* item, void* value, const char* value_title, void* app_userdata);
@@ -271,44 +271,44 @@ void debuginator_copy_1byte(DebuginatorItem* item, void* value, const char* valu
 // have the value from the corresponding index in value_titles.
 // value_indices is currently not used
 // paths and value_titles need to be of length num_paths.
-DebuginatorItem* debuginator_create_preset_item(TheDebuginator* debuginator, const char* path, const char** paths, const char** value_titles, int** value_indices, int num_paths);
+DebuginatorItem* debuginator_create_preset_item(struct TheDebuginator* debuginator, const char* path, const char** paths, const char** value_titles, int** value_indices, int num_paths);
 
 // Wraps create_array_item. Creates an item that contains a color picker.
-DebuginatorItem* debuginator_create_colorpicker_item(TheDebuginator* debuginator, const char* path, const char* description, DebuginatorOnItemChangedCallback on_item_changed_callback, void* user_data, DebuginatorColor* start_color);
+DebuginatorItem* debuginator_create_colorpicker_item(struct TheDebuginator* debuginator, const char* path, const char* description, DebuginatorOnItemChangedCallback on_item_changed_callback, void* user_data, DebuginatorColor* start_color);
 
-DebuginatorItem* debuginator_create_numberrange_float_item(TheDebuginator* debuginator, const char* path, const char* description, float* user_data, float range_min, float range_max);
+DebuginatorItem* debuginator_create_numberrange_float_item(struct TheDebuginator* debuginator, const char* path, const char* description, float* user_data, float range_min, float range_max);
 
 // If you want to create a new empty folder.
-DebuginatorItem* debuginator_create_folder_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* path);
-DebuginatorItem* debuginator_new_folder_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* title, int title_length);
+DebuginatorItem* debuginator_create_folder_item(struct TheDebuginator* debuginator, DebuginatorItem* parent, const char* path);
+DebuginatorItem* debuginator_new_folder_item(struct TheDebuginator* debuginator, DebuginatorItem* parent, const char* title, int title_length);
 
 // Get an item by its path.
 // If create_if_not_exist is a valid pointer, the item will be created if not found. The pointer will then be set to true.
-DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* path, bool* create_if_not_exist);
+DebuginatorItem* debuginator_get_item(struct TheDebuginator* debuginator, DebuginatorItem* parent, const char* path, bool* create_if_not_exist);
 
 // Returns the menu root item.
-DebuginatorItem* debuginator_get_root_item(TheDebuginator* debuginator);
+DebuginatorItem* debuginator_get_root_item(struct TheDebuginator* debuginator);
 
 // Returns first child of the folder item, or NULL if it oesn't have any children.
-DebuginatorItem* debuginator_get_first_child(TheDebuginator* debuginator, DebuginatorItem* item);
+DebuginatorItem* debuginator_get_first_child(struct TheDebuginator* debuginator, DebuginatorItem* item);
 
 // Returns the item's next sibling, or NULL if it doesn't have any, i.e. it's the last item under a folder.
-DebuginatorItem* debuginator_get_next_sibling(TheDebuginator* debuginator, DebuginatorItem* item);
+DebuginatorItem* debuginator_get_next_sibling(struct TheDebuginator* debuginator, DebuginatorItem* item);
 
 // Remove an item by reference
-void debuginator_remove_item(TheDebuginator* debuginator, DebuginatorItem* item);
+void debuginator_remove_item(struct TheDebuginator* debuginator, DebuginatorItem* item);
 
 // Remove an item by its path
-void debuginator_remove_item_by_path(TheDebuginator* debuginator, const char* path);
+void debuginator_remove_item_by_path(struct TheDebuginator* debuginator, const char* path);
 
-void debuginator_set_hot_item(TheDebuginator* debuginator, DebuginatorItem* item);
-DebuginatorItem* debuginator_get_hot_item(TheDebuginator* debuginator, int* out_hot_item_index);
+void debuginator_set_hot_item(struct TheDebuginator* debuginator, DebuginatorItem* item);
+DebuginatorItem* debuginator_get_hot_item(struct TheDebuginator* debuginator, int* out_hot_item_index);
 
 // Get item's parent
 DebuginatorItem* debuginator_get_parent(DebuginatorItem* item);
 
 // Get item's path. If buffer size isn't big enough, it'll be set to the needed amount.
-void debuginator_get_path(TheDebuginator* debuginator, DebuginatorItem* item, char* buffer, int* buffer_size);
+void debuginator_get_path(struct TheDebuginator* debuginator, DebuginatorItem* item, char* buffer, int* buffer_size);
 
 // Is folder
 bool debuginator_is_folder(DebuginatorItem* item);
@@ -316,117 +316,117 @@ bool debuginator_is_folder(DebuginatorItem* item);
 
 // Save the state. Each item whose current active_index is different from its default_index will be saved, by a call to the
 // callback you pass in.
-bool debuginator_save(TheDebuginator* debuginator, DebuginatorSaveItemCallback callback, void* userdata);
+bool debuginator_save(struct TheDebuginator* debuginator, DebuginatorSaveItemCallback callback, void* userdata);
 
 // Preload an item. If the item doesn't exist, it will be created but be hidden until properly created later.
 // value_title should be the value you want it to have when finally created.
-void debuginator_load_item(TheDebuginator* debuginator, const char* key, const char* value);
+void debuginator_load_item(struct TheDebuginator* debuginator, const char* key, const char* value);
 
 // Set an item's default value. If value_title is NULL, value_index will be used instead.
 // value index is used if value_title == NULL
-void debuginator_set_default_value(TheDebuginator* debuginator, const char* path, const char* value_title, int value_index);
+void debuginator_set_default_value(struct TheDebuginator* debuginator, const char* path, const char* value_title, int value_index);
 
 // Resets item and children to default values.
-void debuginator_reset_items_recursively(TheDebuginator* debuginator, DebuginatorItem* item);
+void debuginator_reset_items_recursively(struct TheDebuginator* debuginator, DebuginatorItem* item);
 
 // For number range and color pickers etc
-void debuginator_modify_value(TheDebuginator* debuginator, DebuginatorItem* item, float x_axis, float y_axis, bool snap);
+void debuginator_modify_value(struct TheDebuginator* debuginator, DebuginatorItem* item, float x_axis, float y_axis, bool snap);
 
 // Set an item's edit type.
-void debuginator_set_edit_type(TheDebuginator* debuginator, const char* path, DebuginatorItemEditorDataType edit_type);
+void debuginator_set_edit_type(struct TheDebuginator* debuginator, const char* path, DebuginatorItemEditorDataType edit_type);
 
 // Set an item's callback. Only for leaves.
-void debuginator_item_set_on_changed_callback_by_path(TheDebuginator* debuginator, const char* path, DebuginatorOnItemChangedCallback callback);
+void debuginator_item_set_on_changed_callback_by_path(struct TheDebuginator* debuginator, const char* path, DebuginatorOnItemChangedCallback callback);
 
 // Set an item's callback. Only for leaves.
 void debuginator_item_set_on_changed_callback(DebuginatorItem* item, DebuginatorOnItemChangedCallback callback);
 
 // Set an item's userdata. Only for leaves.
-void debuginator_item_set_user_data_by_path(TheDebuginator* debuginator, const char* path, void* user_data);
+void debuginator_item_set_user_data_by_path(struct TheDebuginator* debuginator, const char* path, void* user_data);
 
 // Set an item's userdata. Only for leaves.
 void debuginator_item_set_user_data(DebuginatorItem* item, void* user_data);
 
 // Change an item's active index to its hot index, and trigger an activation - callbacks and animations and all.
-void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item, bool animate);
+void debuginator_activate(struct TheDebuginator* debuginator, DebuginatorItem* item, bool animate);
 
 // Collapsability (for folders)
 bool debuginator_is_collapsed(DebuginatorItem* item);
-void debuginator_set_collapsed(TheDebuginator* debuginator, DebuginatorItem* item, bool collapsed);
-void debuginator_collapse_to_depth(TheDebuginator* debuginator, int depth);
+void debuginator_set_collapsed(struct TheDebuginator* debuginator, DebuginatorItem* item, bool collapsed);
+void debuginator_collapse_to_depth(struct TheDebuginator* debuginator, int depth);
 
 // Navigation functions
 // Moves the hot item or hot index to the next/previous visible item or index.
 // If long_move is true, it will move to the next item that either has a different parent
 // or a different overridden state.
-void debuginator_move_to_next_leaf(TheDebuginator* debuginator, bool long_move);
-void debuginator_move_to_prev_leaf(TheDebuginator* debuginator, bool long_move);
+void debuginator_move_to_next_leaf(struct TheDebuginator* debuginator, bool long_move);
+void debuginator_move_to_prev_leaf(struct TheDebuginator* debuginator, bool long_move);
 
 // Expands a leaf item (makes it "active") if it's closed, activates it if it's already opened.
 // If toggle_and_activate is true, it will increase the hot index once and then activate,
 // even if it's not expanded. If the item's edit type's toggle_by_default is true,
 // this behaviour is inverted.
-void debuginator_move_to_child(TheDebuginator* debuginator, bool toggle_and_activate);
+void debuginator_move_to_child(struct TheDebuginator* debuginator, bool toggle_and_activate);
 
 // Closes an expanded item.
-void debuginator_move_to_parent(TheDebuginator* debuginator);
+void debuginator_move_to_parent(struct TheDebuginator* debuginator);
 
-void debuginator_move_sibling_next(TheDebuginator* debuginator);
-void debuginator_move_sibling_previous(TheDebuginator* debuginator);
-void debuginator_move_to_root(TheDebuginator* debuginator);
+void debuginator_move_sibling_next(struct TheDebuginator* debuginator);
+void debuginator_move_sibling_previous(struct TheDebuginator* debuginator);
+void debuginator_move_to_root(struct TheDebuginator* debuginator);
 
 // Filter (search) functionality
-bool debuginator_is_filtering_enabled(TheDebuginator* debuginator);
-void debuginator_set_filtering_enabled(TheDebuginator* debuginator, bool enabled);
-const char* debuginator_get_filter(TheDebuginator* debuginator);
-void debuginator_set_filter(TheDebuginator* debuginator, const char* wanted_filter);
-void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_filter);
+bool debuginator_is_filtering_enabled(struct TheDebuginator* debuginator);
+void debuginator_set_filtering_enabled(struct TheDebuginator* debuginator, bool enabled);
+const char* debuginator_get_filter(struct TheDebuginator* debuginator);
+void debuginator_set_filter(struct TheDebuginator* debuginator, const char* wanted_filter);
+void debuginator_update_filter(struct TheDebuginator* debuginator, const char* wanted_filter);
 
 // Mouse / Touch API
-void debuginator_apply_scroll(TheDebuginator* debuginator, int distance);
-void debuginator_reset_scrolling(TheDebuginator* debuginator);
-void debuginator_set_mouse_cursor_pos(TheDebuginator* debuginator, DebuginatorVector2* mouse_cursor_pos);
-void debuginator_activate_item_at_mouse_cursor(TheDebuginator* debuginator);
-void debuginator_expand_item_at_mouse_cursor(TheDebuginator* debuginator, DebuginatorExpand expand);
-DebuginatorItem* debuginator_get_item_at_mouse_cursor(TheDebuginator* debuginator, int* out_hot_item_index);
-bool debuginator_is_mouse_over(TheDebuginator* debuginator, bool* out_over_quick_draw_area);
+void debuginator_apply_scroll(struct TheDebuginator* debuginator, int distance);
+void debuginator_reset_scrolling(struct TheDebuginator* debuginator);
+void debuginator_set_mouse_cursor_pos(struct TheDebuginator* debuginator, DebuginatorVector2* mouse_cursor_pos);
+void debuginator_activate_item_at_mouse_cursor(struct TheDebuginator* debuginator);
+void debuginator_expand_item_at_mouse_cursor(struct TheDebuginator* debuginator, DebuginatorExpand expand);
+DebuginatorItem* debuginator_get_item_at_mouse_cursor(struct TheDebuginator* debuginator, int* out_hot_item_index);
+bool debuginator_is_mouse_over(struct TheDebuginator* debuginator, bool* out_over_quick_draw_area);
 
 // Hot key API
 // Activate returns true if there was an item bound to that key
-void debuginator_assign_hot_key(TheDebuginator* debuginator, const char* key, const char* path, int value_index, const char* optional_value_title);
-void debuginator_unassign_hot_key(TheDebuginator* debuginator, const char* key);
-DebuginatorItem* debuginator_get_first_assigned_hot_key_item(TheDebuginator* debuginator, const char* key);
-bool debuginator_activate_hot_key(TheDebuginator* debuginator, const char* key);
-void debuginator_clear_hot_keys(TheDebuginator* debuginator);
+void debuginator_assign_hot_key(struct TheDebuginator* debuginator, const char* key, const char* path, int value_index, const char* optional_value_title);
+void debuginator_unassign_hot_key(struct TheDebuginator* debuginator, const char* key);
+DebuginatorItem* debuginator_get_first_assigned_hot_key_item(struct TheDebuginator* debuginator, const char* key);
+bool debuginator_activate_hot_key(struct TheDebuginator* debuginator, const char* key);
+void debuginator_clear_hot_keys(struct TheDebuginator* debuginator);
 
 // Sets the height of all items. Default 32.
 // Recommended to use a power of 2
-void debuginator_set_item_height(TheDebuginator* debuginator, int item_height);
+void debuginator_set_item_height(struct TheDebuginator* debuginator, int item_height);
 
 // Sets width and height of The Debuginator
-void debuginator_set_size(TheDebuginator* debuginator, int width, int height);
+void debuginator_set_size(struct TheDebuginator* debuginator, int width, int height);
 
 // Sets screen resolution for The Debuginator. Only used for right-aligned mode.
-void debuginator_set_screen_resolution(TheDebuginator* debuginator, int width, int height);
+void debuginator_set_screen_resolution(struct TheDebuginator* debuginator, int width, int height);
 
 // Not sure there'a valid use case for this but.. it doesn't exactly hurt.
-int debuginator_total_height(TheDebuginator* debuginator);
+int debuginator_total_height(struct TheDebuginator* debuginator);
 
 // True for left, false for right. Use in conjunction with screen resolution.
-void debuginator_set_left_aligned(TheDebuginator* debuginator, bool left_aligned);
-bool debuginator_is_left_aligned(TheDebuginator* debuginator);
-float debuginator_distance_from_edge(TheDebuginator* debuginator);
+void debuginator_set_left_aligned(struct TheDebuginator* debuginator, bool left_aligned);
+bool debuginator_is_left_aligned(struct TheDebuginator* debuginator);
+float debuginator_distance_from_edge(struct TheDebuginator* debuginator);
 
 // Notification API
-void debuginator_set_notifications_enabled(TheDebuginator* debuginator, bool enabled);
-void debuginator_trigger_nondefault_notifications(TheDebuginator* debuginator);
+void debuginator_set_notifications_enabled(struct TheDebuginator* debuginator, bool enabled);
+void debuginator_trigger_nondefault_notifications(struct TheDebuginator* debuginator);
 
 // Copies a string and returns a pointer to one that the debuginator owns and will
 // free if assigned as the description. (TODO: Add for value_titles)
-char* debuginator_copy_string(TheDebuginator* debuginator, const char* string, int length);
+char* debuginator_copy_string(struct TheDebuginator* debuginator, const char* string, int length);
 
 // Logs current value
-void debuginator_log_item(TheDebuginator* debuginator, DebuginatorItem* item);
+void debuginator_log_item(struct TheDebuginator* debuginator, DebuginatorItem* item);
 
 // API END
 
@@ -482,16 +482,16 @@ typedef enum DebuginatorAnimationType {
 
 typedef struct DebuginatorItemEditorData {
 	// Draws the active value to the right of the item title.
-	void(*quick_draw)(TheDebuginator* debuginator, DebuginatorItem* item_data, DebuginatorVector2* position);
+	void(*quick_draw)(struct TheDebuginator* debuginator, DebuginatorItem* item_data, DebuginatorVector2* position);
 
 	// Draws stuff under the title when the item is expanded.
-	void(*expanded_draw)(TheDebuginator* debuginator, DebuginatorItem* item_data, DebuginatorVector2* position);
+	void(*expanded_draw)(struct TheDebuginator* debuginator, DebuginatorItem* item_data, DebuginatorVector2* position);
 
 	// Currently not used
-	void(*on_expanded)(TheDebuginator* debuginator, DebuginatorItem* item, void* userdata);
+	void(*on_expanded)(struct TheDebuginator* debuginator, DebuginatorItem* item, void* userdata);
 
 	// For controls that don't have simple list style values
-	void(*modify_value)(TheDebuginator* debuginator, DebuginatorItem* item, float x_axis, float y_axis, bool snap);
+	void(*modify_value)(struct TheDebuginator* debuginator, DebuginatorItem* item, float x_axis, float y_axis, bool snap);
 
 	// If the item should revert to its default value after activation
 	bool forget_state;
@@ -892,7 +892,7 @@ typedef struct DebuginatorAnimation {
 	float time;
 } DebuginatorAnimation;
 
-typedef struct TheDebuginator {
+struct TheDebuginator {
 	DebuginatorItem* root;
 	DebuginatorItem* hot_item;
 	DebuginatorItem* hot_mouse_item;
@@ -977,8 +977,7 @@ typedef struct TheDebuginator {
 	char notification_paths[DEBUGINATOR_MAX_NOTIFICATIONS][DEBUGINATOR_MAX_PATH_LENGTH];
 	DebuginatorItem* notification_items[DEBUGINATOR_MAX_NOTIFICATIONS];
 	bool notifications_enabled;
-
-} TheDebuginator;
+};
 
 static DebuginatorVector2 debuginator__vector2(float x, float y) {
 	DebuginatorVector2 v; v.x = x; v.y = y;
@@ -1007,7 +1006,7 @@ static float debuginator__lerp(float a, float b, float t) {
 	return a * (1 - t) + b * t;
 }
 
-static void debuginator__quick_draw_default(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
+static void debuginator__quick_draw_default(struct TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
 	if (item->leaf.num_values > 0) {
 		DebuginatorVector2 pos = debuginator__vector2(debuginator->top_left.x + debuginator->size.x - debuginator->quick_draw_size, position->y + debuginator->item_height / 2.0f);
 
@@ -1017,7 +1016,7 @@ static void debuginator__quick_draw_default(TheDebuginator* debuginator, Debugin
 	}
 }
 
-static void debuginator__expanded_draw_default(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
+static void debuginator__expanded_draw_default(struct TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
 	for (int i = 0; i < item->leaf.num_values; i++) {
 		position->y += debuginator->item_height;
 
@@ -1055,7 +1054,7 @@ static void debuginator__expanded_draw_default(TheDebuginator* debuginator, Debu
 	}
 }
 
-static void debuginator__quick_draw_boolean(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
+static void debuginator__quick_draw_boolean(struct TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
 	DebuginatorVector2 size = debuginator__vector2(50, 20);
 	DebuginatorVector2 pos = debuginator__vector2(debuginator->top_left.x + debuginator->size.x - debuginator->quick_draw_size, position->y + debuginator->item_height / 2.0f - size.y / 2.0f);
 	DebuginatorColor background = debuginator__color(0, 0, 0, 100);
@@ -1086,7 +1085,7 @@ static void debuginator__quick_draw_boolean(TheDebuginator* debuginator, Debugin
 	debuginator->draw_rect(&slider_pos, &size, &slider, debuginator->app_user_data);
 }
 
-static void debuginator__expanded_draw_boolean(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
+static void debuginator__expanded_draw_boolean(struct TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
 	for (int i = 0; i < item->leaf.num_values; i++) {
 		position->y += debuginator->item_height;
 
@@ -1123,11 +1122,11 @@ static void debuginator__expanded_draw_boolean(TheDebuginator* debuginator, Debu
 	}
 }
 
-static void debuginator__quick_draw_preset(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
+static void debuginator__quick_draw_preset(struct TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
 	(void)debuginator, item, position;
 }
 
-static void debuginator__expanded_draw_preset(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
+static void debuginator__expanded_draw_preset(struct TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
 	(void)debuginator, item, position;
 	// We don't really want to draw these I think, better to show in the description.
 
@@ -1141,7 +1140,7 @@ static void debuginator__expanded_draw_preset(TheDebuginator* debuginator, Debug
 	// }
 }
 
-static void debuginator__quick_draw_colorpicker(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
+static void debuginator__quick_draw_colorpicker(struct TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
 	(void)debuginator, item, position;
 
 	float anim_t = (float)(DEBUGINATOR_sin(debuginator->draw_timer * 0.2) + 1) * 0.5f;
@@ -1170,19 +1169,19 @@ static void debuginator__quick_draw_colorpicker(TheDebuginator* debuginator, Deb
 	debuginator->draw_rect(&square_pos, &square_size, &square_color, debuginator->app_user_data);
 }
 
-static void debuginator__expanded_draw_colorpicker(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
+static void debuginator__expanded_draw_colorpicker(struct TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
 	DEBUGINATOR_UNUSED(item);
 	DebuginatorVector2 image_size = debuginator__vector2(100, 100);
 	debuginator->draw_image(position, &image_size, debuginator->colorpicker_image, debuginator->app_user_data);
 }
 
-// static void debuginator__on_expanded_colorpicker(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
+// static void debuginator__on_expanded_colorpicker(struct TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
 // 	DEBUGINATOR_UNUSED(item);
 // 	DebuginatorVector2 image_size = debuginator__vector2(100, 100);
 // 	debuginator->draw_image(position, &image_size, debuginator->colorpicker_image, debuginator->app_user_data);
 // }
 
-static void debuginator__quick_draw_numberrange(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
+static void debuginator__quick_draw_numberrange(struct TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
 	(void)debuginator, item, position;
 
 	// float* state = (float*)item->leaf.values;
@@ -1197,13 +1196,13 @@ static void debuginator__quick_draw_numberrange(TheDebuginator* debuginator, Deb
 	debuginator->draw_text(value_str, &pos, &debuginator->theme.colors[DEBUGINATOR_ItemTitleActive], font, debuginator->app_user_data);
 }
 
-static void debuginator__expanded_draw_numberrange(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
+static void debuginator__expanded_draw_numberrange(struct TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
 	(void)debuginator, item, position;
 	// DebuginatorVector2 image_size = debuginator__vector2(100, 100);
 	// debuginator->draw_image(position, &image_size, debuginator->colorpicker_image, debuginator->app_user_data);
 }
 
-static void debuginator__modify_value_numberrange(TheDebuginator* debuginator, DebuginatorItem* item, float x_axis, float y_axis, bool snap) {
+static void debuginator__modify_value_numberrange(struct TheDebuginator* debuginator, DebuginatorItem* item, float x_axis, float y_axis, bool snap) {
 	(void)debuginator, item, snap, x_axis;
 	float* state = (float*)item->leaf.values;
 	float min_value = state[0];
@@ -1216,7 +1215,7 @@ static void debuginator__modify_value_numberrange(TheDebuginator* debuginator, D
 	debuginator_activate(debuginator, item, false);
 }
 
-// static void debuginator__activate_numberrange(TheDebuginator* debuginator, DebuginatorItem* item) {
+// static void debuginator__activate_numberrange(struct TheDebuginator* debuginator, DebuginatorItem* item) {
 // 	(void)debuginator, item;
 // 	float* state = (float*)item->leaf.values;
 // 	float min_value = state[0];
@@ -1229,12 +1228,12 @@ static void debuginator__modify_value_numberrange(TheDebuginator* debuginator, D
 // 	debuginator_activate(debuginator, item, false);
 // }
 
-// static void debuginator__on_expanded_colorpicker(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
+// static void debuginator__on_expanded_colorpicker(struct TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2* position) {
 // 	DebuginatorVector2 image_size = debuginator__vector2(100, 100);
 // 	debuginator->draw_image(position, &image_size, debuginator->colorpicker_image, debuginator->app_user_data);
 // }
 
-static void* debuginator__allocate(TheDebuginator* debuginator, int bytes/*, const void* origin*/) {
+static void* debuginator__allocate(struct TheDebuginator* debuginator, int bytes/*, const void* origin*/) {
 	for (int i = 0; i < 6; i++) {
 		if (bytes <= debuginator->allocators[i].element_size) {
 			void* result = debuginator__block_allocate(&debuginator->allocators[i], bytes);
@@ -1252,7 +1251,7 @@ static void* debuginator__allocate(TheDebuginator* debuginator, int bytes/*, con
 	return NULL;
 }
 
-static void debuginator__deallocate(TheDebuginator* debuginator, const void* void_ptr) {
+static void debuginator__deallocate(struct TheDebuginator* debuginator, const void* void_ptr) {
 	// We remove the const part and that's fine, if it's our string we can do whatever we want with it,
 	// and if not, then we don't do anything (see right below). It makes the API a bit nicer.
 	char* ptr = (char*)(DEBUGINATOR_intptr)void_ptr;
@@ -1272,7 +1271,7 @@ static void debuginator__deallocate(TheDebuginator* debuginator, const void* voi
 	debuginator__block_deallocate(allocator, void_ptr);
 }
 
-char* debuginator_copy_string(TheDebuginator* debuginator, const char* string, int length) {
+char* debuginator_copy_string(struct TheDebuginator* debuginator, const char* string, int length) {
 	if (length == 0) {
 		length = (int)DEBUGINATOR_strlen(string);
 	}
@@ -1283,7 +1282,7 @@ char* debuginator_copy_string(TheDebuginator* debuginator, const char* string, i
 	return memory;
 }
 
-static DebuginatorAnimation* debuginator__get_free_animation(TheDebuginator* debuginator) {
+static DebuginatorAnimation* debuginator__get_free_animation(struct TheDebuginator* debuginator) {
 	if (debuginator->animation_count == sizeof(debuginator->animations) / sizeof(*debuginator->animations)) {
 		return NULL;
 	}
@@ -1361,12 +1360,12 @@ static void debuginator__adjust_num_visible_children(DebuginatorItem* item, int 
 static void debuginator__on_change_theme(DebuginatorItem* item, void* value, const char* value_title, void* app_userdata) {
 	(void)app_userdata;
 	(void)value_title;
-	TheDebuginator* debuginator = (TheDebuginator*)item->user_data;
+	struct TheDebuginator* debuginator = (struct TheDebuginator*)item->user_data;
 	debuginator->theme_index = *(int*)value;
 	debuginator->theme = debuginator->themes[debuginator->theme_index];
 }
 
-static void debuginator__set_title(TheDebuginator* debuginator, DebuginatorItem* item, const char* title, int title_length) {
+static void debuginator__set_title(struct TheDebuginator* debuginator, DebuginatorItem* item, const char* title, int title_length) {
 	if (title_length == 0) {
 		title_length = (int)DEBUGINATOR_strlen(title);
 	}
@@ -1596,7 +1595,7 @@ static void debuginator__set_parent(DebuginatorItem* item, DebuginatorItem* pare
 	}
 }
 
-static void debuginator__store_item_setting(TheDebuginator* debuginator, const char* path, const char* value_title) {
+static void debuginator__store_item_setting(struct TheDebuginator* debuginator, const char* path, const char* value_title) {
 	// If it already exists, we override the value
 	for (int i = 0; i < debuginator->num_loaded_settings; ++i) {
 		int setting_index = i * 2;
@@ -1626,7 +1625,7 @@ static void debuginator__store_item_setting(TheDebuginator* debuginator, const c
 	debuginator->num_loaded_settings++;
 }
 
-static const char* debuginator__get_item_setting(TheDebuginator* debuginator, const char* path) {
+static const char* debuginator__get_item_setting(struct TheDebuginator* debuginator, const char* path) {
 	for (int i = 0; i < debuginator->num_loaded_settings; ++i) {
 		int setting_index = i * 2;
 		if (DEBUGINATOR_strcmp(debuginator->loaded_settings[setting_index], path) == 0) {
@@ -1639,7 +1638,7 @@ static const char* debuginator__get_item_setting(TheDebuginator* debuginator, co
 }
 
 // Note: This will allocate a string and return it. I'm ok with that since it's an internal function.
-static const char* debuginator__compute_path(TheDebuginator* debuginator, DebuginatorItem* parent, const char* path, int path_length) {
+static const char* debuginator__compute_path(struct TheDebuginator* debuginator, DebuginatorItem* parent, const char* path, int path_length) {
 	if (path_length == 0) {
 		path_length = (int)DEBUGINATOR_strlen(path);
 	}
@@ -1672,7 +1671,7 @@ static const char* debuginator__compute_path(TheDebuginator* debuginator, Debugi
 	return result;
 }
 
-DebuginatorItem* debuginator_new_folder_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* title, int title_length) {
+DebuginatorItem* debuginator_new_folder_item(struct TheDebuginator* debuginator, DebuginatorItem* parent, const char* title, int title_length) {
 	DebuginatorItem* folder_item = (DebuginatorItem*)debuginator__allocate(debuginator, sizeof(DebuginatorItem));
 	folder_item->is_folder = true;
 	folder_item->folder.num_visible_children = 0;
@@ -1691,7 +1690,7 @@ DebuginatorItem* debuginator_new_folder_item(TheDebuginator* debuginator, Debugi
 	return folder_item;
 }
 
-DebuginatorItem* debuginator_create_folder_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* path) {
+DebuginatorItem* debuginator_create_folder_item(struct TheDebuginator* debuginator, DebuginatorItem* parent, const char* path) {
 	bool create_if_not_exist;
 	DebuginatorItem* folder_item = debuginator_get_item(debuginator, parent, path, &create_if_not_exist);
 	folder_item->is_folder = true;
@@ -1708,7 +1707,7 @@ DebuginatorItem* debuginator_create_folder_item(TheDebuginator* debuginator, Deb
 	return folder_item;
 }
 
-DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, DebuginatorItem* parent, const char* path, bool* create_if_not_exist) {
+DebuginatorItem* debuginator_get_item(struct TheDebuginator* debuginator, DebuginatorItem* parent, const char* path, bool* create_if_not_exist) {
 	parent = parent == NULL ? debuginator->root : parent;
 	const char* temp_path = path;
 	while (true) {
@@ -1768,17 +1767,17 @@ DebuginatorItem* debuginator_get_item(TheDebuginator* debuginator, DebuginatorIt
 	return NULL;
 }
 
-DebuginatorItem* debuginator_get_root_item(TheDebuginator* debuginator) {
+DebuginatorItem* debuginator_get_root_item(struct TheDebuginator* debuginator) {
 	return debuginator->root;
 }
 
-DebuginatorItem* debuginator_get_first_child(TheDebuginator* debuginator, DebuginatorItem* item) {
+DebuginatorItem* debuginator_get_first_child(struct TheDebuginator* debuginator, DebuginatorItem* item) {
 	DEBUGINATOR_UNUSED(debuginator);
 	DEBUGINATOR_assert(item->is_folder);
 	return item->folder.first_child;
 }
 
-DebuginatorItem* debuginator_get_next_sibling(TheDebuginator* debuginator, DebuginatorItem* item) {
+DebuginatorItem* debuginator_get_next_sibling(struct TheDebuginator* debuginator, DebuginatorItem* item) {
 	DEBUGINATOR_UNUSED(debuginator);
 	return item->next_sibling;
 }
@@ -1787,7 +1786,7 @@ DebuginatorItem* debuginator_get_parent(DebuginatorItem* item) {
 	return item->parent;
 }
 
-void debuginator_get_path(TheDebuginator* debuginator, DebuginatorItem* item, char* buffer, int* buffer_size) {
+void debuginator_get_path(struct TheDebuginator* debuginator, DebuginatorItem* item, char* buffer, int* buffer_size) {
 	const char* full_path = debuginator__compute_path(debuginator, item, "", 0);
 	int length = (int)DEBUGINATOR_strlen(full_path);
 	if (length > *buffer_size) {
@@ -1805,7 +1804,7 @@ bool debuginator_is_folder(DebuginatorItem* item) {
 	return item->is_folder;
 }
 
-DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
+DebuginatorItem* debuginator_create_array_item(struct TheDebuginator* debuginator,
 	DebuginatorItem* parent, const char* path, const char* description,
 	DebuginatorOnItemChangedCallback on_item_changed_callback, void* user_data,
 	const char** value_titles, void* values, int num_values, int value_size) {
@@ -1891,7 +1890,7 @@ DebuginatorItem* debuginator_create_array_item(TheDebuginator* debuginator,
 	return item;
 }
 
-bool debuginator_save(TheDebuginator* debuginator, DebuginatorSaveItemCallback callback, void* userdata) {
+bool debuginator_save(struct TheDebuginator* debuginator, DebuginatorSaveItemCallback callback, void* userdata) {
 	char current_full_path[1024] = { 0 };
 	size_t path_indices[DEBUGINATOR_MAX_HIERARCHY_SIZE] = { 0 };
 	int current_path_index = 0;
@@ -1974,7 +1973,7 @@ bool debuginator_save(TheDebuginator* debuginator, DebuginatorSaveItemCallback c
 	return true;
 }
 
-void debuginator_load_item(TheDebuginator* debuginator, const char* key, const char* value) {
+void debuginator_load_item(struct TheDebuginator* debuginator, const char* key, const char* value) {
 	// First we store path + value so that we can use it later when (re)creating the item.
 	debuginator__store_item_setting(debuginator, key, value);
 
@@ -2002,7 +2001,7 @@ void debuginator_load_item(TheDebuginator* debuginator, const char* key, const c
 	}
 }
 
-DebuginatorItem* debuginator_get_hot_item(TheDebuginator* debuginator, int* out_hot_item_index) {
+DebuginatorItem* debuginator_get_hot_item(struct TheDebuginator* debuginator, int* out_hot_item_index) {
 	if (out_hot_item_index != NULL) {
 		if (debuginator->hot_item->is_folder) {
 			*out_hot_item_index = 0;
@@ -2018,7 +2017,7 @@ DebuginatorItem* debuginator_get_hot_item(TheDebuginator* debuginator, int* out_
 	return debuginator->hot_item;
 }
 
-void debuginator_set_hot_item(TheDebuginator* debuginator, DebuginatorItem* item) {
+void debuginator_set_hot_item(struct TheDebuginator* debuginator, DebuginatorItem* item) {
 	if (item == debuginator->root) {
 		return;
 	}
@@ -2027,7 +2026,7 @@ void debuginator_set_hot_item(TheDebuginator* debuginator, DebuginatorItem* item
 	item->parent->folder.hot_child = item;
 }
 
-void debuginator_set_default_value(TheDebuginator* debuginator, const char* path, const char* value_title, int value_index) {
+void debuginator_set_default_value(struct TheDebuginator* debuginator, const char* path, const char* value_title, int value_index) {
 	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, NULL);
 	if (item == NULL || item->is_folder) {
 		return;
@@ -2047,13 +2046,13 @@ void debuginator_set_default_value(TheDebuginator* debuginator, const char* path
 	}
 }
 
-void debuginator_modify_value(TheDebuginator* debuginator, DebuginatorItem* item, float x_axis, float y_axis, bool snap) {
+void debuginator_modify_value(struct TheDebuginator* debuginator, DebuginatorItem* item, float x_axis, float y_axis, bool snap) {
 	if (debuginator->edit_types[(int)item->leaf.edit_type].modify_value != NULL) {
 		debuginator->edit_types[(int)item->leaf.edit_type].modify_value(debuginator, item, x_axis, y_axis, snap);
 	}
 }
 
-void debuginator_set_edit_type(TheDebuginator* debuginator, const char* path, DebuginatorItemEditorDataType edit_type) {
+void debuginator_set_edit_type(struct TheDebuginator* debuginator, const char* path, DebuginatorItemEditorDataType edit_type) {
 	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, NULL);
 	if (item == NULL) {
 		return;
@@ -2067,7 +2066,7 @@ void debuginator_item_set_on_changed_callback(DebuginatorItem* item, Debuginator
 	item->leaf.on_item_changed_callback = callback;
 }
 
-void debuginator_item_set_on_changed_callback_by_path(TheDebuginator* debuginator, const char* path, DebuginatorOnItemChangedCallback callback) {
+void debuginator_item_set_on_changed_callback_by_path(struct TheDebuginator* debuginator, const char* path, DebuginatorOnItemChangedCallback callback) {
 	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, NULL);
 	if (item == NULL) {
 		return;
@@ -2082,7 +2081,7 @@ void debuginator_item_set_user_data(DebuginatorItem* item, void* user_data) {
 	item->user_data = user_data;
 }
 
-void debuginator_item_set_user_data_by_path(TheDebuginator* debuginator, const char* path, void* user_data) {
+void debuginator_item_set_user_data_by_path(struct TheDebuginator* debuginator, const char* path, void* user_data) {
 	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, NULL);
 	if (item == NULL) {
 		return;
@@ -2093,7 +2092,7 @@ void debuginator_item_set_user_data_by_path(TheDebuginator* debuginator, const c
 }
 
 // Note: If you remove the last visible item, you must create a new one under the root.
-void debuginator_remove_item(TheDebuginator* debuginator, DebuginatorItem* item) {
+void debuginator_remove_item(struct TheDebuginator* debuginator, DebuginatorItem* item) {
 	if (item->is_folder) {
 		DebuginatorItem* child = item->folder.first_child;
 		while (child != NULL) {
@@ -2153,7 +2152,7 @@ void debuginator_remove_item(TheDebuginator* debuginator, DebuginatorItem* item)
 	debuginator__deallocate(debuginator, item);
 }
 
-void debuginator_remove_item_by_path(TheDebuginator* debuginator, const char* path) {
+void debuginator_remove_item_by_path(struct TheDebuginator* debuginator, const char* path) {
 	DebuginatorItem* item = debuginator_get_item(debuginator, NULL, path, NULL);
 	if (item == NULL) {
 		return;
@@ -2189,28 +2188,28 @@ static bool debuginator__distance_to_hot_item(DebuginatorItem* item, Debuginator
 	return false;
 }
 
-int debuginator_total_height(TheDebuginator* debuginator) {
+int debuginator_total_height(struct TheDebuginator* debuginator) {
 	return debuginator->root->total_height;
 }
 
-bool debuginator_is_filtering_enabled(TheDebuginator* debuginator) {
+bool debuginator_is_filtering_enabled(struct TheDebuginator* debuginator) {
 	return debuginator->filter_enabled;
 }
 
-void debuginator_set_filtering_enabled(TheDebuginator* debuginator, bool enabled) {
+void debuginator_set_filtering_enabled(struct TheDebuginator* debuginator, bool enabled) {
 	debuginator->filter_enabled = enabled;
 	// debuginator->draw_mode = enabled ? DEBUGINATOR_DrawModeSortedFilter : DEBUGINATOR_DrawModeHierarchy;
 }
 
-const char* debuginator_get_filter(TheDebuginator* debuginator) {
+const char* debuginator_get_filter(struct TheDebuginator* debuginator) {
 	return debuginator->filter;
 }
 
-void debuginator_set_filter(TheDebuginator* debuginator, const char* wanted_filter) {
+void debuginator_set_filter(struct TheDebuginator* debuginator, const char* wanted_filter) {
 	DEBUGINATOR_strcpy_s(debuginator->filter, sizeof(debuginator->filter), wanted_filter);
 }
 
-void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_filter) {
+void debuginator_update_filter(struct TheDebuginator* debuginator, const char* wanted_filter) {
 	// See this for a description of how the fuzzy filtering works.
 	// https://medium.com/@Srekel/implementing-a-fuzzy-search-algorithm-for-the-debuginator-cacc349e6c55
 
@@ -2569,7 +2568,7 @@ void debuginator_update_filter(TheDebuginator* debuginator, const char* wanted_f
 	DEBUGINATOR_strcpy_s(debuginator->filter, sizeof(debuginator->filter), filter);
 }
 
-void debuginator_apply_scroll(TheDebuginator* debuginator, int distance) {
+void debuginator_apply_scroll(struct TheDebuginator* debuginator, int distance) {
 	if (debuginator->tooltip_timer < 0) {
 		debuginator->tooltip_timer = DEBUGINATOR_TOOLTIP_DELAY;
 	}
@@ -2583,11 +2582,11 @@ void debuginator_apply_scroll(TheDebuginator* debuginator, int distance) {
 	debuginator->scroll_wanted = DEBUGINATOR_max(debuginator->scroll_wanted, -debuginator->root->total_height + distance_from_root_to_hot_item + max_offset);
 }
 
-void debuginator_reset_scrolling(TheDebuginator* debuginator) {
+void debuginator_reset_scrolling(struct TheDebuginator* debuginator) {
 	debuginator->scroll_wanted = 0;
 }
 
-void debuginator_set_mouse_cursor_pos(TheDebuginator* debuginator, DebuginatorVector2* mouse_cursor_pos) {
+void debuginator_set_mouse_cursor_pos(struct TheDebuginator* debuginator, DebuginatorVector2* mouse_cursor_pos) {
 	if (debuginator->tooltip_timer < 0) {
 		if (debuginator->mouse_cursor_pos.x != mouse_cursor_pos->x && debuginator->mouse_cursor_pos.y != mouse_cursor_pos->y) {
 			// Mouse moved before tooltip visible, clear it
@@ -2601,7 +2600,7 @@ void debuginator_set_mouse_cursor_pos(TheDebuginator* debuginator, DebuginatorVe
 	debuginator->mouse_cursor_pos = *mouse_cursor_pos;
 }
 
-void debuginator_activate_item_at_mouse_cursor(TheDebuginator* debuginator) {
+void debuginator_activate_item_at_mouse_cursor(struct TheDebuginator* debuginator) {
 	if (debuginator->tooltip_timer < 0) {
 		debuginator->tooltip_timer = DEBUGINATOR_TOOLTIP_DELAY;
 	}
@@ -2656,7 +2655,7 @@ void debuginator_activate_item_at_mouse_cursor(TheDebuginator* debuginator) {
 	debuginator->scroll_current = debuginator->scroll_wanted;
 }
 
-void debuginator_expand_item_at_mouse_cursor(TheDebuginator* debuginator, DebuginatorExpand expand) {
+void debuginator_expand_item_at_mouse_cursor(struct TheDebuginator* debuginator, DebuginatorExpand expand) {
 	if (debuginator->tooltip_timer < 0) {
 		debuginator->tooltip_timer = DEBUGINATOR_TOOLTIP_DELAY;
 	}
@@ -2699,7 +2698,7 @@ void debuginator_expand_item_at_mouse_cursor(TheDebuginator* debuginator, Debugi
 	debuginator->scroll_current = debuginator->scroll_wanted;
 }
 
-DebuginatorItem* debuginator_get_item_at_mouse_cursor(TheDebuginator* debuginator, int* out_hot_item_index) {
+DebuginatorItem* debuginator_get_item_at_mouse_cursor(struct TheDebuginator* debuginator, int* out_hot_item_index) {
 	if (out_hot_item_index != NULL) {
 		*out_hot_item_index = debuginator->hot_mouse_item_index;
 	}
@@ -2707,7 +2706,7 @@ DebuginatorItem* debuginator_get_item_at_mouse_cursor(TheDebuginator* debuginato
 	return debuginator->hot_mouse_item;
 }
 
-bool debuginator_is_mouse_over(TheDebuginator* debuginator, bool* out_over_quick_draw_area) {
+bool debuginator_is_mouse_over(struct TheDebuginator* debuginator, bool* out_over_quick_draw_area) {
 	if (debuginator->openness == 0) {
 		return false;
 	}
@@ -2724,7 +2723,7 @@ bool debuginator_is_mouse_over(TheDebuginator* debuginator, bool* out_over_quick
 		debuginator->mouse_cursor_pos.x <= right_edge_x;
 }
 
-void debuginator_assign_hot_key(TheDebuginator* debuginator, const char* _key, const char* path, int value_index, const char* optional_value_title) {
+void debuginator_assign_hot_key(struct TheDebuginator* debuginator, const char* _key, const char* path, int value_index, const char* optional_value_title) {
 #if DEBUGINATOR_DO_HOT_KEY_UPPERCASING
 	char key[128] = {0};
 	DEBUGINATOR_strcpy_s(key, 128, _key);
@@ -2764,7 +2763,7 @@ void debuginator_assign_hot_key(TheDebuginator* debuginator, const char* _key, c
 	}
 }
 
-void debuginator_unassign_hot_key(TheDebuginator* debuginator, const char* _key) {
+void debuginator_unassign_hot_key(struct TheDebuginator* debuginator, const char* _key) {
 #if DEBUGINATOR_DO_HOT_KEY_UPPERCASING
 	char key[128] = { 0 };
 	DEBUGINATOR_strcpy_s(key, 128, _key);
@@ -2796,7 +2795,7 @@ void debuginator_unassign_hot_key(TheDebuginator* debuginator, const char* _key)
 	}
 }
 
-DebuginatorItem* debuginator_get_first_assigned_hot_key_item(TheDebuginator* debuginator, const char* _key) {
+DebuginatorItem* debuginator_get_first_assigned_hot_key_item(struct TheDebuginator* debuginator, const char* _key) {
 #if DEBUGINATOR_DO_HOT_KEY_UPPERCASING
 	char key[128] = { 0 };
 	DEBUGINATOR_strcpy_s(key, 128, _key);
@@ -2817,7 +2816,7 @@ DebuginatorItem* debuginator_get_first_assigned_hot_key_item(TheDebuginator* deb
 	return NULL;
 }
 
-bool debuginator_activate_hot_key(TheDebuginator* debuginator, const char* _key) {
+bool debuginator_activate_hot_key(struct TheDebuginator* debuginator, const char* _key) {
 #if DEBUGINATOR_DO_HOT_KEY_UPPERCASING
 	char key[128] = { 0 };
 	DEBUGINATOR_strcpy_s(key, 128, _key);
@@ -2858,7 +2857,7 @@ bool debuginator_activate_hot_key(TheDebuginator* debuginator, const char* _key)
 	return success;
 }
 
-void debuginator_clear_hot_keys(TheDebuginator* debuginator) {
+void debuginator_clear_hot_keys(struct TheDebuginator* debuginator) {
 	for (int i = 0; i < debuginator->num_hot_keys; ++i) {
 		DebuginatorItem* item = debuginator_get_item(debuginator, NULL, debuginator->hot_keys[i].path, NULL);
 		if (item != NULL) {
@@ -2873,7 +2872,7 @@ void debuginator_clear_hot_keys(TheDebuginator* debuginator) {
 }
 
 /*
-DebuginatorItem* debuginator_get_hot_key_assignment(TheDebuginator* debuginator, const char* _key) {
+DebuginatorItem* debuginator_get_hot_key_assignment(struct TheDebuginator* debuginator, const char* _key) {
 #if DEBUGINATOR_DO_HOT_KEY_UPPERCASING
 	char key[128] = { 0 };
 	DEBUGINATOR_strcpy_s(key, 128, _key);
@@ -2894,7 +2893,7 @@ DebuginatorItem* debuginator_get_hot_key_assignment(TheDebuginator* debuginator,
 	return NULL;
 }
 
-DebuginatorItem* debuginator_get_hot_key_assigned_path(TheDebuginator* debuginator, const char* _key) {
+DebuginatorItem* debuginator_get_hot_key_assigned_path(struct TheDebuginator* debuginator, const char* _key) {
 #if DEBUGINATOR_DO_HOT_KEY_UPPERCASING
 	char key[128] = { 0 };
 	DEBUGINATOR_strcpy_s(key, 128, _key);
@@ -2916,7 +2915,7 @@ DebuginatorItem* debuginator_get_hot_key_assigned_path(TheDebuginator* debuginat
 }
 */
 
-void debuginator_set_item_height(TheDebuginator* debuginator, int item_height) {
+void debuginator_set_item_height(struct TheDebuginator* debuginator, int item_height) {
 	debuginator->item_height = item_height;
 	debuginator__set_item_total_height_recursively(debuginator->root, item_height);
 
@@ -2927,33 +2926,33 @@ void debuginator_set_item_height(TheDebuginator* debuginator, int item_height) {
 	debuginator->current_height_offset = distance_to_wanted_y;
 }
 
-void debuginator_set_size(TheDebuginator* debuginator, int width, int height) {
+void debuginator_set_size(struct TheDebuginator* debuginator, int width, int height) {
 	debuginator->size.x = (float)width;
 	debuginator->size.y = (float)height;
 }
 
-void debuginator_set_screen_resolution(TheDebuginator* debuginator, int width, int height) {
+void debuginator_set_screen_resolution(struct TheDebuginator* debuginator, int width, int height) {
 	debuginator->screen_resolution.x = (float)width;
 	debuginator->screen_resolution.y = (float)height;
 }
 
-void debuginator_set_left_aligned(TheDebuginator* debuginator, bool left_aligned) {
+void debuginator_set_left_aligned(struct TheDebuginator* debuginator, bool left_aligned) {
 	debuginator->open_direction = left_aligned ? 1 : -1;
 }
 
-bool debuginator_is_left_aligned(TheDebuginator* debuginator) {
+bool debuginator_is_left_aligned(struct TheDebuginator* debuginator) {
 	return debuginator->open_direction == 1;
 }
 
-float debuginator_distance_from_edge(TheDebuginator* debuginator) {
+float debuginator_distance_from_edge(struct TheDebuginator* debuginator) {
 	return debuginator->openness * debuginator->size.x;
 }
 
-void debuginator_set_notifications_enabled(TheDebuginator* debuginator, bool enabled) {
+void debuginator_set_notifications_enabled(struct TheDebuginator* debuginator, bool enabled) {
 	debuginator->notifications_enabled = enabled;
 }
 
-void debuginator_trigger_nondefault_notifications(TheDebuginator* debuginator) {
+void debuginator_trigger_nondefault_notifications(struct TheDebuginator* debuginator) {
 	DEBUGINATOR_UNUSED(debuginator);
 }
 
@@ -3098,7 +3097,7 @@ void debuginator_get_default_config(TheDebuginatorConfig* config) {
 	// config->edit_types[DEBUGINATOR_EditTypeNumberRange].activate = debuginator__activate_numberrange;
 }
 
-void debuginator_reset_items_recursively(TheDebuginator* debuginator, DebuginatorItem* item) {
+void debuginator_reset_items_recursively(struct TheDebuginator* debuginator, DebuginatorItem* item) {
 	if (item->is_folder) {
 		DebuginatorItem* child = item->folder.first_child;
 		while (child != NULL) {
@@ -3118,7 +3117,7 @@ static void debuginator_reset_all_items(DebuginatorItem* item, void* value, cons
 	(void)value;
 	(void)value_title;
 	(void)app_userdata;
-	TheDebuginator* debuginator = (TheDebuginator*)item->user_data;
+	struct TheDebuginator* debuginator = (struct TheDebuginator*)item->user_data;
 	DebuginatorItem* child = debuginator->root->folder.first_child;
 	while (child != NULL) {
 		if (DEBUGINATOR_strcmp("Debuginator", child->title) != 0) {
@@ -3128,12 +3127,12 @@ static void debuginator_reset_all_items(DebuginatorItem* item, void* value, cons
 	}
 }
 
-void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginator) {
+void debuginator_create(TheDebuginatorConfig* config, struct TheDebuginator* debuginator) {
 	DEBUGINATOR_assert(config->draw_rect != NULL);
 	DEBUGINATOR_assert(config->draw_text != NULL);
 	DEBUGINATOR_assert(config->text_size != NULL);
-	DEBUGINATOR_assert(config->app_user_data != NULL);
 	DEBUGINATOR_assert(config->word_wrap != NULL);
+	DEBUGINATOR_assert(config->app_user_data != NULL);
 	DEBUGINATOR_assert(config->memory_arena != NULL);
 	DEBUGINATOR_assert(config->memory_arena_capacity > 0);
 	DEBUGINATOR_assert(config->open_direction == -1 || config->open_direction == 1);
@@ -3277,7 +3276,7 @@ void debuginator_create(TheDebuginatorConfig* config, TheDebuginator* debuginato
 	}
 }
 
-void debuginator_update(TheDebuginator* debuginator, float dt) {
+void debuginator_update(struct TheDebuginator* debuginator, float dt) {
 	// To not lerp outside 1
 	if (dt > 0.5f) {
 		dt = 0.5f;
@@ -3335,15 +3334,15 @@ void debuginator_update(TheDebuginator* debuginator, float dt) {
 }
 
 
-static float debuginator__draw_item(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2 offset, bool hot);
-static void debuginator__draw_hierarchy(TheDebuginator* debuginator, float dt, DebuginatorVector2 offset);
-static void debuginator__draw_sorted_filter(TheDebuginator* debuginator, float dt, DebuginatorVector2 offset);
-static void debuginator__draw_animations(TheDebuginator* debuginator, float dt);
-static void debuginator__draw_search_filter(TheDebuginator* debuginator, float dt);
-static void debuginator__draw_notifications(TheDebuginator* debuginator, float dt);
-static void debuginator__draw_tooltip(TheDebuginator* debuginator, float dt);
+static float debuginator__draw_item(struct TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2 offset, bool hot);
+static void debuginator__draw_hierarchy(struct TheDebuginator* debuginator, float dt, DebuginatorVector2 offset);
+static void debuginator__draw_sorted_filter(struct TheDebuginator* debuginator, float dt, DebuginatorVector2 offset);
+static void debuginator__draw_animations(struct TheDebuginator* debuginator, float dt);
+static void debuginator__draw_search_filter(struct TheDebuginator* debuginator, float dt);
+static void debuginator__draw_notifications(struct TheDebuginator* debuginator, float dt);
+static void debuginator__draw_tooltip(struct TheDebuginator* debuginator, float dt);
 
-static void debuginator__draw_border(TheDebuginator* debuginator, DebuginatorVector2* position, DebuginatorVector2* size, float thickness, DebuginatorColor* color1, DebuginatorColor* color2) {
+static void debuginator__draw_border(struct TheDebuginator* debuginator, DebuginatorVector2* position, DebuginatorVector2* size, float thickness, DebuginatorColor* color1, DebuginatorColor* color2) {
 	DebuginatorVector2 border_h_size = {size->x,  thickness};
 	DebuginatorVector2 border_v_size = {thickness,  size->y - thickness * 2};
 	DebuginatorVector2 border_t_pos = *position;
@@ -3360,7 +3359,7 @@ static void debuginator__draw_border(TheDebuginator* debuginator, DebuginatorVec
 	debuginator->draw_rect(&border_r_pos, &border_v_size, color2, debuginator->app_user_data);
 }
 
-void debuginator_draw(TheDebuginator* debuginator, float dt) {
+void debuginator_draw(struct TheDebuginator* debuginator, float dt) {
 	// Always draw notifications
 	debuginator__draw_notifications(debuginator, dt);
 
@@ -3412,7 +3411,7 @@ void debuginator_draw(TheDebuginator* debuginator, float dt) {
 	}
 }
 
-static void debuginator__draw_hierarchy(TheDebuginator* debuginator, float dt, DebuginatorVector2 offset){
+static void debuginator__draw_hierarchy(struct TheDebuginator* debuginator, float dt, DebuginatorVector2 offset){
 	DEBUGINATOR_UNUSED(dt);
 	offset.y = debuginator->current_height_offset;
 
@@ -3455,7 +3454,7 @@ static void debuginator__draw_hierarchy(TheDebuginator* debuginator, float dt, D
 	}
 }
 
-static void debuginator__draw_animations(TheDebuginator* debuginator, float dt) {
+static void debuginator__draw_animations(struct TheDebuginator* debuginator, float dt) {
 	// Update animations
 	int running_animations = debuginator->animation_count; // Can be cleverer I guess
 	for (int i = 0; i < debuginator->animation_count; i++) {
@@ -3505,7 +3504,7 @@ static void debuginator__draw_animations(TheDebuginator* debuginator, float dt) 
 	}
 }
 
-static void debuginator__draw_search_filter(TheDebuginator* debuginator, float dt) {
+static void debuginator__draw_search_filter(struct TheDebuginator* debuginator, float dt) {
 	bool filter_hint_mode = !debuginator->filter_enabled && debuginator->current_height_offset > 100;
 	if (debuginator->filter_enabled) {
 		debuginator->filter_timer += dt * 5;
@@ -3610,7 +3609,7 @@ static void debuginator__draw_search_filter(TheDebuginator* debuginator, float d
 	debuginator->filter_size = filter_size;
 }
 
-void debuginator__draw_notifications(TheDebuginator* debuginator, float dt) {
+void debuginator__draw_notifications(struct TheDebuginator* debuginator, float dt) {
 	if (!debuginator->notifications_enabled) {
 		debuginator->notification_count = 0;
 		return;
@@ -3658,7 +3657,7 @@ void debuginator__draw_notifications(TheDebuginator* debuginator, float dt) {
 	}
 }
 
-static void debuginator__draw_tooltip(TheDebuginator* debuginator, float dt) {
+static void debuginator__draw_tooltip(struct TheDebuginator* debuginator, float dt) {
 	DebuginatorItem* item = debuginator->hot_mouse_item;
 	if (item == NULL) {
 		debuginator->tooltip_timer = DEBUGINATOR_max(DEBUGINATOR_TOOLTIP_DELAY, debuginator->tooltip_timer - dt);
@@ -3730,7 +3729,7 @@ static void debuginator__draw_tooltip(TheDebuginator* debuginator, float dt) {
 	}
 }
 
-static float debuginator__draw_item(TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2 offset, bool hot) {
+static float debuginator__draw_item(struct TheDebuginator* debuginator, DebuginatorItem* item, DebuginatorVector2 offset, bool hot) {
 	bool mouse_over =
 		debuginator->top_left.x <= debuginator->mouse_cursor_pos.x && debuginator->mouse_cursor_pos.x < debuginator->top_left.x + debuginator->size.x &&
 		offset.y <= debuginator->mouse_cursor_pos.y && debuginator->mouse_cursor_pos.y < offset.y + item->total_height;
@@ -3869,7 +3868,7 @@ static float debuginator__draw_item(TheDebuginator* debuginator, DebuginatorItem
 	return offset.y;
 }
 
-static void debuginator__draw_sorted_filter(TheDebuginator* debuginator, float dt, DebuginatorVector2 offset) {
+static void debuginator__draw_sorted_filter(struct TheDebuginator* debuginator, float dt, DebuginatorVector2 offset) {
 	DEBUGINATOR_UNUSED(dt);
 	DebuginatorSortedItem* sorted_item = debuginator->best_sorted_item;
 	while (sorted_item && sorted_item->score > 0) {
@@ -3881,18 +3880,18 @@ static void debuginator__draw_sorted_filter(TheDebuginator* debuginator, float d
 	}
 }
 
-bool debuginator_is_open(TheDebuginator* debuginator) {
+bool debuginator_is_open(struct TheDebuginator* debuginator) {
 	return debuginator->is_open;
 }
 
-void debuginator_set_open(TheDebuginator* debuginator, bool is_open) {
+void debuginator_set_open(struct TheDebuginator* debuginator, bool is_open) {
 	debuginator->is_open = is_open;
 	if (debuginator->on_opened_changed) {
 		debuginator->on_opened_changed(is_open, false, debuginator->app_user_data);
 	}
 }
 
-static void debuginator__add_notification(TheDebuginator* debuginator, DebuginatorItem* item){
+static void debuginator__add_notification(struct TheDebuginator* debuginator, DebuginatorItem* item){
 	if (debuginator->notification_count == DEBUGINATOR_MAX_NOTIFICATIONS) {
 		return;
 	}
@@ -3914,7 +3913,7 @@ static void debuginator__add_notification(TheDebuginator* debuginator, Debuginat
 	debuginator->notification_count++;
 }
 
-void debuginator_log_item(TheDebuginator* debuginator, DebuginatorItem* item) {
+void debuginator_log_item(struct TheDebuginator* debuginator, DebuginatorItem* item) {
 	if (debuginator->log == NULL) {
 		return;
 	}
@@ -3935,7 +3934,7 @@ void debuginator_log_item(TheDebuginator* debuginator, DebuginatorItem* item) {
 }
 
 
-void debuginator_activate(TheDebuginator* debuginator, DebuginatorItem* item, bool animate) {
+void debuginator_activate(struct TheDebuginator* debuginator, DebuginatorItem* item, bool animate) {
 	item->leaf.draw_t = 0;
 	if (item->leaf.num_values <= 0) {
 		// "Action" items doesn't have a list of values, they just get triggered
@@ -4012,7 +4011,7 @@ static bool debuginator__is_parent_recursive(DebuginatorItem* item, DebuginatorI
 	return false;
 }
 
-void debuginator_set_collapsed(TheDebuginator* debuginator, DebuginatorItem* item, bool collapsed) {
+void debuginator_set_collapsed(struct TheDebuginator* debuginator, DebuginatorItem* item, bool collapsed) {
 	if (!item->is_folder) {
 		return;
 	}
@@ -4048,7 +4047,7 @@ void debuginator_set_collapsed(TheDebuginator* debuginator, DebuginatorItem* ite
 	}
 }
 
-static void debuginator__collapse_recursive(TheDebuginator* debuginator, DebuginatorItem *item, int collapse_depth, int depth) {
+static void debuginator__collapse_recursive(struct TheDebuginator* debuginator, DebuginatorItem *item, int collapse_depth, int depth) {
 	if (!item->is_folder)
 		return;
 
@@ -4063,12 +4062,12 @@ static void debuginator__collapse_recursive(TheDebuginator* debuginator, Debugin
 	}
 }
 
-void debuginator_collapse_to_depth(TheDebuginator* debuginator, int depth) {
+void debuginator_collapse_to_depth(struct TheDebuginator* debuginator, int depth) {
 	DebuginatorItem *item = debuginator->root;
 	debuginator__collapse_recursive(debuginator, item, depth, 0);
 }
 
-void debuginator_move_sibling_previous(TheDebuginator* debuginator) {
+void debuginator_move_sibling_previous(struct TheDebuginator* debuginator) {
 	DebuginatorItem* hot_item = debuginator->hot_item;
 
 	if (!hot_item->is_folder && hot_item->leaf.is_expanded) {
@@ -4103,7 +4102,7 @@ void debuginator_move_sibling_previous(TheDebuginator* debuginator) {
 	}
 }
 
-void debuginator_move_sibling_next(TheDebuginator* debuginator) {
+void debuginator_move_sibling_next(struct TheDebuginator* debuginator) {
 	DebuginatorItem* hot_item = debuginator->hot_item;
 
 	if (!hot_item->is_folder && hot_item->leaf.is_expanded) {
@@ -4127,7 +4126,7 @@ void debuginator_move_sibling_next(TheDebuginator* debuginator) {
 	}
 }
 
-void debuginator_move_to_next_leaf(TheDebuginator* debuginator, bool long_move) {
+void debuginator_move_to_next_leaf(struct TheDebuginator* debuginator, bool long_move) {
 	DebuginatorItem* hot_item = debuginator->hot_item;
 	if (!hot_item->is_folder && hot_item->leaf.is_expanded) {
 		int steps = 1;
@@ -4163,7 +4162,7 @@ void debuginator_move_to_next_leaf(TheDebuginator* debuginator, bool long_move) 
 }
 
 
-void debuginator_move_to_prev_leaf(TheDebuginator* debuginator, bool long_move) {
+void debuginator_move_to_prev_leaf(struct TheDebuginator* debuginator, bool long_move) {
 	DebuginatorItem* hot_item = debuginator->hot_item;
 	if (!hot_item->is_folder && hot_item->leaf.is_expanded) {
 		int steps = 1;
@@ -4197,7 +4196,7 @@ void debuginator_move_to_prev_leaf(TheDebuginator* debuginator, bool long_move) 
 	debuginator->hot_item = hot_item_new;
 }
 
-void debuginator_move_to_child(TheDebuginator* debuginator, bool toggle_and_activate) {
+void debuginator_move_to_child(struct TheDebuginator* debuginator, bool toggle_and_activate) {
 	DebuginatorItem* hot_item = debuginator->hot_item;
 	DebuginatorItem* hot_item_new = debuginator->hot_item;
 
@@ -4237,7 +4236,7 @@ void debuginator_move_to_child(TheDebuginator* debuginator, bool toggle_and_acti
 	}
 }
 
-void debuginator_move_to_parent(TheDebuginator* debuginator) {
+void debuginator_move_to_parent(struct TheDebuginator* debuginator) {
 	DebuginatorItem* hot_item = debuginator->hot_item;
 	DebuginatorItem* hot_item_new = debuginator->hot_item;
 	if (!hot_item->is_folder && hot_item->leaf.is_expanded) {
@@ -4254,7 +4253,7 @@ void debuginator_move_to_parent(TheDebuginator* debuginator) {
 	}
 }
 
-void debuginator_move_to_root(TheDebuginator* debuginator) {
+void debuginator_move_to_root(struct TheDebuginator* debuginator) {
 	DebuginatorItem* hot_item = debuginator->hot_item;
 	if (!hot_item->is_folder && hot_item->leaf.is_expanded) {
 		hot_item->leaf.is_expanded = false;
@@ -4278,7 +4277,7 @@ void debuginator_copy_1byte(DebuginatorItem* item, void* value, const char* valu
 	DEBUGINATOR_memcpy(item->user_data, value, 1);
 }
 
-DebuginatorItem* debuginator_create_bool_item(TheDebuginator* debuginator, const char* path, const char* description, void* user_data) {
+DebuginatorItem* debuginator_create_bool_item(struct TheDebuginator* debuginator, const char* path, const char* description, void* user_data) {
 	bool value_before_creation = *(bool*)user_data;
 	DEBUGINATOR_static_assert(sizeof(debuginator->bool_values[0]) == 1);
 	DebuginatorItem* item = debuginator_create_array_item(debuginator, NULL, path,
@@ -4299,7 +4298,7 @@ DebuginatorItem* debuginator_create_bool_item(TheDebuginator* debuginator, const
 	return item;
 }
 
-DebuginatorItem* debuginator_create_bool_item_with_callback(TheDebuginator* debuginator, const char* path, const char* description, void* user_data, DebuginatorOnItemChangedCallback callback) {
+DebuginatorItem* debuginator_create_bool_item_with_callback(struct TheDebuginator* debuginator, const char* path, const char* description, void* user_data, DebuginatorOnItemChangedCallback callback) {
 	bool value_before_creation = *(bool*)user_data;
 	DEBUGINATOR_static_assert(sizeof(debuginator->bool_values[0]) == 1);
 	DebuginatorItem* item = debuginator_create_array_item(debuginator, NULL, path,
@@ -4326,7 +4325,7 @@ static void debuginator__activate_preset(DebuginatorItem* item, void* value, con
 	(void)value;
 	(void)item;
 	const char** preset_value_titles = (const char**)item->leaf.values;
-	TheDebuginator* debuginator = (TheDebuginator*)item->user_data;
+	struct TheDebuginator* debuginator = (struct TheDebuginator*)item->user_data;
 	for (int i = 0; i < item->leaf.num_values; i++) {
 		const char* path = item->leaf.value_titles[i];
 		DebuginatorItem* item_to_activate = debuginator_get_item(debuginator, NULL, path, NULL);
@@ -4347,7 +4346,7 @@ static void debuginator__activate_preset(DebuginatorItem* item, void* value, con
 	item->leaf.active_index = 0;
 }
 
-DebuginatorItem* debuginator_create_preset_item(TheDebuginator* debuginator, const char* path, const char** paths, const char** value_titles, int** value_indices, int num_paths) {
+DebuginatorItem* debuginator_create_preset_item(struct TheDebuginator* debuginator, const char* path, const char** paths, const char** value_titles, int** value_indices, int num_paths) {
 	(void)value_indices; // TODO
 
 	char description[2048] = { 0 };
@@ -4386,7 +4385,7 @@ DebuginatorItem* debuginator_create_preset_item(TheDebuginator* debuginator, con
 	return item;
 }
 
-DebuginatorItem* debuginator_create_colorpicker_item(TheDebuginator* debuginator, const char* path, const char* description, DebuginatorOnItemChangedCallback on_item_changed_callback, void* user_data, DebuginatorColor* start_color) {
+DebuginatorItem* debuginator_create_colorpicker_item(struct TheDebuginator* debuginator, const char* path, const char* description, DebuginatorOnItemChangedCallback on_item_changed_callback, void* user_data, DebuginatorColor* start_color) {
 	DebuginatorColor* value_before_creation = start_color;
 	DebuginatorColor* state = (DebuginatorColor*)debuginator__allocate(debuginator, sizeof(DebuginatorColor));
 	*state = *start_color;
@@ -4411,7 +4410,7 @@ static void debuginator_copy_float(DebuginatorItem* item, void* value, const cha
 	*dest = src;
 }
 
-DebuginatorItem* debuginator_create_numberrange_float_item(TheDebuginator* debuginator, const char* path, const char* description, float* user_data, float range_min, float range_max) {
+DebuginatorItem* debuginator_create_numberrange_float_item(struct TheDebuginator* debuginator, const char* path, const char* description, float* user_data, float range_min, float range_max) {
 	float value_before_creation = *user_data;
 	float* state = (float*)debuginator__allocate(debuginator, sizeof(float) * 4);
 	state[0] = range_min;
@@ -4430,81 +4429,81 @@ DebuginatorItem* debuginator_create_numberrange_float_item(TheDebuginator* debug
 
 #ifdef DEBUGINATOR_STUB_IMPLEMENTATION
 
-void                 debuginator_create                                (TheDebuginatorConfig*, TheDebuginator*) {}
+void                 debuginator_create                                (TheDebuginatorConfig*, struct TheDebuginator*) {}
 void                 debuginator_get_default_config                    (TheDebuginatorConfig*) {}
-bool                 debuginator_is_open                               (TheDebuginator*) {}
-void                 debuginator_set_open                              (TheDebuginator*, bool) {}
-void                 debuginator_update                                (TheDebuginator*, float) {}
-void                 debuginator_draw                                  (TheDebuginator*, float) {}
-DebuginatorItem*     debuginator_create_array_item                     (TheDebuginator*, t, d_callback,, m_values,) {}
-DebuginatorItem*     debuginator_create_bool_item                      (TheDebuginator*, const, const, void*) {}
-DebuginatorItem*     debuginator_create_bool_item_with_callback        (TheDebuginator*, const, const, void*, DebuginatorOnItemChangedCallback) {}
+bool                 debuginator_is_open                               (struct TheDebuginator*) {}
+void                 debuginator_set_open                              (struct TheDebuginator*, bool) {}
+void                 debuginator_update                                (struct TheDebuginator*, float) {}
+void                 debuginator_draw                                  (struct TheDebuginator*, float) {}
+DebuginatorItem*     debuginator_create_array_item                     (struct TheDebuginator*, t, d_callback,, m_values,) {}
+DebuginatorItem*     debuginator_create_bool_item                      (struct TheDebuginator*, const, const, void*) {}
+DebuginatorItem*     debuginator_create_bool_item_with_callback        (struct TheDebuginator*, const, const, void*, DebuginatorOnItemChangedCallback) {}
 void                 debuginator_copy_1byte                            (DebuginatorItem*, void*, const, void*) {}
-DebuginatorItem*     debuginator_create_preset_item                    (TheDebuginator*, const, const, const, int**, int) {}
-DebuginatorItem*     debuginator_create_colorpicker_item               (TheDebuginator*, const, const, DebuginatorOnItemChangedCallback, void*, DebuginatorColor*) {}
-DebuginatorItem*     debuginator_create_numberrange_float_item         (TheDebuginator*, const, const, float*, float, float) {}
-DebuginatorItem*     debuginator_create_folder_item                    (TheDebuginator*, DebuginatorItem*, const) {}
-DebuginatorItem*     debuginator_new_folder_item                       (TheDebuginator*, DebuginatorItem*, const, int) {}
-DebuginatorItem*     debuginator_get_item                              (TheDebuginator*, DebuginatorItem*, const, bool*) {}
-DebuginatorItem*     debuginator_get_root_item                         (TheDebuginator*) {}
-DebuginatorItem*     debuginator_get_first_child                       (TheDebuginator*, DebuginatorItem*) {}
-DebuginatorItem*     debuginator_get_next_sibling                      (TheDebuginator*, DebuginatorItem*) {}
-void                 debuginator_remove_item                           (TheDebuginator*, DebuginatorItem*) {}
-void                 debuginator_remove_item_by_path                   (TheDebuginator*, const) {}
-void                 debuginator_set_hot_item                          (TheDebuginator*, DebuginatorItem*) {}
-DebuginatorItem*     debuginator_get_hot_item                          (TheDebuginator*, int*) {}
+DebuginatorItem*     debuginator_create_preset_item                    (struct TheDebuginator*, const, const, const, int**, int) {}
+DebuginatorItem*     debuginator_create_colorpicker_item               (struct TheDebuginator*, const, const, DebuginatorOnItemChangedCallback, void*, DebuginatorColor*) {}
+DebuginatorItem*     debuginator_create_numberrange_float_item         (struct TheDebuginator*, const, const, float*, float, float) {}
+DebuginatorItem*     debuginator_create_folder_item                    (struct TheDebuginator*, DebuginatorItem*, const) {}
+DebuginatorItem*     debuginator_new_folder_item                       (struct TheDebuginator*, DebuginatorItem*, const, int) {}
+DebuginatorItem*     debuginator_get_item                              (struct TheDebuginator*, DebuginatorItem*, const, bool*) {}
+DebuginatorItem*     debuginator_get_root_item                         (struct TheDebuginator*) {}
+DebuginatorItem*     debuginator_get_first_child                       (struct TheDebuginator*, DebuginatorItem*) {}
+DebuginatorItem*     debuginator_get_next_sibling                      (struct TheDebuginator*, DebuginatorItem*) {}
+void                 debuginator_remove_item                           (struct TheDebuginator*, DebuginatorItem*) {}
+void                 debuginator_remove_item_by_path                   (struct TheDebuginator*, const) {}
+void                 debuginator_set_hot_item                          (struct TheDebuginator*, DebuginatorItem*) {}
+DebuginatorItem*     debuginator_get_hot_item                          (struct TheDebuginator*, int*) {}
 DebuginatorItem*     debuginator_get_parent                            (DebuginatorItem*) {}
-void                 debuginator_get_path                              (TheDebuginator*, DebuginatorItem*, char*, int*) {}
+void                 debuginator_get_path                              (struct TheDebuginator*, DebuginatorItem*, char*, int*) {}
 bool                 debuginator_is_folder                             (DebuginatorItem*) {}
-bool                 debuginator_save                                  (TheDebuginator*, DebuginatorSaveItemCallback, void*) {}
-void                 debuginator_load_item                             (TheDebuginator*, const, const) {}
-void                 debuginator_set_default_value                     (TheDebuginator*, const, const, int) {}
-void                 debuginator_reset_items_recursively               (TheDebuginator*, DebuginatorItem*) {}
-void                 debuginator_modify_value                          (TheDebuginator*, DebuginatorItem*, float, float, bool) {}
-void                 debuginator_set_edit_type                         (TheDebuginator*, const, DebuginatorItemEditorDataType) {}
-void                 debuginator_item_set_on_changed_callback_by_path  (TheDebuginator*, const, DebuginatorOnItemChangedCallback) {}
+bool                 debuginator_save                                  (struct TheDebuginator*, DebuginatorSaveItemCallback, void*) {}
+void                 debuginator_load_item                             (struct TheDebuginator*, const, const) {}
+void                 debuginator_set_default_value                     (struct TheDebuginator*, const, const, int) {}
+void                 debuginator_reset_items_recursively               (struct TheDebuginator*, DebuginatorItem*) {}
+void                 debuginator_modify_value                          (struct TheDebuginator*, DebuginatorItem*, float, float, bool) {}
+void                 debuginator_set_edit_type                         (struct TheDebuginator*, const, DebuginatorItemEditorDataType) {}
+void                 debuginator_item_set_on_changed_callback_by_path  (struct TheDebuginator*, const, DebuginatorOnItemChangedCallback) {}
 void                 debuginator_item_set_on_changed_callback          (DebuginatorItem*, DebuginatorOnItemChangedCallback) {}
-void                 debuginator_item_set_user_data_by_path            (TheDebuginator*, const, void*) {}
+void                 debuginator_item_set_user_data_by_path            (struct TheDebuginator*, const, void*) {}
 void                 debuginator_item_set_user_data                    (DebuginatorItem*, void*) {}
-void                 debuginator_activate                              (TheDebuginator*, DebuginatorItem*, bool) {}
+void                 debuginator_activate                              (struct TheDebuginator*, DebuginatorItem*, bool) {}
 bool                 debuginator_is_collapsed                          (DebuginatorItem*) {}
-void                 debuginator_set_collapsed                         (TheDebuginator*, DebuginatorItem*, bool) {}
-void                 debuginator_collapse_to_depth                     (TheDebuginator*, int) {}
-void                 debuginator_move_to_next_leaf                     (TheDebuginator*, bool) {}
-void                 debuginator_move_to_prev_leaf                     (TheDebuginator*, bool) {}
-void                 debuginator_move_to_child                         (TheDebuginator*, bool) {}
-void                 debuginator_move_to_parent                        (TheDebuginator*) {}
-void                 debuginator_move_sibling_next                     (TheDebuginator*) {}
-void                 debuginator_move_sibling_previous                 (TheDebuginator*) {}
-void                 debuginator_move_to_root                          (TheDebuginator*) {}
-bool                 debuginator_is_filtering_enabled                  (TheDebuginator*) {}
-void                 debuginator_set_filtering_enabled                 (TheDebuginator*, bool) {}
-const                char* debuginator_get_filter                      (TheDebuginator*) {}
-void                 debuginator_set_filter                            (TheDebuginator*, const) {}
-void                 debuginator_update_filter                         (TheDebuginator*, const) {}
-void                 debuginator_apply_scroll                          (TheDebuginator*, int) {}
-void                 debuginator_reset_scrolling                       (TheDebuginator*) {}
-void                 debuginator_set_mouse_cursor_pos                  (TheDebuginator*, DebuginatorVector2*) {}
-void                 debuginator_activate_item_at_mouse_cursor         (TheDebuginator*) {}
-void                 debuginator_expand_item_at_mouse_cursor           (TheDebuginator*, DebuginatorExpand) {}
-DebuginatorItem*     debuginator_get_item_at_mouse_cursor              (TheDebuginator*, int*) {}
-bool                 debuginator_is_mouse_over                         (TheDebuginator*, bool*) {}
-void                 debuginator_assign_hot_key                        (TheDebuginator*, const, const, int, const) {}
-void                 debuginator_unassign_hot_key                      (TheDebuginator*, const) {}
-DebuginatorItem*     debuginator_get_first_assigned_hot_key_item       (TheDebuginator*, const) {}
-bool                 debuginator_activate_hot_key                      (TheDebuginator*, const) {}
-void                 debuginator_clear_hot_keys                        (TheDebuginator*) {}
-void                 debuginator_set_item_height                       (TheDebuginator*, int) {}
-void                 debuginator_set_size                              (TheDebuginator*, int, int) {}
-void                 debuginator_set_screen_resolution                 (TheDebuginator*, int, int) {}
-int                  debuginator_total_height                          (TheDebuginator*) {}
-void                 debuginator_set_left_aligned                      (TheDebuginator*, bool) {}
-bool                 debuginator_is_left_aligned                       (TheDebuginator*) {}
-float                debuginator_distance_from_edge                    (TheDebuginator*) {}
-void                 debuginator_set_notifications_enabled             (TheDebuginator*, bool) {}
-void                 debuginator_trigger_nondefault_notifications      (TheDebuginator*) {}
-char*                debuginator_copy_string                           (TheDebuginator*, const, int) {}
-void                 debuginator_log_item                              (TheDebuginator*, DebuginatorItem*) {}
+void                 debuginator_set_collapsed                         (struct TheDebuginator*, DebuginatorItem*, bool) {}
+void                 debuginator_collapse_to_depth                     (struct TheDebuginator*, int) {}
+void                 debuginator_move_to_next_leaf                     (struct TheDebuginator*, bool) {}
+void                 debuginator_move_to_prev_leaf                     (struct TheDebuginator*, bool) {}
+void                 debuginator_move_to_child                         (struct TheDebuginator*, bool) {}
+void                 debuginator_move_to_parent                        (struct TheDebuginator*) {}
+void                 debuginator_move_sibling_next                     (struct TheDebuginator*) {}
+void                 debuginator_move_sibling_previous                 (struct TheDebuginator*) {}
+void                 debuginator_move_to_root                          (struct TheDebuginator*) {}
+bool                 debuginator_is_filtering_enabled                  (struct TheDebuginator*) {}
+void                 debuginator_set_filtering_enabled                 (struct TheDebuginator*, bool) {}
+const                char* debuginator_get_filter                      (struct TheDebuginator*) {}
+void                 debuginator_set_filter                            (struct TheDebuginator*, const) {}
+void                 debuginator_update_filter                         (struct TheDebuginator*, const) {}
+void                 debuginator_apply_scroll                          (struct TheDebuginator*, int) {}
+void                 debuginator_reset_scrolling                       (struct TheDebuginator*) {}
+void                 debuginator_set_mouse_cursor_pos                  (struct TheDebuginator*, DebuginatorVector2*) {}
+void                 debuginator_activate_item_at_mouse_cursor         (struct TheDebuginator*) {}
+void                 debuginator_expand_item_at_mouse_cursor           (struct TheDebuginator*, DebuginatorExpand) {}
+DebuginatorItem*     debuginator_get_item_at_mouse_cursor              (struct TheDebuginator*, int*) {}
+bool                 debuginator_is_mouse_over                         (struct TheDebuginator*, bool*) {}
+void                 debuginator_assign_hot_key                        (struct TheDebuginator*, const, const, int, const) {}
+void                 debuginator_unassign_hot_key                      (struct TheDebuginator*, const) {}
+DebuginatorItem*     debuginator_get_first_assigned_hot_key_item       (struct TheDebuginator*, const) {}
+bool                 debuginator_activate_hot_key                      (struct TheDebuginator*, const) {}
+void                 debuginator_clear_hot_keys                        (struct TheDebuginator*) {}
+void                 debuginator_set_item_height                       (struct TheDebuginator*, int) {}
+void                 debuginator_set_size                              (struct TheDebuginator*, int, int) {}
+void                 debuginator_set_screen_resolution                 (struct TheDebuginator*, int, int) {}
+int                  debuginator_total_height                          (struct TheDebuginator*) {}
+void                 debuginator_set_left_aligned                      (struct TheDebuginator*, bool) {}
+bool                 debuginator_is_left_aligned                       (struct TheDebuginator*) {}
+float                debuginator_distance_from_edge                    (struct TheDebuginator*) {}
+void                 debuginator_set_notifications_enabled             (struct TheDebuginator*, bool) {}
+void                 debuginator_trigger_nondefault_notifications      (struct TheDebuginator*) {}
+char*                debuginator_copy_string                           (struct TheDebuginator*, const, int) {}
+void                 debuginator_log_item                              (struct TheDebuginator*, DebuginatorItem*) {}
 
 #endif // DEBUGINATOR_STUB_IMPLEMENTATION
 
